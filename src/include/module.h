@@ -6,6 +6,7 @@ struct module_data
 {
 	void *priv;
 	void *ops;
+	int (*on_event)();
 };
 
 #define FRAMEBUFFER_INPUT_DEV  0

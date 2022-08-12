@@ -1,0 +1,1 @@
+option('fb_in_dev', type : 'combo', choices : ['x11_xext'], value : 'x11_xext')

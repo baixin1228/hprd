@@ -7,7 +7,4 @@ if get_option('buildtype').startswith('debug')
 endif
 
 subdir('test')
-
-subdir('src/fb_in')
-
-subdir('src/server')
+subdir('src')

@@ -2,7 +2,7 @@
 #define __LD_HELP_H__
 
 #define __RO_SECTION_DECLARE(order_1, order_2, order_3, sym) \
-__attribute__((__used__, aligned(8), section(".rodata1" #order_1 "." #order_2 "." #order_3 "." #sym))) \
+__attribute__((__used__, aligned(8), section(".rodata1." #order_1 "." #order_2 "." #order_3 "." #sym))) \
 
 struct __module_item {
 	void *(*handler)(void);
@@ -10,13 +10,14 @@ struct __module_item {
 
 #define _REGISTE_MODULE_ITEM(class_no, handler, order, order2) \
 static const struct __module_item __rodata1##_##class_no##_##order##_##order2##_##handler \
-__RO_SECTION_DECLARE(order, class_no, order2, handler) = {handler}
+__RO_SECTION_DECLARE(class_no, order, order2, handler) = {handler}
 
 #define _MODULE_INIT(handler, module_no, order) \
 _REGISTE_MODULE_ITEM(module_no, handler, 1, order)
 
 #define MODULE_INIT(handler, module_no, order) _MODULE_INIT(handler, module_no, order)
 
+void *null_func(void);
 #define _MODULE_BOUNDARY(handler, module_no) \
 _REGISTE_MODULE_ITEM(module_no, handler, 0, 0); \
 _REGISTE_MODULE_ITEM(module_no, handler, 2, 0)

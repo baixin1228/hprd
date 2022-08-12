@@ -18,6 +18,7 @@ static inline void log_info(const char *fmt, ...)
 	char fmt_buffer[1024];
 	sprintf(fmt_buffer, "\033[0m\033[1;34mInfo:%s\033[0m\n", fmt);
 	va_list va;
+	#pragma GCC diagnostic ignored "-Wvarargs"
 	va_start(va, fmt_buffer);
 	vfprintf(stdout, fmt_buffer, va);
 	va_end(va);
@@ -28,6 +29,7 @@ static inline void log_warning(const char *fmt, ...)
 	char fmt_buffer[1024];
 	sprintf(fmt_buffer, "\033[0m\033[1;33mWarning:%s\033[0m\n", fmt);
 	va_list va;
+	#pragma GCC diagnostic ignored "-Wvarargs"
 	va_start(va, fmt_buffer);
 	vfprintf(stderr, fmt_buffer, va);
 	va_end(va);
@@ -50,6 +52,7 @@ static inline void _func_info(const char *fmt, char *file, char *func, uint32_t 
 	char str_buffer[1024];
 	sprintf(fmt_buffer, "%s%s:%d <%s>\n", fmt, file, line, func);
 	va_list va;
+	#pragma GCC diagnostic ignored "-Wvarargs"
 	va_start(va, fmt_buffer);
 	vsprintf(str_buffer, fmt_buffer, va);
 	va_end(va);
@@ -62,6 +65,7 @@ static inline void _func_warning(const char *fmt, char *file, char *func, uint32
 	char str_buffer[1024];
 	sprintf(fmt_buffer, "%s%s:%d <%s>\n", fmt, file, line, func);
 	va_list va;
+	#pragma GCC diagnostic ignored "-Wvarargs"
 	va_start(va, fmt_buffer);
 	vsprintf(str_buffer, fmt_buffer, va);
 	va_end(va);

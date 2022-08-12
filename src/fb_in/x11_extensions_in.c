@@ -9,7 +9,7 @@
 
 #include "module.h"
 #include "util.h"
-#include "frame_buffer_input.h"
+#include "fb_in.h"
 
 struct x11_extensions
 {
@@ -23,19 +23,19 @@ struct x11_extensions
 	XImage *xim;
 };
 
-static int xext_get_frame_buffer(struct frame_buffer_input_data *dev)
+static int xext_get_frame_buffer(struct module_data *dev)
 {
 	struct x11_extensions *priv = (struct x11_extensions *)dev->priv;
-
-	XShmGetImage(priv->display, priv->root_win, priv->xim,
-		     0, 0, AllPlanes);
-	XSync(priv->display, False);
+	printf("%p\n", priv);
+	// XShmGetImage(priv->display, priv->root_win, priv->xim,
+	// 	     0, 0, AllPlanes);
+	// XSync(priv->display, False);
 
 	return 0;
 }
 
 #define DISPLAY_NAME ":0"
-static int xext_dev_init(struct frame_buffer_input_data *dev)
+static int xext_dev_init(struct module_data *dev)
 {
 	int ret = -1;
 	struct x11_extensions *priv;
@@ -75,7 +75,7 @@ static int xext_dev_init(struct frame_buffer_input_data *dev)
 	priv->shm.shmaddr = (char *) -1;
     int w = DisplayWidth(priv->display, priv->screen_num);
     int h = DisplayHeight(priv->display, priv->screen_num);
-	func_error("x11 xext informations of screen:%d width:%d height:%d\n" , priv->screen_num
+	log_info("x11 xext informations of screen:%d width:%d height:%d\n" , priv->screen_num
 		, w , h);
 
 	priv->xim = XShmCreateImage(priv->display, priv->visual, priv->depth, ZPixmap, NULL,
@@ -122,7 +122,7 @@ FAIL1:
 	return ret;
 }
 
-static int xext_dev_release(struct frame_buffer_input_data *dev)
+static int xext_dev_release(struct module_data *dev)
 {
 	struct x11_extensions *priv = (struct x11_extensions *)dev->priv;
 
@@ -135,7 +135,7 @@ static int xext_dev_release(struct frame_buffer_input_data *dev)
 	return 0;
 }
 
-struct frame_buffer_input_dev x11_extensions_input_dev = 
+struct fb_in_ops x11_extensions_input_dev = 
 {
 	.name 				= "x11_extensions_input_dev",
 	.init 				= xext_dev_init,
@@ -143,20 +143,4 @@ struct frame_buffer_input_dev x11_extensions_input_dev =
 	.release 			= xext_dev_release
 };
 
-void xext_init3(void)
-{
-	printf("hhhhhhhhh2\n");
-}
-MODULE_INIT(xext_init3, FRAMEBUFFER_INPUT_DEV, DEVICE_PRIO_LOW);
-
-void xext_init(void)
-{
-	printf("hhhhhhhhh\n");
-}
-MODULE_INIT(xext_init, FRAMEBUFFER_INPUT_DEV, DEVICE_PRIO_HEIGHT);
-
-void xext_init2(void)
-{
-	printf("hhhhhhhhh2\n");
-}
-MODULE_INIT(xext_init2, FRAMEBUFFER_INPUT_DEV, DEVICE_PRIO_HEIGHT);
+FRAME_BUFFER_INPUT_DEV(x11_extensions_input_dev, DEVICE_PRIO_LOW);

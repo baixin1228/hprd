@@ -1,4 +1,4 @@
-src = ['x11_extensions_input.c']
+src = ['x11_extensions_in.c']
 
 frame_buffer_input = static_library('frame-buffer-input-lib',
 	src,

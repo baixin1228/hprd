@@ -1,4 +1,6 @@
-project('hprd', 'c')
+project('hprd', 'c', default_options: 'werror=true')
+
+add_global_arguments('-Dwerror=true', language : 'c')
 
 if get_option('buildtype').startswith('debug')
   add_project_arguments('-DDEBUG', language : 'c')
@@ -6,6 +8,6 @@ endif
 
 subdir('test')
 
-subdir('src/frame_buffer_input')
+subdir('src/fb_in')
 
 subdir('src/server')

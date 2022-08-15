@@ -6,7 +6,7 @@
 
 MODULE_BOUNDARY(null_func, ENCODEC_DEV);
 
-struct module_data *init_encodec_dev(void)
+struct module_data *encodec_init_dev(void)
 {
 	int ret;
 	struct encodec_ops *dev_ops;

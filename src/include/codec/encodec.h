@@ -14,7 +14,7 @@ struct encodec_ops
 
 #define REGISTE_ENCODEC_DEV(dev, prio) REGISTE_MODULE_DEV(dev, ENCODEC_DEV, prio)
 
-struct module_data *init_encodec_dev(void);
+struct module_data *encodec_init_dev(void);
 int encodec_push_fb(struct module_data *dev, struct common_buffer *buffer);
 struct common_buffer *encodec_get_package(struct module_data *dev);
 int encodec_release(struct module_data *dev);

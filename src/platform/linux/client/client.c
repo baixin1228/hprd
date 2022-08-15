@@ -5,9 +5,12 @@
 #include "module.h"
 #include "fb_in/fb_in.h"
 #include "fb_out/fb_out.h"
+#include "codec/encodec.h"
 
 struct module_data * in_dev;
 struct module_data * out_dev;
+struct module_data * enc_dev;
+
 int on_event()
 {
     struct common_buffer * buffer = fb_in_get_fb(in_dev);
@@ -25,6 +28,9 @@ int main(int argc, char* argv[])
 
     out_dev = fb_out_init_dev();
     fb_out_set_info(out_dev, fb_info);
+
+    enc_dev = encodec_init_dev();
+    // fb_out_set_info(enc_dev, fb_info);
 
     in_dev->on_event = on_event;
     out_dev->on_event = on_event;

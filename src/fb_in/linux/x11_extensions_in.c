@@ -22,9 +22,9 @@ struct x11_extensions
 	int depth;
 	XShmSegmentInfo shm;
 	XImage *xim;
+	struct common_buffer buffer;
 };
 
-struct common_buffer buffer;
 
 static struct common_buffer * xext_get_frame_buffer(struct module_data *dev)
 {
@@ -32,7 +32,7 @@ static struct common_buffer * xext_get_frame_buffer(struct module_data *dev)
 	XShmGetImage(priv->display, priv->root_win, priv->xim,
 		0, 0, AllPlanes);
 	XSync(priv->display, False);
-	return &buffer;
+	return &priv->buffer;
 }
 
 #define DISPLAY_NAME ":0"
@@ -45,6 +45,7 @@ static int xext_dev_init(struct module_data *dev)
 	if(!priv)
 	{
 		func_error("calloc fail, check free memery.");
+		goto FAIL1;
 	}
 
 	priv->display = XOpenDisplay(DISPLAY_NAME);
@@ -53,11 +54,11 @@ static int xext_dev_init(struct module_data *dev)
 	{
 		func_error("XOpenDisplay: cannot displayect to X server %s\n",
 			XDisplayName(DISPLAY_NAME));
-		goto FAIL1;
+		goto FAIL2;
 	}
 	if(XShmQueryExtension(priv->display) == False)
 	{
-		goto FAIL2;
+		goto FAIL3;
 	}
 
 	priv->screen_num = DefaultScreen(priv->display);
@@ -67,7 +68,7 @@ static int xext_dev_init(struct module_data *dev)
 		&priv->windowattr) == 0)
 	{
 		func_error("icvVideoRender: failed to get window attributes.\n");
-		goto FAIL2;
+		goto FAIL3;
 	}
 
 	priv->depth = priv->windowattr.depth;
@@ -84,7 +85,7 @@ static int xext_dev_init(struct module_data *dev)
 
 	if (priv->xim == NULL) {
 		func_error("XShmCreateImage failed.\n");
-		goto FAIL2;
+		goto FAIL3;
 	}
 
 	priv->shm.shmid = shmget(IPC_PRIVATE,
@@ -92,7 +93,7 @@ static int xext_dev_init(struct module_data *dev)
 
 	if (priv->shm.shmid == -1) {
 		func_error("shmget failed.\n");
-		goto FAIL3;
+		goto FAIL4;
 	}
 
 	priv->shm.readOnly = False;
@@ -100,34 +101,47 @@ static int xext_dev_init(struct module_data *dev)
 
 	if (priv->shm.shmaddr == (char *)-1) {
 		func_error("shmat failed.\n");
-		goto FAIL4;
+		goto FAIL5;
 	}
 
 	if (!XShmAttach(priv->display, &priv->shm)) {
 		func_error("XShmAttach failed.\n");
-		goto FAIL5;
+		goto FAIL6;
 	}
 	XSync(priv->display, False);
 
-	buffer.width = w;
-	buffer.h_stride = w;
-	buffer.height = h;
-	buffer.v_stride = h;
-	buffer.ptr = priv->xim->data;
+	priv->buffer.width = w;
+	priv->buffer.hor_stride = w;
+	priv->buffer.height = h;
+	priv->buffer.ver_stride = h;
+	priv->buffer.ptr = priv->xim->data;
 
 	dev->priv = (void *)priv;
 	return 0;
-FAIL5:
+FAIL6:
 	shmdt(priv->shm.shmaddr);
-FAIL4:
+FAIL5:
 	shmctl(priv->shm.shmid, IPC_RMID, 0);
-FAIL3:
+FAIL4:
 	XDestroyImage(priv->xim);
-FAIL2:
+FAIL3:
 	XCloseDisplay(priv->display);
-FAIL1:
+FAIL2:
 	free(priv);
+FAIL1:
 	return ret;
+}
+
+static int xext_get_fb_info(struct module_data *dev, struct frame_buffer_info *fb_info)
+{
+	struct x11_extensions *priv = (struct x11_extensions *)dev->priv;
+
+	fb_info->format = RGB888;
+	fb_info->width = priv->buffer.width;
+	fb_info->height = priv->buffer.height;
+	fb_info->hor_stride = priv->buffer.hor_stride;
+	fb_info->ver_stride = priv->buffer.ver_stride;
+	return 0;
 }
 
 static int xext_dev_release(struct module_data *dev)
@@ -147,6 +161,7 @@ struct fb_in_ops x11_extensions_input_dev =
 {
 	.name 				= "x11_extensions_input_dev",
 	.init 				= xext_dev_init,
+	.get_fb_info		= xext_get_fb_info,
 	.get_data 		 	= xext_get_frame_buffer,
 	.release 			= xext_dev_release
 };

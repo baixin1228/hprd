@@ -2,7 +2,7 @@
 #define __LD_HELP_H__
 
 #define __RO_SECTION_DECLARE(order_1, order_2, order_3, sym) \
-__attribute__((__used__, aligned(8), section(".rodata1." #order_1 "." #order_2 "." #order_3 "." #sym))) \
+__attribute__((__used__, aligned(8), section(".rodata1." #order_1 "." #order_2 "." #order_3 "." #sym)))
 
 struct __module_item {
 	void *(*handler)(void);

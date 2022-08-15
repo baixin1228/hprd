@@ -5,6 +5,14 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define ALIGN16(x)  ((x+15)&~15)
+#define ALIGN32(x)  ((x+31)&~31)
+#define ALIGN64(x)  ((x+63)&~63)
+#define ALIGN128(x)  ((x+127)&~127)
+
+#define MIN(a, b) ((a)>(b)?(b):(a))
+#define MAX(a, b) ((a)>(b)?(a):(b))
+
 enum ENGINE_LOG_LEVEL
 {
 	ENGINE_LOG_DEBUG,

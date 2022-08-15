@@ -1,1 +1,0 @@
-option('build_target', type : 'combo', choices : ['server', 'client', 'all'], value : 'all')

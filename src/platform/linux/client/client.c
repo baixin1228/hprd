@@ -10,16 +10,22 @@ struct module_data * in_dev;
 struct module_data * out_dev;
 int on_event()
 {
-    struct common_buffer * buffer = get_frame_buffer(in_dev);
-    put_frame_buffer(out_dev, buffer);
+    struct common_buffer * buffer = fb_in_get_fb(in_dev);
+    fb_out_put_fb(out_dev, buffer);
     log_info("on_event");
     return 0;
 }
 
 int main(int argc, char* argv[])
 {
-    in_dev = init_frame_buffer_input_dev();
-    out_dev = init_frame_buffer_output_dev();
+    struct frame_buffer_info fb_info;
+
+    in_dev = fb_in_init_dev();
+    fb_in_get_info(in_dev, &fb_info);
+
+    out_dev = fb_out_init_dev();
+    fb_out_set_info(out_dev, fb_info);
+
     in_dev->on_event = on_event;
     out_dev->on_event = on_event;
     // fb_in_main_loop(in_dev);

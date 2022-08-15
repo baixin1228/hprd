@@ -5,7 +5,7 @@
 
 MODULE_BOUNDARY(null_func, FRAMEBUFFER_OUTPUT_DEV);
 
-struct module_data *init_frame_buffer_output_dev(void)
+struct module_data *fb_out_init_dev(void)
 {
 	int ret;
 	struct fb_out_ops *dev_ops;
@@ -34,7 +34,24 @@ struct module_data *init_frame_buffer_output_dev(void)
 		return fb_out_data;
 }
 
-int put_frame_buffer(struct module_data *fb_out_data, struct common_buffer *buffer)
+int fb_out_set_info(struct module_data *fb_out_data, struct frame_buffer_info fb_info)
+{
+	struct fb_out_ops *dev_ops;
+	
+	if(!fb_out_data)
+		return -1;
+
+	dev_ops = (struct fb_out_ops *)fb_out_data->ops;
+	if(dev_ops)
+	{
+		if(dev_ops->set_fb_info)
+			return dev_ops->set_fb_info(fb_out_data, fb_info);
+	}
+
+	return -1;
+}
+
+int fb_out_put_fb(struct module_data *fb_out_data, struct common_buffer *buffer)
 {
 	struct fb_out_ops *dev_ops;
 	

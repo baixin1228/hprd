@@ -30,6 +30,8 @@ int main(int argc, char* argv[])
     fb_out_set_info(out_dev, fb_info);
 
     enc_dev = encodec_init_dev();
+    if(enc_dev == NULL)
+        exit(-1);
     // fb_out_set_info(enc_dev, fb_info);
 
     in_dev->on_event = on_event;

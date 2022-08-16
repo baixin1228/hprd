@@ -1832,9 +1832,10 @@ static int init_va(struct vaapi_hevc_encodec *data)
 
     /* use the highest profile */
     for (i = 0; i < sizeof(profile_list) / sizeof(profile_list[0]); i++) {
+        log_warning("123");
         if ((data->hevc_profile != ~0) && data->hevc_profile != profile_list[i])
             continue;
-
+        log_warning("456");
         data->hevc_profile = profile_list[i];
         vaQueryConfigEntrypoints(data->va_dpy, data->hevc_profile, entrypoints, &num_entrypoints);
         for (slice_entrypoint = 0; slice_entrypoint < num_entrypoints; slice_entrypoint++) {

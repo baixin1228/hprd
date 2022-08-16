@@ -19,9 +19,14 @@ libva_display_deps = [ dependency('libva', version : '>=0.36.0')]
 #  libva_display_deps += wayland_deps
 #endif
 
+cc = meson.get_compiler('c')
+m_dep = cc.find_library('m', required : true)
+libva_display_deps += m_dep
+
 libva_display_lib = static_library('common', libva_display_src,
                                    dependencies: libva_display_deps,
-                                   include_directories: [include_directories('.'), include_directories('../../include')])
+                                   include_directories: [include_directories('.'), include_directories('../../include')],
+                                   link_args: '-lm')
 libva_display_dep = declare_dependency(link_with: libva_display_lib,
                                        dependencies: libva_display_deps)
 

@@ -58,7 +58,7 @@ static inline void _func_info(const char *fmt, char *file, char *func, uint32_t 
 {
 	char fmt_buffer[1024];
 	char str_buffer[1024];
-	sprintf(fmt_buffer, "%s%s:%d <%s>\n", fmt, file, line, func);
+	sprintf(fmt_buffer, "%s\n%s:%d <%s>\n", fmt, file, line, func);
 	va_list va;
 	#pragma GCC diagnostic ignored "-Wvarargs"
 	va_start(va, fmt_buffer);
@@ -71,7 +71,7 @@ static inline void _func_warning(const char *fmt, char *file, char *func, uint32
 {
 	char fmt_buffer[1024];
 	char str_buffer[1024];
-	sprintf(fmt_buffer, "%s%s:%d <%s>\n", fmt, file, line, func);
+	sprintf(fmt_buffer, "%s\n%s:%d <%s>\n", fmt, file, line, func);
 	va_list va;
 	#pragma GCC diagnostic ignored "-Wvarargs"
 	va_start(va, fmt_buffer);
@@ -84,7 +84,7 @@ static inline void _func_error(const char *fmt, char *file, const char *func, ui
 {
 	char fmt_buffer[1024];
 	char str_buffer[1024];
-	sprintf(fmt_buffer, "%s%s:%d <%s>\n", fmt, file, line, func);
+	sprintf(fmt_buffer, "%s\n%s:%d <%s>\n", fmt, file, line, func);
 	va_list va;
 	#pragma GCC diagnostic ignored "-Wvarargs"
 	va_start(va, fmt_buffer);

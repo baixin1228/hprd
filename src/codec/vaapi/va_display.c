@@ -31,6 +31,7 @@
 #include <string.h>
 #include <va/va.h>
 #include "va_display.h"
+#include "util.h"
 
 extern const VADisplayHooks va_display_hooks_android;
 extern const VADisplayHooks va_display_hooks_wayland;
@@ -45,9 +46,7 @@ static const VADisplayHooks *g_display_hooks_available[] = {
 #ifdef HAVE_VA_WAYLAND
     &va_display_hooks_wayland,
 #endif
-#ifdef HAVE_VA_X11
     &va_display_hooks_x11,
-#endif
 #ifdef HAVE_VA_DRM
     &va_display_hooks_drm,
 #endif
@@ -101,9 +100,9 @@ print_display_names(void)
 {
     const VADisplayHooks **h;
 
-    printf("Available displays:\n");
+    log_info("Available displays:\n");
     for (h = g_display_hooks_available; *h != NULL; h++)
-        printf("  %s\n", (*h)->name);
+        log_info("  %s", (*h)->name);
 }
 
 static void
@@ -146,6 +145,7 @@ va_open_display(void)
 
     for (i = 0; !va_dpy && g_display_hooks_available[i]; i++) {
         g_display_hooks = g_display_hooks_available[i];
+        log_info("open display");
         if (g_display_name &&
             strcmp(g_display_name, g_display_hooks->name) != 0)
             continue;
@@ -155,10 +155,9 @@ va_open_display(void)
     }
 
     if (!va_dpy)  {
-        fprintf(stderr, "error: failed to initialize display");
+        func_error("error: failed to initialize display");
         if (g_display_name)
-            fprintf(stderr, " '%s'", g_display_name);
-        fprintf(stderr, "\n");
+            func_error(" '%s'", g_display_name);
         exit(1);
     }
     return va_dpy;

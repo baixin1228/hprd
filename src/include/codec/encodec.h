@@ -3,10 +3,23 @@
 #include "buffer.h"
 #include "module.h"
 
+enum STREAM_FORMAT
+{
+	STREAM_H264,
+	STREAM_H265,
+};
+
+struct encodec_info
+{
+	struct frame_buffer_info fb_info;
+	enum STREAM_FORMAT stream_fmt;
+	uint8_t quality;
+};
+
 struct encodec_ops
 {
 	char * name;
-	int (* init)(struct module_data *dev);
+	int (* init)(struct module_data *encodec_dev, struct encodec_info enc_info);
 	int (* push_fb)(struct module_data *dev, struct common_buffer *buffer);
 	struct common_buffer *(* get_package)(struct module_data *dev);
 	int (* release)(struct module_data *dev);
@@ -14,9 +27,8 @@ struct encodec_ops
 
 #define REGISTE_ENCODEC_DEV(dev, prio) REGISTE_MODULE_DEV(dev, ENCODEC_DEV, prio)
 
-struct module_data *encodec_init_dev(void);
+struct module_data *encodec_init_dev(struct encodec_info enc_info);
 int encodec_push_fb(struct module_data *dev, struct common_buffer *buffer);
 struct common_buffer *encodec_get_package(struct module_data *dev);
 int encodec_release(struct module_data *dev);
-
 #endif

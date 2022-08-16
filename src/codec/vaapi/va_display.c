@@ -22,9 +22,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -43,13 +40,12 @@ static const VADisplayHooks *g_display_hooks_available[] = {
 #ifdef ANDROID
     &va_display_hooks_android,
 #else
+
 #ifdef HAVE_VA_WAYLAND
     &va_display_hooks_wayland,
 #endif
-    &va_display_hooks_x11,
-#ifdef HAVE_VA_DRM
+    // &va_display_hooks_x11,
     &va_display_hooks_drm,
-#endif
 #endif
     NULL
 };

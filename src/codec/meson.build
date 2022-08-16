@@ -1,5 +1,6 @@
 if build_machine.system() == 'linux'
     subdir('vaapi')
+    subdir('ffmpeg')
 endif
 
 encodec_src = ['encodec.c']

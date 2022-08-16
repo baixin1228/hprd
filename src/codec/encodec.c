@@ -6,7 +6,7 @@
 
 MODULE_BOUNDARY(null_func, ENCODEC_DEV);
 
-struct module_data *encodec_init_dev(void)
+struct module_data *encodec_init_dev(struct encodec_info enc_info)
 {
 	int ret;
 	struct encodec_ops *dev_ops;
@@ -19,7 +19,7 @@ struct module_data *encodec_init_dev(void)
 	{
 		dev_ops = item->handler();
 		log_info("%s init...\n", dev_ops->name);
-		ret = dev_ops->init(encodec_data);
+		ret = dev_ops->init(encodec_data, enc_info);
 		if(ret == 0)
 		{
 			encodec_data->ops = (void *)dev_ops;

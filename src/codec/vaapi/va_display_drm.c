@@ -45,9 +45,9 @@ va_open_display_drm(void)
     int i;
     drmVersionPtr version;
     static const char *drm_device_paths[] = {
-        "/dev/dri/renderD128",
-        "/dev/dri/card0",
-        "/dev/dri/renderD129",
+        // "/dev/dri/renderD128",
+        // "/dev/dri/card0",
+        // "/dev/dri/renderD129",
         "/dev/dri/card1",
         NULL
     };

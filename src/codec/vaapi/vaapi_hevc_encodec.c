@@ -2792,7 +2792,7 @@ static void deinit_va(struct vaapi_hevc_encodec *data)
     va_close_display(data->va_dpy);
 }
 
-static int vaapi_encodec_init(struct module_data *encodec_dev)
+static int vaapi_encodec_init(struct module_data *encodec_dev, struct encodec_info enc_info)
 {
     struct vaapi_hevc_encodec *priv;
 

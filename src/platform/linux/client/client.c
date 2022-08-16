@@ -1,6 +1,7 @@
 #include <stdlib.h>
 
 #include "util.h"
+#include "string.h"
 #include "buffer.h"
 #include "module.h"
 #include "fb_in/fb_in.h"
@@ -21,6 +22,7 @@ int on_event()
 
 int main(int argc, char* argv[])
 {
+    struct encodec_info enc_info;
     struct frame_buffer_info fb_info;
 
     in_dev = fb_in_init_dev();
@@ -29,7 +31,11 @@ int main(int argc, char* argv[])
     out_dev = fb_out_init_dev();
     fb_out_set_info(out_dev, fb_info);
 
-    enc_dev = encodec_init_dev();
+    memcpy(&enc_info.fb_info, &fb_info, sizeof(fb_info));
+    enc_info.stream_fmt = STREAM_H265;
+    enc_info.quality = 80;
+    enc_dev = encodec_init_dev(enc_info);
+
     if(enc_dev == NULL)
         exit(-1);
     // fb_out_set_info(enc_dev, fb_info);

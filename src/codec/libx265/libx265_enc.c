@@ -232,4 +232,4 @@ struct encodec_ops x265_encodec_dev =
     .release            = x265_enc_release
 };
 
-REGISTE_ENCODEC_DEV(x265_encodec_dev, DEVICE_PRIO_MIDDLE);
+REGISTE_ENCODEC_DEV(x265_encodec_dev, DEVICE_PRIO_LOW);

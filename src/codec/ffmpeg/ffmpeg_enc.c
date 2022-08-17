@@ -92,7 +92,7 @@ static int ffmpeg_enc_init(struct module_data *encodec_dev, struct encodec_info 
     av_codec_ctx->framerate = (AVRational){25, 1};
     av_codec_ctx->pix_fmt = _com_fb_fmt_to_av_fmt(enc_info.fb_info.format);
     av_codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
-    av_codec_ctx->gop_size = 30;
+    av_codec_ctx->gop_size = 10;
     av_codec_ctx->max_b_frames = 0;
     av_codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
     av_codec_ctx->thread_count = 4;
@@ -104,10 +104,10 @@ static int ffmpeg_enc_init(struct module_data *encodec_dev, struct encodec_info 
         av_dict_set(&param, "tune", "zerolatency", 0);
     }
 
-    if(av_codec_ctx->codec_id == AV_CODEC_ID_HEVC || av_codec_ctx->codec_id == AV_CODEC_ID_H265){
+    if(av_codec_ctx->codec_id == AV_CODEC_ID_H265){
         av_dict_set(&param, "preset", "ultrafast", 0);
-        av_dict_set(&param, "x265-params", "qp=20", 0);
-        av_dict_set(&param, "tune", "zero-latency", 0);
+        // av_dict_set(&param, "x265-params", "qp=20", 0);
+        av_dict_set(&param, "tune", "zerolatency", 0);
     }
 
     if (avcodec_open2(av_codec_ctx, enc_data->av_codec, &param) < 0) {
@@ -195,9 +195,14 @@ static  struct common_buffer *ffmpeg_enc_get_pkt(struct module_data *encodec_dev
 
     if (enc_data->enc_status >= 0) {
         enc_data->enc_status = avcodec_receive_packet(av_codec_ctx, pkt);
-        if (enc_data->enc_status == AVERROR(EAGAIN) || enc_data->enc_status == AVERROR_EOF)
+        if (enc_data->enc_status == AVERROR_EOF)
         {
             log_info("encode end.");
+            return NULL;
+        }
+        if (enc_data->enc_status == AVERROR(EAGAIN))
+        {
+            log_info("not data, retry.");
             return NULL;
         }
         else if (enc_data->enc_status < 0) {
@@ -207,14 +212,15 @@ static  struct common_buffer *ffmpeg_enc_get_pkt(struct module_data *encodec_dev
 
         if (pkt->flags & AV_PKT_FLAG_KEY)//找到带I帧的AVPacket
         {
-            log_info("ffmpeg enc:find I frame.");
+            log_info("-------> ffmpeg enc:find I frame size:%d.", pkt->size);
             //找到I帧，插入SPS和PPS
             // code_ctx->on_package(av_codec_ctx->extradata, av_codec_ctx->extradata_size);
         }else{
-            log_info("ffmpeg enc:find P frame.");
+            log_info("ffmpeg enc:find P frame size:%d.", pkt->size);
             // code_ctx->on_package(pkt->data, pkt->size);
         }
         av_packet_unref(pkt);
+        return &enc_data->ret_pkt;
     }
     func_error("get pkt error.");
     return NULL;

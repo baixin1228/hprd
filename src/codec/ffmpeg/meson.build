@@ -11,5 +11,5 @@ ffmpeg_codec_lib = static_library('ffmpeg-codec-lib', ffmpeg_codec_src,
 ffmpeg_codec_dep = declare_dependency(link_with: ffmpeg_codec_lib,
                                        dependencies: ffmpeg_codec_deps)
 
-encodec_libs = [ ffmpeg_codec_lib ]
-encodec_deps = [ ffmpeg_codec_dep ]
+encodec_libs += [ ffmpeg_codec_lib ]
+encodec_deps += [ ffmpeg_codec_dep ]

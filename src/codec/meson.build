@@ -1,5 +1,9 @@
+encodec_libs = []
+encodec_deps = []
+
 if build_machine.system() == 'linux'
     subdir('vaapi')
+    subdir('libx265')
     subdir('ffmpeg')
 endif
 

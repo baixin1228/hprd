@@ -16,7 +16,9 @@ int on_event()
 {
     struct common_buffer * buffer = fb_in_get_fb(in_dev);
     fb_out_put_fb(out_dev, buffer);
-    log_info("on_event");
+    encodec_push_fb(enc_dev, buffer);
+    encodec_get_package(enc_dev);
+    // log_info("on_event");
     return 0;
 }
 

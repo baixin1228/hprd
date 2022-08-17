@@ -1729,15 +1729,15 @@ static char *rc_to_string(int rcmode)
 //     }
 
 //     if (ip_period < 1) {
-//         printf(" ip_period must be greater than 0\n");
+//         printf(" ip_period must be greater than 0");
 //         exit(0);
 //     }
 //     if (intra_period != 1 && (intra_period - 1) % ip_period != 0) {
-//         printf(" intra_period -1 must be a multiplier of ip_period\n");
+//         printf(" intra_period -1 must be a multiplier of ip_period");
 //         exit(0);
 //     }
 //     if (intra_period != 0 && intra_idr_period % intra_period != 0) {
-//         printf(" intra_idr_period must be a multiplier of intra_period\n");
+//         printf(" intra_idr_period must be a multiplier of intra_period");
 //         exit(0);
 //     }
 //     if (ip_period > 1) {
@@ -1752,13 +1752,13 @@ static char *rc_to_string(int rcmode)
 //         srcyuv_fp = fopen(srcyuv_fn, "r");
 
 //         if (srcyuv_fp == NULL)
-//             printf("Open source YUV file %s failed, use auto-generated YUV data\n", srcyuv_fn);
+//             printf("Open source YUV file %s failed, use auto-generated YUV data", srcyuv_fn);
 //         else {
 //             struct stat tmp;
 
 //             fstat(fileno(srcyuv_fp), &tmp);
 //             srcyuv_frames = tmp.st_size / (data->frame_width * data->frame_height * 1.5);
-//             printf("Source YUV file %s with %llu frames\n", srcyuv_fn, srcyuv_frames);
+//             printf("Source YUV file %s with %llu frames", srcyuv_fn, srcyuv_frames);
 
 //             if (frame_count == 0)
 //                 frame_count = srcyuv_frames;
@@ -1770,7 +1770,7 @@ static char *rc_to_string(int rcmode)
 //         recyuv_fp = fopen(recyuv_fn, "w+");
 
 //         if (recyuv_fp == NULL)
-//             printf("Open reconstructed YUV file %s failed\n", recyuv_fn);
+//             printf("Open reconstructed YUV file %s failed", recyuv_fn);
 //     }
 
 //     if (coded_fn == NULL) {
@@ -1791,7 +1791,7 @@ static char *rc_to_string(int rcmode)
 //         exit(1);
 //     }
 //     if (coded_fp == NULL) {
-//         printf("Open file %s failed, exit\n", coded_fn);
+//         printf("Open file %s failed, exit", coded_fn);
 //         exit(1);
 //     }
 
@@ -1799,7 +1799,7 @@ static char *rc_to_string(int rcmode)
 //     frame_ver_stride = (data->frame_height + 63) & (~63);
 //     if (data->frame_width != frame_hor_stride ||
 //         data->frame_height != frame_ver_stride) {
-//         printf("Source frame is %dx%d and will code clip to %dx%d with crop\n",
+//         printf("Source frame is %dx%d and will code clip to %dx%d with crop",
 //                data->frame_width, data->frame_height,
 //                frame_hor_stride, frame_ver_stride
 //               );
@@ -1850,18 +1850,18 @@ static int init_va(struct vaapi_hevc_encodec *data)
     }
 
     if (support_encode == 0) {
-        func_error("Can't find VAEntrypointEncSlice for HEVC profiles\n");
+        func_error("Can't find VAEntrypointEncSlice for HEVC profiles.");
         goto FAIL2;
     } else {
         switch (data->hevc_profile) {
         case VAProfileHEVCMain:
             data->hevc_profile = VAProfileHEVCMain;
-            log_info("Use profile VAProfileHEVCMain\n");
+            log_info("Use profile VAProfileHEVCMain");
             break;
 
         case VAProfileHEVCMain10:
             data->hevc_profile = VAProfileHEVCMain10;
-            log_info("Use profile VAProfileHEVCMain10\n");
+            log_info("Use profile VAProfileHEVCMain10");
             break;
         default:
             log_info("unknow profile. Set to Main");
@@ -1887,7 +1887,7 @@ static int init_va(struct vaapi_hevc_encodec *data)
     CHECK_VASTATUS(va_status, "vaGetConfigAttributes");
     /* check the interested configattrib */
     if ((attrib[VAConfigAttribRTFormat].value & VA_RT_FORMAT_YUV420) == 0) {
-        func_error("Not find desired YUV420 RT format\n");
+        func_error("Not find desired YUV420 RT format.");
         goto FAIL2;
     } else {
         data->config_attrib[data->config_attrib_num].type = VAConfigAttribRTFormat;
@@ -2642,7 +2642,7 @@ static int send_pkt_data(struct vaapi_hevc_encodec *data)
         break;
     }
     printf("%08lld", data->current_frame_encoding);
-    printf("(%06d bytes coded)\n", coded_size);
+    printf("(%06d bytes coded)", coded_size);
 
     return 0;
 }
@@ -2720,7 +2720,7 @@ static int send_pkt_data(struct vaapi_hevc_encodec *data)
 //         case VA_FOURCC_YV12:
 //         case VA_FOURCC_YUY2:
 //         default:
-//             printf("unsupported fourcc in load_surface_yuv\n");
+//             printf("unsupported fourcc in load_surface_yuv");
 //             assert(0);
 //         }
 //     }

@@ -18,7 +18,7 @@ struct module_data *encodec_init_dev(struct encodec_info enc_info)
 	FOREACH_ITEM(item, null_func, ENCODEC_DEV)
 	{
 		dev_ops = item->handler();
-		log_info("%s init...\n", dev_ops->name);
+		log_info("%s init...", dev_ops->name);
 		ret = dev_ops->init(encodec_data, enc_info);
 		if(ret == 0)
 		{

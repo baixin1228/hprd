@@ -3,6 +3,7 @@ encodec_deps = []
 
 if build_machine.system() == 'linux'
     subdir('vaapi')
+    subdir('libx264')
     subdir('libx265')
     subdir('ffmpeg')
 endif

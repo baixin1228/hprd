@@ -82,7 +82,7 @@ static int x265_enc_init(struct module_data *encodec_dev, struct encodec_info en
 
 	enc_data->x265_enc_ctx = x265_encoder_open(enc_data->x265_params);
 	if(enc_data->x265_enc_ctx == NULL){
-		printf("x265_encoder_open err\n");
+		func_error("x265_encoder_open err.");
 		goto FAIL3;
 	}
 
@@ -114,7 +114,7 @@ static int x265_enc_init(struct module_data *encodec_dev, struct encodec_info en
 		}
 		default:
 		{
-			printf("Colorspace Not Support.\n");
+			func_error("Colorspace Not Support.");
 			goto FAIL4;
 		}
 	}
@@ -137,40 +137,50 @@ static int x265_frame_enc(struct module_data *encodec_dev, struct common_buffer 
 {
     struct x265_enc_data *enc_data = encodec_dev->priv;
 
-	switch(enc_data->x265_params->internalCsp){
-		case X265_CSP_RGB:
-		{
-			enc_data->x265_pic_in->planes[0] = buffer->ptr;
-			enc_data->x265_pic_in->planes[1] = NULL;
-			enc_data->x265_pic_in->planes[2] = NULL;
-			break;
+    if(buffer)
+    {
+		switch(enc_data->x265_params->internalCsp){
+			case X265_CSP_RGB:
+			{
+				enc_data->x265_pic_in->planes[0] = buffer->ptr;
+				enc_data->x265_pic_in->planes[1] = NULL;
+				enc_data->x265_pic_in->planes[2] = NULL;
+				break;
+			}
+			case X265_CSP_I420:
+			{
+				enc_data->x265_pic_in->planes[0] = buffer->ptr;
+				enc_data->x265_pic_in->planes[1] = buffer->ptr + enc_data->plan1_size;
+				enc_data->x265_pic_in->planes[2] = buffer->ptr + enc_data->plan1_size * 5 / 4;
+				break;
+			}
+			case X265_CSP_NV12:
+			{
+				enc_data->x265_pic_in->planes[0] = buffer->ptr;
+				enc_data->x265_pic_in->planes[1] = buffer->ptr + enc_data->plan1_size;
+				enc_data->x265_pic_in->planes[2] = NULL;
+				break;
+			}
+			default:
+			{
+				func_error("Colorspace Not Support.");
+				return -1;
+			}
 		}
-		case X265_CSP_I420:
-		{
-			enc_data->x265_pic_in->planes[0] = buffer->ptr;
-			enc_data->x265_pic_in->planes[1] = buffer->ptr + enc_data->plan1_size;
-			enc_data->x265_pic_in->planes[2] = buffer->ptr + enc_data->plan1_size * 5 / 4;
-			break;
-		}
-		case X265_CSP_NV12:
-		{
-			enc_data->x265_pic_in->planes[0] = buffer->ptr;
-			enc_data->x265_pic_in->planes[1] = buffer->ptr + enc_data->plan1_size;
-			enc_data->x265_pic_in->planes[2] = NULL;
-			break;
-		}
-		default:
-		{
-			printf("Colorspace Not Support.\n");
-			return -1;
-		}
-	}
 
-	enc_data->enc_status = x265_encoder_encode(enc_data->x265_enc_ctx,
-		&enc_data->pp_nal,
-		&enc_data->pi_nal,
-		enc_data->x265_pic_in,
-		NULL);
+		enc_data->enc_status = x265_encoder_encode(enc_data->x265_enc_ctx,
+			&enc_data->pp_nal,
+			&enc_data->pi_nal,
+			enc_data->x265_pic_in,
+			NULL);
+    }else{
+		enc_data->enc_status = x265_encoder_encode(enc_data->x265_enc_ctx,
+			&enc_data->pp_nal,
+			&enc_data->pi_nal,
+			NULL,
+			NULL);
+    }
+
 
 	if(enc_data->enc_status == 1)
 	{

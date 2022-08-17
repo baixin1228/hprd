@@ -45,7 +45,7 @@ void show_all_codec()
 			strcat(info, "[Other]");
 			break;
 		}
-		sprintf(info, "%s %10s\n", info, c_temp->name);
+		sprintf(info, "%s %10s", info, c_temp->name);
 		c_temp = c_temp->next;
 	}
 	puts(info);
@@ -59,7 +59,7 @@ int fill_iobuffer(void * opaque, uint8_t *buf, int bufsize){
 	int ret;
 	uint32_t counter = 0;
 
-	// printf("%s %d\n", __func__, bufsize);
+	// printf("%s %d", __func__, bufsize);
 IO_RETRY:
 	ret = read_queue_data(&data->queue, buf, bufsize);
 	if(ret > 0)
@@ -70,7 +70,7 @@ IO_RETRY:
 		usleep(SLEEP_DEFAULT_US);
 		if(counter > 100)
 		{
-			printf("fill_iobuffer:NO DATA\n");
+			printf("fill_iobuffer:NO DATA");
 			counter = 0;
 		}
 
@@ -98,7 +98,7 @@ int _on_av_frame(struct mini_codec* code_ctx, struct gl_obj *gl)
 		}
 		if(data->print_counter > 100)
 		{
-			log_warning("waiting to frame randered:%d next show:%d\n", data->dec_frame, data->show_frame);
+			log_warning("waiting to frame randered:%d next show:%d", data->dec_frame, data->show_frame);
 			data->print_counter = 0;
 		}
 		data->print_counter++;
@@ -121,8 +121,8 @@ int _on_av_frame(struct mini_codec* code_ctx, struct gl_obj *gl)
             ret = imresize(src, dst);
             if(ret != IM_STATUS_SUCCESS)
             {
-                printf("imresize fail.\n");
-                printf("resizing .... %s\n", imStrError(ret));
+                printf("imresize fail.");
+                printf("resizing .... %s", imStrError(ret));
                 exit(-1);
             }
 		}else if(data->use_sw)
@@ -203,7 +203,7 @@ int _ffmpeg_bind_to_texture0(struct mini_codec* code_ctx)
 		drm_buffer = gl->surfaces[i].drm_buffer;
 		if(bind_drm_buffer_to_texture0(gl, &gl->surfaces[i], drm_buffer) != 0)
 		{
-            line_error("bind_drm_buffer_to_texture0 fail. idx:%d\n", i);
+            line_error("bind_drm_buffer_to_texture0 fail. idx:%d", i);
             return -1;
 		}
 	}
@@ -226,17 +226,17 @@ int _reinit_shader(struct mini_codec* code_ctx)
 	{
 		case AV_PIX_FMT_YUV420P:
 			gl_init_shader(gl, DRM_FORMAT_YUV420);
-			log_info("AV_PIX_FMT_YUV420P\n");
+			log_info("AV_PIX_FMT_YUV420P");
 		break;
 		case AV_PIX_FMT_RGB24:
 			gl_init_shader(gl, DRM_FORMAT_RGB888);
-			log_info("AV_PIX_FMT_RGB24\n");
+			log_info("AV_PIX_FMT_RGB24");
 		break;
 		case AV_PIX_FMT_NV12:
-			log_info("AV_PIX_FMT_NV12\n");
+			log_info("AV_PIX_FMT_NV12");
 		break;
 		default:
-			log_info("AV_PIX_FMT_NULL\n");
+			log_info("AV_PIX_FMT_NULL");
 		break;
 	}
 }
@@ -279,7 +279,7 @@ int _ffmpeg_alloc_buffer(struct mini_codec* code_ctx)
 			align_height = SIZE_ALIGN(av_codec_ctx->height, 2);
 		break;
 	}
-	log_info("ffmpeg dec video stream size:%ux%u align size:%ux%u\n", av_codec_ctx->width, av_codec_ctx->height, align_width, align_height);
+	log_info("ffmpeg dec video stream size:%ux%u align size:%ux%u", av_codec_ctx->width, av_codec_ctx->height, align_width, align_height);
 
 	_reinit_shader(code_ctx);
 
@@ -290,7 +290,7 @@ int _ffmpeg_alloc_buffer(struct mini_codec* code_ctx)
 		drm_buffer = get_dma_buf(align_width, align_height, align_width, align_height, 16, true);
 		if(drm_buffer == NULL)
 		{
-			line_error("get_dma_buf failed\n");
+			line_error("get_dma_buf failed");
 			exit(-1);
 		}
 		gl->surfaces[i].drm_buffer = drm_buffer;
@@ -346,7 +346,7 @@ int mini_ffmpeg_unbind_buffer_to_gl(struct mini_codec* code_ctx)
         {
 			if(unbind_texture(gl, &gl->surfaces[i], drm_buffer) != 0)
 			{
-	            line_error("unbind_texture fail. idx:%d\n", i);
+	            line_error("unbind_texture fail. idx:%d", i);
 	            return -1;
 			}
         }
@@ -379,7 +379,7 @@ void ffmpeg_thread(void *opaque)
 			ret = avcodec_decode_video2(data->av_codec_ctx, data->av_frame, &got_picture, data->av_packet);
 			if(ret < 0)
 			{
-				log_warning("Decode Error.\n");
+				log_warning("Decode Error.");
 				continue;
 			}
 			if(got_picture)
@@ -387,7 +387,7 @@ void ffmpeg_thread(void *opaque)
 				_on_av_frame(code_ctx, gl);
 			}
 		}else{
-			log_warning("stream_index error\n", data->av_packet->stream_index);
+			log_warning("stream_index error", data->av_packet->stream_index);
 		}
 		ret = get_queue_data_len(&data->queue);
 		while(ret <= F_BUFFER_SIZE)
@@ -417,7 +417,7 @@ END1:
 END2:
 	data->frame_eos_flag = true;
 	data->thread_exited = true;
-	log_info("ffmpeg thread exit.\n");
+	log_info("ffmpeg thread exit.");
 }
 
 int mini_ffmpeg_dec_init(struct mini_codec* code_ctx, int format)
@@ -429,7 +429,7 @@ int mini_ffmpeg_dec_init(struct mini_codec* code_ctx, int format)
 	int 			y_size;
 	int 			ret, got_picture;
  	
-    log_info("mpp init...\n");
+    log_info("mpp init...");
 
 	av_register_all();
 
@@ -437,8 +437,8 @@ int mini_ffmpeg_dec_init(struct mini_codec* code_ctx, int format)
 	data->av_codec = avcodec_find_decoder(format);
 	if(!data->av_codec)
 	{
-		line_error("ffmpeg not find decoder.\n");
-		line_error("找不到解码器，请检查ffmpeg编译选项.\n");
+		line_error("ffmpeg not find decoder.");
+		line_error("找不到解码器，请检查ffmpeg编译选项.");
 		exit(-1);
 	}
 	av_format_set_video_codec(data->av_ctx, data->av_codec);
@@ -448,8 +448,8 @@ int mini_ffmpeg_dec_init(struct mini_codec* code_ctx, int format)
 	AVIOContext *avio = avio_alloc_context(data->iobuffer, F_BUFFER_SIZE, 0, code_ctx, fill_iobuffer, NULL, NULL);
     if (!avio)
     {
-        line_error("avio_alloc_context error!\n");
-		line_error("不支持AVIO模式，请检查ffmpeg编译选项.\n");
+        line_error("avio_alloc_context error!");
+		line_error("不支持AVIO模式，请检查ffmpeg编译选项.");
         exit(-1);
     }
 	data->av_ctx->pb = avio;
@@ -480,7 +480,7 @@ enum PUSH_STATUS mini_ffmepg_put_packet(struct mini_codec* code_ctx, char *buf, 
 	if(ret == QUEUE_FULL)
 		return PUSH_BUFFER_FULL;
 
-    line_error("ffmpeg: put package fail!\n");
+    line_error("ffmpeg: put package fail!");
 	return PUSH_FAIL;
 }
 
@@ -501,26 +501,26 @@ enum DECODE_FRAME_STATUS mini_ffmepg_get_frame(struct mini_codec* code_ctx)
 	struct display_engine *display_engine = code_ctx->display_engine;
 	struct gl_obj *gl = display_engine->gl;
 
-	// printf("%lx:%s\n", code_ctx, __func__);
+	// printf("%lx:%s", code_ctx, __func__);
 	if(data->stream_idx == -1)
 	{
 		ret = get_queue_data_len(&data->queue);
 		if(ret <= PROBE_SIZE)
 		{
 			/* 通知外面推送数据 */
-			log_info("ffmpeg dec probe:no data\n");
+			log_info("ffmpeg dec probe:no data");
 			return DECODE_ERROR;
 		}
 
 		if(avformat_open_input(&data->av_ctx, NULL, NULL, NULL) != 0){
-			line_error("ffmpeg couldn't open input stream.\n");
-			line_error("视频流有问题，请检查.\n");
+			line_error("ffmpeg couldn't open input stream.");
+			line_error("视频流有问题，请检查.");
 			exit(-1);
 		}
 
 		if(avformat_find_stream_info(data->av_ctx, NULL) < 0){
-			line_error("ffmpeg couldn't find stream information.\n");
-			line_error("视频流有问题，请检查.\n");
+			line_error("ffmpeg couldn't find stream information.");
+			line_error("视频流有问题，请检查.");
 			return DECODE_ERROR;
 		}
 
@@ -531,15 +531,15 @@ enum DECODE_FRAME_STATUS mini_ffmepg_get_frame(struct mini_codec* code_ctx)
 			}
 		
 		if(stream_tmp == -1){
-			line_error("ffmpeg Didn't find a video stream.\n");
-			line_error("视频流有问题，请检查.\n");
+			line_error("ffmpeg Didn't find a video stream.");
+			line_error("视频流有问题，请检查.");
 			exit(-1);
 		}
 
 		data->av_codec_ctx = data->av_ctx->streams[stream_tmp]->codec;
 		if(data->av_codec_ctx == NULL){
-			line_error("av_codec_ctx not found.\n");
-			line_error("视频流有问题，请检查.\n");
+			line_error("av_codec_ctx not found.");
+			line_error("视频流有问题，请检查.");
 			exit(-1);
 		}
 
@@ -549,8 +549,8 @@ enum DECODE_FRAME_STATUS mini_ffmepg_get_frame(struct mini_codec* code_ctx)
 		data->av_codec_ctx->thread_type = FF_THREAD_FRAME;
 
 		if(avcodec_open2(data->av_codec_ctx, data->av_codec, NULL) < 0){
-			line_error("Could not open codec.\n");
-			line_error("ffmpeg出错.\n");
+			line_error("Could not open codec.");
+			line_error("ffmpeg出错.");
 			exit(-1);
 		}
 		_ffmpeg_alloc_buffer(code_ctx);
@@ -559,7 +559,7 @@ enum DECODE_FRAME_STATUS mini_ffmepg_get_frame(struct mini_codec* code_ctx)
 
 	if(data->stream_idx == -1)
 	{
-		line_error("ffmpeg dec error, stream_idx is -1.\n");
+		line_error("ffmpeg dec error, stream_idx is -1.");
 		return DECODE_ERROR;
 	}
 
@@ -614,7 +614,7 @@ int mini_ffmepg_dec_release(struct mini_codec* code_ctx)
 		if(counter > 50)
 		{
 			usleep(SLEEP_DEFAULT_US);
-			log_info("ffmepg dec: waiting for thread exit.\n");
+			log_info("ffmepg dec: waiting for thread exit.");
 			counter = 0;
 		}
 	}
@@ -637,5 +637,5 @@ int mini_ffmepg_dec_release(struct mini_codec* code_ctx)
 	}
 
 	free(data);
-	log_info("ffmpeg dec release.\n");
+	log_info("ffmpeg dec release.");
 }

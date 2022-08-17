@@ -52,7 +52,7 @@ static int xext_dev_init(struct module_data *dev)
 
 	if(priv->display == NULL)
 	{
-		func_error("XOpenDisplay: cannot displayect to X server %s\n",
+		func_error("XOpenDisplay: cannot displayect to X server %s.",
 			XDisplayName(DISPLAY_NAME));
 		goto FAIL2;
 	}
@@ -67,7 +67,7 @@ static int xext_dev_init(struct module_data *dev)
 	if(XGetWindowAttributes(priv->display, priv->root_win,
 		&priv->windowattr) == 0)
 	{
-		func_error("icvVideoRender: failed to get window attributes.\n");
+		func_error("icvVideoRender: failed to get window attributes.");
 		goto FAIL3;
 	}
 
@@ -77,14 +77,14 @@ static int xext_dev_init(struct module_data *dev)
 	priv->shm.shmaddr = (char *) -1;
 	int w = DisplayWidth(priv->display, priv->screen_num);
 	int h = DisplayHeight(priv->display, priv->screen_num);
-	log_info("x11 xext informations of screen:%d width:%d height:%d\n" , priv->screen_num
+	log_info("x11 xext informations of screen:%d width:%d height:%d." , priv->screen_num
 		, w , h);
 
 	priv->xim = XShmCreateImage(priv->display, priv->visual, priv->depth, ZPixmap, NULL,
 		&priv->shm, w, h);
 
 	if (priv->xim == NULL) {
-		func_error("XShmCreateImage failed.\n");
+		func_error("XShmCreateImage failed.");
 		goto FAIL3;
 	}
 
@@ -92,7 +92,7 @@ static int xext_dev_init(struct module_data *dev)
 		(size_t)priv->xim->bytes_per_line * priv->xim->height, IPC_CREAT | 0600);
 
 	if (priv->shm.shmid == -1) {
-		func_error("shmget failed.\n");
+		func_error("shmget failed.");
 		goto FAIL4;
 	}
 
@@ -100,12 +100,12 @@ static int xext_dev_init(struct module_data *dev)
 	priv->shm.shmaddr = priv->xim->data = (char *) shmat(priv->shm.shmid, 0, 0);
 
 	if (priv->shm.shmaddr == (char *)-1) {
-		func_error("shmat failed.\n");
+		func_error("shmat failed.");
 		goto FAIL5;
 	}
 
 	if (!XShmAttach(priv->display, &priv->shm)) {
-		func_error("XShmAttach failed.\n");
+		func_error("XShmAttach failed.");
 		goto FAIL6;
 	}
 	XSync(priv->display, False);

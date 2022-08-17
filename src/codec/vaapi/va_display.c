@@ -96,7 +96,7 @@ print_display_names(void)
 {
     const VADisplayHooks **h;
 
-    log_info("Available displays:\n");
+    log_info("Available displays:");
     for (h = g_display_hooks_available; *h != NULL; h++)
         log_info("  %s", (*h)->name);
 }

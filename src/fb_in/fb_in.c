@@ -18,7 +18,7 @@ struct module_data *fb_in_init_dev(void)
 	FOREACH_ITEM(item, null_func, FRAMEBUFFER_INPUT_DEV)
 	{
 		dev_ops = item->handler();
-		log_info("%s init...\n", dev_ops->name);
+		log_info("%s init...", dev_ops->name);
 		ret = dev_ops->init(fb_in_data);
 		if(ret == 0)
 		{

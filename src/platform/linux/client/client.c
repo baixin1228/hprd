@@ -4,9 +4,9 @@
 #include "string.h"
 #include "buffer.h"
 #include "module.h"
-#include "fb_in/fb_in.h"
-#include "fb_out/fb_out.h"
-#include "codec/encodec.h"
+#include "fb_in.h"
+#include "fb_out.h"
+#include "encodec.h"
 
 struct module_data * in_dev;
 struct module_data * out_dev;

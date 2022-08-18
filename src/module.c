@@ -2,7 +2,7 @@
 
 #include "util.h"
 #include "buffer.h"
-#include "fb_in/fb_in.h"
+#include "fb_in.h"
 
 MODULE_BOUNDARY(null_func, FRAMEBUFFER_INPUT_DEV);
 

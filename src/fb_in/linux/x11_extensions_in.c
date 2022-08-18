@@ -10,7 +10,7 @@
 #include "util.h"
 #include "buffer.h"
 #include "module.h"
-#include "fb_in/fb_in.h"
+#include "fb_in.h"
 
 struct x11_extensions
 {

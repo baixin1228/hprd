@@ -13,10 +13,12 @@ struct module_data
 #define FRAMEBUFFER_OUTPUT_DEV  	1
 #define ENCODEC_DEV  				2
 #define DECODEC_DEV  				3
+#define FRAME_CONVERT_DEV  			4
 
-#define DEVICE_PRIO_HEIGHT   		0
-#define DEVICE_PRIO_MIDDLE   		1
-#define DEVICE_PRIO_LOW   			2
+#define DEVICE_PRIO_VERYHEIGHT 		0
+#define DEVICE_PRIO_HEIGHT   		1
+#define DEVICE_PRIO_MIDDLE   		2
+#define DEVICE_PRIO_LOW   			3
 
 #define _REGISTE_MODULE_DEV(dev, class, prio)						\
 void *_##dev##registe(void)											\

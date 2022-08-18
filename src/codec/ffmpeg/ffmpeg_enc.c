@@ -3,7 +3,7 @@
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include "util.h"
-#include "codec/encodec.h"
+#include "encodec.h"
 
 struct ffmpeg_enc_data{
     AVFormatContext *av_ctx;

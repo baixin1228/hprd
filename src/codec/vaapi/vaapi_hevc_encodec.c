@@ -17,7 +17,7 @@
 
 #include "util.h"
 #include "va_display.h"
-#include "codec/encodec.h"
+#include "encodec.h"
 
 #define CHECK_VASTATUS(va_status,func)                                  \
     if (va_status != VA_STATUS_SUCCESS) {                               \

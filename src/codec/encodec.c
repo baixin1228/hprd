@@ -2,7 +2,7 @@
 
 #include "util.h"
 #include "buffer.h"
-#include "codec/encodec.h"
+#include "encodec.h"
 
 MODULE_BOUNDARY(null_func, ENCODEC_DEV);
 

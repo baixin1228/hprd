@@ -2,7 +2,7 @@
 
 #include "util.h"
 #include "module.h"
-#include "fb_in/fb_in.h"
+#include "fb_in.h"
 
 int main()
 {

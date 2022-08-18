@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "util.h"
-#include "codec/encodec.h"
+#include "encodec.h"
 
 #define PKT_BUFFER_SIZE (10 * 1024 * 1024)
 

@@ -3,7 +3,7 @@
 
 #include "module.h"
 #include "util.h"
-#include "fb_out/fb_out.h"
+#include "fb_out.h"
 
 struct sdl_fd_out
 {

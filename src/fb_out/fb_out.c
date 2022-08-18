@@ -1,7 +1,7 @@
 #include <stdlib.h>
 
 #include "util.h"
-#include "fb_out/fb_out.h"
+#include "fb_out.h"
 
 MODULE_BOUNDARY(null_func, FRAMEBUFFER_OUTPUT_DEV);
 

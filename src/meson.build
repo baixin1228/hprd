@@ -9,6 +9,8 @@ common_src_dep = declare_dependency(
 	link_with : common_src,
 	)
 
+subdir('frame_convert')
+
 subdir('codec')
 
 if get_option('build_target') == 'server'

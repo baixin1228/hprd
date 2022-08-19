@@ -114,6 +114,7 @@ static int xext_dev_init(struct module_data *dev)
 	priv->buffer.hor_stride = w;
 	priv->buffer.height = h;
 	priv->buffer.ver_stride = h;
+	priv->buffer.bpp = 24;
 	priv->buffer.ptr = priv->xim->data;
 
 	dev->priv = (void *)priv;

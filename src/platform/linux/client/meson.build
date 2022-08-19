@@ -1,10 +1,12 @@
-client_deps = [	common_src_dep, 
+client_deps = [	common_src_dep,
+				frame_conv_dep,
 				frame_buffer_input_dep, 
 				frame_buffer_output_dep, 
 				encodec_dep
 				]
 
-client_libs = [	frame_buffer_input,
+client_libs = [	frame_convert,
+				frame_buffer_input,
 				frame_buffer_output,
 				encodec
 				]

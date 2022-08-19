@@ -21,6 +21,7 @@ int on_event()
 
     buffer = fb_in_get_fb(in_dev);
     fb_out_put_fb(out_dev, buffer);
+
     encodec_push_fb(enc_dev, buffer);
     pkt = encodec_get_package(enc_dev);
     fwrite(pkt->ptr, pkt->size, 1, fp);
@@ -43,7 +44,7 @@ int main(int argc, char* argv[])
     enc_info.quality = 80;
     enc_dev = encodec_init_dev(enc_info);
 
-    fp = fopen("out.h264", "wb+");
+    fp = fopen("out.h264", "wb");
     if(enc_dev == NULL)
         exit(-1);
 

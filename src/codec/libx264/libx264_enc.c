@@ -4,6 +4,7 @@
 #include <string.h>
 #include "util.h"
 #include "encodec.h"
+#include "frame_convert.h"
 
 #define PKT_BUFFER_SIZE (10 * 1024 * 1024)
 
@@ -20,6 +21,10 @@ struct x264_enc_data{
     int enc_status;
 
     struct common_buffer ret_pkt;
+
+    struct common_buffer fc_buf;
+    struct module_data *fc;
+    bool use_fc;
 };
 
 static int _com_fb_fmt_to_x264_fmt(enum COMMON_BUFFER_FORMAT format)
@@ -61,13 +66,23 @@ static int x264_enc_init(struct module_data *encodec_dev, struct encodec_info en
         goto FAIL1;
     }
  
+ 	int width = enc_info.fb_info.width;
+	int height = enc_info.fb_info.height;
+
 	int csp = _com_fb_fmt_to_x264_fmt(enc_info.fb_info.format);
 	if(csp == -1)
 	{
+		enc_data->fc = fc_init_dev();
+		enc_data->fc_buf.width = width;
+		enc_data->fc_buf.height = height;
+		enc_data->fc_buf.hor_stride = width;
+		enc_data->fc_buf.ver_stride = height;
+		enc_data->fc_buf.format = YUV420P;
+		enc_data->fc_buf.bpp = 16;
+		enc_data->fc_buf.ptr = malloc(width * height * 2);
 		csp = X264_CSP_I420;
+		enc_data->use_fc = true;
 	}
-	int width = enc_info.fb_info.width;
-	int height = enc_info.fb_info.height;
 
 	/* rt enc */
 	x264_param_default_preset(&enc_data->x264_params, "ultrafast", "zerolatency");
@@ -143,28 +158,36 @@ FAIL1:
 static int x264_frame_enc(struct module_data *encodec_dev, struct common_buffer *buffer)
 {
     struct x264_enc_data *enc_data = encodec_dev->priv;
+    struct common_buffer *_buffer;
+    if(enc_data->use_fc)
+    {
+    	fc_convert(enc_data->fc, buffer, &enc_data->fc_buf);
+    	_buffer = &enc_data->fc_buf;
+    }else{
+    	_buffer = buffer;
+    }
 
-    if(buffer)
+    if(_buffer)
     {
 		switch(enc_data->x264_params.i_csp){
 			case X264_CSP_RGB:
 			{
-				enc_data->x264_pic_in->img.plane[0] = (uint8_t *)(buffer->ptr);
+				enc_data->x264_pic_in->img.plane[0] = (uint8_t *)(_buffer->ptr);
 				enc_data->x264_pic_in->img.plane[1] = NULL;
 				enc_data->x264_pic_in->img.plane[2] = NULL;
 				break;
 			}
 			case X264_CSP_I420:
 			{
-				enc_data->x264_pic_in->img.plane[0] = (uint8_t *)(buffer->ptr);
-				enc_data->x264_pic_in->img.plane[1] = (uint8_t *)(buffer->ptr + enc_data->plan1_size);
-				enc_data->x264_pic_in->img.plane[2] = (uint8_t *)(buffer->ptr + enc_data->plan1_size * 5 / 4);
+				enc_data->x264_pic_in->img.plane[0] = (uint8_t *)(_buffer->ptr);
+				enc_data->x264_pic_in->img.plane[1] = (uint8_t *)(_buffer->ptr + enc_data->plan1_size);
+				enc_data->x264_pic_in->img.plane[2] = (uint8_t *)(_buffer->ptr + enc_data->plan1_size * 5 / 4);
 				break;
 			}
 			case X264_CSP_NV12:
 			{
-				enc_data->x264_pic_in->img.plane[0] = (uint8_t *)(buffer->ptr);
-				enc_data->x264_pic_in->img.plane[1] = (uint8_t *)(buffer->ptr + enc_data->plan1_size);
+				enc_data->x264_pic_in->img.plane[0] = (uint8_t *)(_buffer->ptr);
+				enc_data->x264_pic_in->img.plane[1] = (uint8_t *)(_buffer->ptr + enc_data->plan1_size);
 				enc_data->x264_pic_in->img.plane[2] = NULL;
 				break;
 			}

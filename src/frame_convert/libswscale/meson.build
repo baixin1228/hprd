@@ -1,13 +1,13 @@
-x264_codec_src = ['libx264_enc.c']
-x264_codec_deps = [ dependency('x264')]
+sw_scale_src = ['libswscale.c']
+sw_scale_deps = [ dependency('libswscale'), dependency('libavcodec')]
 
-x264_codec_lib = static_library('ffmpeg-codec-lib', x264_codec_src,
-                                   dependencies: x264_codec_deps,
+sw_scale_lib = static_library('ffmpeg-codec-lib', sw_scale_src,
+                                   dependencies: sw_scale_deps,
                                    include_directories: [ include_directories('.'),
                                                           include_directories('../../include')])
 
-x264_codec_dep = declare_dependency(link_with: x264_codec_lib,
-                                       dependencies: x264_codec_deps)
+sw_scale_dep = declare_dependency(link_with: sw_scale_lib,
+                                       dependencies: sw_scale_deps)
 
-encodec_libs += [ x264_codec_lib ]
-encodec_deps += [ x264_codec_dep ]
+frame_conv_libs += [ sw_scale_lib ]
+frame_conv_deps += [ sw_scale_dep ]

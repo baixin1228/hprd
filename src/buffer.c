@@ -6,10 +6,10 @@ uint32_t get_line_size(struct common_buffer *buf)
 	switch(buf->format)
 	{
 		case RGB444:
-			ret = buf->hor_stride * buf->bpp;
+			ret = buf->hor_stride * buf->bpp / 8;
 		break;
 		case RGB888:
-			ret = buf->hor_stride * buf->bpp;
+			ret = buf->hor_stride * buf->bpp / 8;
 		break;
 		case YUV420P:
 			ret = buf->hor_stride;
@@ -18,7 +18,7 @@ uint32_t get_line_size(struct common_buffer *buf)
 			ret = buf->hor_stride;
 		break;
 		default:
-			ret = buf->hor_stride * buf->bpp;
+			ret = buf->hor_stride * buf->bpp / 8;
 		break;
 	}
 	return ret;

@@ -28,13 +28,16 @@ static int _com_fb_fmt_to_x264_fmt(enum COMMON_BUFFER_FORMAT format)
     {
         case RGB444:
         {
-        	func_error("not support fb format.");
+        	func_error("not support fb format RGB444.");
             return -1;
         	break;
         }
         case RGB888:
-            return X264_CSP_RGB;
-        break;
+        {
+        	func_error("not support fb format RGB888.");
+            return -1;
+        	break;
+        }
         case YUV420P:
             return X264_CSP_I420;
         break;
@@ -59,7 +62,10 @@ static int x264_enc_init(struct module_data *encodec_dev, struct encodec_info en
     }
  
 	int csp = _com_fb_fmt_to_x264_fmt(enc_info.fb_info.format);
-	csp = X264_CSP_I420;
+	if(csp == -1)
+	{
+		csp = X264_CSP_I420;
+	}
 	int width = enc_info.fb_info.width;
 	int height = enc_info.fb_info.height;
 
@@ -71,11 +77,13 @@ static int x264_enc_init(struct module_data *encodec_dev, struct encodec_info en
 	enc_data->x264_params.i_csp = csp;
 	enc_data->x264_params.i_width = width;
 	enc_data->x264_params.i_height = height;
-	enc_data->x264_params.i_fps_num = 60;
+	enc_data->x264_params.i_fps_num = 10;
 	enc_data->x264_params.i_fps_den = 1;
 
+	enc_data->x264_params.i_threads = 4;
+
 	enc_data->x264_params.rc.i_rc_method = X264_RC_CQP;
-	enc_data->x264_params.rc.i_qp_constant = 30;
+	enc_data->x264_params.rc.i_qp_constant = 25;
 
 	enc_data->x264_enc_ctx = x264_encoder_open(&enc_data->x264_params);
 	if(enc_data->x264_enc_ctx == NULL){
@@ -166,7 +174,6 @@ static int x264_frame_enc(struct module_data *encodec_dev, struct common_buffer 
 				return -1;
 			}
 		}
-
 		enc_data->enc_status = x264_encoder_encode(enc_data->x264_enc_ctx,
 			&enc_data->pp_nals,
 			&enc_data->i_nal,
@@ -180,6 +187,26 @@ static int x264_frame_enc(struct module_data *encodec_dev, struct common_buffer 
 			enc_data->x264_pic_out);
     }
 
+    if(enc_data->x264_pic_out->i_type == X264_TYPE_IDR)
+    {
+    	log_info("x264 find IDR");
+    }
+    if(enc_data->x264_pic_out->i_type == X264_TYPE_I)
+    {
+    	log_info("x264 find I");
+    }
+    if(enc_data->x264_pic_out->i_type == X264_TYPE_P)
+    {
+    	log_info("x264 find P");
+    }
+    if(enc_data->x264_pic_out->i_type == X264_TYPE_B)
+    {
+    	log_info("x264 find B");
+    }
+    if(enc_data->x264_pic_out->i_type == X264_TYPE_IDR)
+    {
+    	log_info("x264 find IDR");
+    }
 
 	if(enc_data->enc_status == 1)
 	{
@@ -199,14 +226,20 @@ static  struct common_buffer *x264_enc_get_pkt(struct module_data *encodec_dev)
 		enc_data->ret_pkt.size = 0;
 		for(i=0; i < enc_data->i_nal; i++)
 		{
-			memcpy(enc_data->ret_pkt.ptr, enc_data->pp_nals[i].p_payload, enc_data->pp_nals[i].i_payload);
+			if(enc_data->pp_nals[i].i_type == NAL_PPS)
+			{
+				log_info("x264 find PPS.");
+			}
+			if(enc_data->pp_nals[i].i_type == NAL_SPS)
+			{
+				log_info("x264 find SPS.");
+			}
+			memcpy(enc_data->ret_pkt.ptr + enc_data->ret_pkt.size, enc_data->pp_nals[i].p_payload, enc_data->pp_nals[i].i_payload);
 			enc_data->ret_pkt.size += enc_data->pp_nals[i].i_payload;
 		}
-		log_info("x264 enc success, pkt size:%4dkb i_nal:%d.", enc_data->ret_pkt.size / 1024, enc_data->i_nal);
 		return &enc_data->ret_pkt;
 	}
 
-	log_info("x264 enc no data, i_nal:%d.", enc_data->i_nal);
 	return NULL;
 }
 

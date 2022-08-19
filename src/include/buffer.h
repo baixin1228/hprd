@@ -1,6 +1,8 @@
 #ifndef __BUFFER_H__
 #define __BUFFER_H__
 
+#include <stdint.h>
+#include <stdlib.h>
 #include "list.h"
 
 enum COMMON_BUFFER_FORMAT
@@ -48,4 +50,7 @@ struct frame_buffer_info
 	uint32_t hor_stride;
 	uint32_t ver_stride;
 };
+
+uint32_t get_line_size(struct common_buffer *buf);
+
 #endif

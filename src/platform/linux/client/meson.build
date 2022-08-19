@@ -17,4 +17,4 @@ hprd_client = executable('hprd_client', ['client.c'],
 				install : true
 			)
 
-test('hprd_client_test', hprd_client, is_parallel : false)
+test('hprd_client_test', hprd_client, is_parallel : false, timeout: 100)

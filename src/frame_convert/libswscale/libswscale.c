@@ -10,8 +10,8 @@
 
 struct sw_scale_data{
 	struct SwsContext *sw_ctx;
-	struct common_buffer *dst;
-	struct common_buffer *src;
+	struct common_buffer dst;
+	struct common_buffer src;
 };
 
 static int _com_fb_fmt_to_av_fmt(enum COMMON_BUFFER_FORMAT format)
@@ -59,8 +59,8 @@ static int _update_sw_ctx(struct sw_scale_data *sw_data)
 	if(sw_data->sw_ctx)
 		sws_freeContext(sw_data->sw_ctx);
 
-	struct common_buffer *src = sw_data->src;
-	struct common_buffer *dst = sw_data->dst;
+	struct common_buffer *src = &sw_data->src;
+	struct common_buffer *dst = &sw_data->dst;
 	sw_data->sw_ctx = sws_getContext(
 		src->width,
 		src->height,
@@ -78,15 +78,42 @@ static int _update_sw_ctx(struct sw_scale_data *sw_data)
 
 static  int sw_scale_convert(struct module_data *sw_scale_dev, struct common_buffer *src, struct common_buffer *dst)
 {
+	bool update_sw = false;
 	struct sw_scale_data *sw_data = sw_scale_dev->priv;
-	sw_data->src = buffer;
 
 	if(!sw_data->sw_ctx)
 	{
+		memcpy(sw_data->src, src, sizeof(struct common_buffer));
+		memcpy(sw_data->dst, dst, sizeof(struct common_buffer));
 		_update_sw_ctx(sw_data);
+	}else{
+		if(sw_data->src.width != src->width
+			|| sw_data->src.height != src->height
+			|| sw_data->src.format != src->format)
+		{
+			memcpy(sw_data->src, src, sizeof(struct common_buffer));
+			update_sw = true;
+		}
+		if(sw_data->dst.width != dst->width
+			|| sw_data->dst.height != dst->height
+			|| sw_data->dst.format != dst->format)
+		{
+			memcpy(sw_data->dst, dst, sizeof(struct common_buffer));
+			update_sw = true;
+		}
+		if(update_sw)
+		{
+			_update_sw_ctx(sw_data);
+		}
 	}
-	
-    sws_scale(sw_data->sw_ctx, frame_data, frame_linesize, 0, pFrame->height, pFrame->data, pFrame->linesize);
+
+    sws_scale(sw_data->sw_ctx,
+    	src->ptr,
+    	get_line_size(src),
+    	0,
+    	src->height,
+    	dst->ptr,
+    	get_line_size(dst));
 
 	return 0;
 }

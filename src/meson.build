@@ -1,4 +1,4 @@
-common_src = ['ld_help.c', 'util.c']
+common_src = ['ld_help.c', 'util.c', 'buffer.c']
 common_src = static_library('frame-buffer-output-lib',
 	common_src,
 	include_directories : include_directories('include'),

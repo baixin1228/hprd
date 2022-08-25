@@ -23,13 +23,7 @@ static int _com_fb_fmt_to_x265_fmt(enum COMMON_BUFFER_FORMAT format)
 {
     switch(format)
     {
-        case RGB444:
-        {
-        	func_error("not support fb format.");
-            return -1;
-        	break;
-        }
-        case RGB888:
+        case ARGB8888:
             return X265_CSP_RGB;
         break;
         case YUV420P:

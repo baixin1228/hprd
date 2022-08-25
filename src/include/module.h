@@ -13,7 +13,7 @@ struct module_data
 #define FRAMEBUFFER_OUTPUT_DEV  	1
 #define ENCODEC_DEV  				2
 #define DECODEC_DEV  				3
-#define FRAME_CONVERT_DEV  			4
+#define fb_convert_DEV  			4
 
 #define DEVICE_PRIO_VERYHEIGHT 		0
 #define DEVICE_PRIO_HEIGHT   		1

@@ -1,15 +1,17 @@
-common_src = ['ld_help.c', 'util.c', 'buffer.c']
-common_src = static_library('frame-buffer-output-lib',
+common_src = ['ld_help.c', 'util.c', 'buffer.c', 'mini_ring_queue.c']
+
+common = static_library('common-lib',
 	common_src,
+	dependencies : [ dependency('openmp') ],
 	include_directories : include_directories('include'),
   )
 
-common_src_dep = declare_dependency(
+common_dep = declare_dependency(
 	include_directories : include_directories('include'),
-	link_with : common_src,
+	link_with : common,
 	)
 
-subdir('frame_convert')
+subdir('fb_convert')
 
 subdir('codec')
 

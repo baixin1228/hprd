@@ -1,9 +1,9 @@
-#ifndef __FRAME_CONVERT_H__
-#define __FRAME_CONVERT_H__
+#ifndef __FB_CONVERT_H__
+#define __FB_CONVERT_H__
 #include "buffer.h"
 #include "module.h"
 
-struct frame_convert_ops
+struct fb_convert_ops
 {
 	char * name;
 	int (* init)(struct module_data *dev);
@@ -13,7 +13,7 @@ struct frame_convert_ops
 	int (* release)(struct module_data *dev);
 };
 
-#define REGISTE_FRAME_CONVERT_DEV(dev, prio) REGISTE_MODULE_DEV(dev, FRAME_CONVERT_DEV, prio)
+#define REGISTE_fb_convert_DEV(dev, prio) REGISTE_MODULE_DEV(dev, fb_convert_DEV, prio)
 
 struct module_data *fc_init_dev();
 int fc_convert(struct module_data *dev,

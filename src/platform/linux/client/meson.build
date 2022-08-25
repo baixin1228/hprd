@@ -1,14 +1,16 @@
-client_deps = [	common_src_dep,
+client_deps = [	common_dep,
 				frame_conv_dep,
 				frame_buffer_input_dep, 
 				frame_buffer_output_dep, 
-				encodec_dep
+				encodec_dep,
+				decodec_dep,
 				]
 
-client_libs = [	frame_convert,
+client_libs = [	fb_convert,
 				frame_buffer_input,
 				frame_buffer_output,
-				encodec
+				encodec,
+				decodec,
 				]
 
 hprd_client = executable('hprd_client', ['client.c'], 
@@ -19,4 +21,4 @@ hprd_client = executable('hprd_client', ['client.c'],
 				install : true
 			)
 
-test('hprd_client_test', hprd_client, is_parallel : false, timeout: 100)
+test('hprd_client_test', hprd_client, is_parallel : false, timeout: 1000)

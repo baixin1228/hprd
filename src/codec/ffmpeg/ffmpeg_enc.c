@@ -4,6 +4,7 @@
 #include <libavformat/avformat.h>
 #include "util.h"
 #include "encodec.h"
+#include "ffmpeg_util.h"
 
 struct ffmpeg_enc_data{
     AVFormatContext *av_ctx;
@@ -22,10 +23,7 @@ static int _com_fb_fmt_to_av_fmt(enum COMMON_BUFFER_FORMAT format)
 {
     switch(format)
     {
-        case RGB444:
-            return AV_PIX_FMT_RGB444LE;
-        break;
-        case RGB888:
+        case ARGB8888:
             return AV_PIX_FMT_RGB24;
         break;
         case YUV420P:
@@ -36,22 +34,6 @@ static int _com_fb_fmt_to_av_fmt(enum COMMON_BUFFER_FORMAT format)
         break;
         default:
             return AV_PIX_FMT_RGB24;
-        break;
-    }
-}
-
-static int _com_fmt_to_ff_fmt(int fmt)
-{
-    switch(fmt)
-    {
-        case STREAM_H264:
-            return AV_CODEC_ID_H264;
-        break;
-        case STREAM_H265:
-            return AV_CODEC_ID_H265;
-        break;
-        default:
-            return AV_CODEC_ID_H265;
         break;
     }
 }
@@ -70,7 +52,7 @@ static int ffmpeg_enc_init(struct module_data *encodec_dev, struct encodec_info 
         goto FAIL1;
     }
 
-    format = _com_fmt_to_ff_fmt(enc_info.stream_fmt);
+    format = com_fmt_to_av_fmt(enc_info.stream_fmt);
     enc_data->av_codec = avcodec_find_encoder(format);
     if (!enc_data->av_codec) {
         func_error("ffmpeg enc avcodec not found.");

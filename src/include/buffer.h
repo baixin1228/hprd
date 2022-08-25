@@ -7,19 +7,13 @@
 
 enum COMMON_BUFFER_FORMAT
 {
-	RGB444,
-	RGB888,
+	ARGB8888,
 	YUV420P,
 	NV12,
 };
 
 struct common_buffer
 {
-	/* is it drm_buffer */
-	bool is_dma;
-	/* is it bind to egl */
-	bool is_bind;
-
 	enum COMMON_BUFFER_FORMAT format;
 	uint32_t width;
 	uint32_t height;
@@ -28,9 +22,14 @@ struct common_buffer
 	uint64_t size;
 	uint32_t pitch;
 	uint8_t bpp;
+	uint64_t id;
 
+	/* is it drm_buffer */
+	bool is_dma;
+	/* is it bind to egl */
+	bool is_bind;
 	/* buffer vaddr */
-	char* ptr;
+	uint8_t *ptr;
 	/* dma buffer fd */
 	int32_t fd;
 	/* dma buffer hnd */

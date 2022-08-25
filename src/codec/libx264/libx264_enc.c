@@ -4,7 +4,7 @@
 #include <string.h>
 #include "util.h"
 #include "encodec.h"
-#include "frame_convert.h"
+#include "fb_convert.h"
 
 #define PKT_BUFFER_SIZE (10 * 1024 * 1024)
 
@@ -20,6 +20,8 @@ struct x264_enc_data{
 	int i_nal;
     int enc_status;
 
+    uint64_t success_fb_cnt;
+
     struct common_buffer ret_pkt;
 
     struct common_buffer fc_buf;
@@ -31,15 +33,9 @@ static int _com_fb_fmt_to_x264_fmt(enum COMMON_BUFFER_FORMAT format)
 {
     switch(format)
     {
-        case RGB444:
+        case ARGB8888:
         {
-        	func_error("not support fb format RGB444.");
-            return -1;
-        	break;
-        }
-        case RGB888:
-        {
-        	func_error("not support fb format RGB888.");
+        	func_error("not support fb format ARGB8888.");
             return -1;
         	break;
         }
@@ -92,13 +88,15 @@ static int x264_enc_init(struct module_data *encodec_dev, struct encodec_info en
 	enc_data->x264_params.i_csp = csp;
 	enc_data->x264_params.i_width = width;
 	enc_data->x264_params.i_height = height;
-	enc_data->x264_params.i_fps_num = 10;
+	enc_data->x264_params.i_fps_num = 30;
 	enc_data->x264_params.i_fps_den = 1;
+	enc_data->x264_params.i_keyint_min = 2;
+	enc_data->x264_params.i_keyint_max = 20;
 
 	enc_data->x264_params.i_threads = 4;
 
 	enc_data->x264_params.rc.i_rc_method = X264_RC_CQP;
-	enc_data->x264_params.rc.i_qp_constant = 25;
+	enc_data->x264_params.rc.i_qp_constant = 20;
 
 	enc_data->x264_enc_ctx = x264_encoder_open(&enc_data->x264_params);
 	if(enc_data->x264_enc_ctx == NULL){
@@ -159,6 +157,7 @@ static int x264_frame_enc(struct module_data *encodec_dev, struct common_buffer 
 {
     struct x264_enc_data *enc_data = encodec_dev->priv;
     struct common_buffer *_buffer;
+
     if(enc_data->use_fc)
     {
     	fc_convert(enc_data->fc, buffer, &enc_data->fc_buf);
@@ -218,21 +217,19 @@ static int x264_frame_enc(struct module_data *encodec_dev, struct common_buffer 
     {
     	log_info("x264 find I");
     }
-    if(enc_data->x264_pic_out->i_type == X264_TYPE_P)
-    {
-    	log_info("x264 find P");
-    }
-    if(enc_data->x264_pic_out->i_type == X264_TYPE_B)
-    {
-    	log_info("x264 find B");
-    }
-    if(enc_data->x264_pic_out->i_type == X264_TYPE_IDR)
-    {
-    	log_info("x264 find IDR");
-    }
+    // if(enc_data->x264_pic_out->i_type == X264_TYPE_P)
+    // {
+    // 	log_info("x264 find P");
+    // }
+    // if(enc_data->x264_pic_out->i_type == X264_TYPE_B)
+    // {
+    // 	log_info("x264 find B");
+    // }
 
-	if(enc_data->enc_status == 1)
+	if(enc_data->enc_status != 0)
 	{
+	    enc_data->success_fb_cnt++;
+    	// printf("i_frame_size:%6d record:%lu enc:%lu\n", enc_data->enc_status, _buffer->id, enc_data->success_fb_cnt);
 		return 0;
 	}else{
 		return -1;
@@ -249,14 +246,14 @@ static  struct common_buffer *x264_enc_get_pkt(struct module_data *encodec_dev)
 		enc_data->ret_pkt.size = 0;
 		for(i=0; i < enc_data->i_nal; i++)
 		{
-			if(enc_data->pp_nals[i].i_type == NAL_PPS)
-			{
-				log_info("x264 find PPS.");
-			}
-			if(enc_data->pp_nals[i].i_type == NAL_SPS)
-			{
-				log_info("x264 find SPS.");
-			}
+			// if(enc_data->pp_nals[i].i_type == NAL_PPS)
+			// {
+			// 	log_info("x264 find PPS.");
+			// }
+			// if(enc_data->pp_nals[i].i_type == NAL_SPS)
+			// {
+			// 	log_info("x264 find SPS.");
+			// }
 			memcpy(enc_data->ret_pkt.ptr + enc_data->ret_pkt.size, enc_data->pp_nals[i].p_payload, enc_data->pp_nals[i].i_payload);
 			enc_data->ret_pkt.size += enc_data->pp_nals[i].i_payload;
 		}

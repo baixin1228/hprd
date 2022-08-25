@@ -2855,4 +2855,4 @@ struct encodec_ops vaapi_hevc_encodec_dev =
     .release            = vaapi_encodec_release
 };
 
-REGISTE_ENCODEC_DEV(vaapi_hevc_encodec_dev, DEVICE_PRIO_HEIGHT);
+// REGISTE_ENCODEC_DEV(vaapi_hevc_encodec_dev, DEVICE_PRIO_HEIGHT);

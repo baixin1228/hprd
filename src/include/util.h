@@ -96,4 +96,6 @@ static inline void _func_error(const char *fmt, char *file, const char *func, ui
 #define func_info(fmt, arg...) _func_info((fmt), __FILE__, __func__, __LINE__, ##arg)
 #define func_warning(fmt, arg...) _func_warning((fmt), __FILE__, __func__, __LINE__, ##arg)
 #define func_error(fmt, arg...) _func_error((fmt), __FILE__, __func__, __LINE__, ##arg)
+
+int smp_frame_copy(uint8_t *to, size_t to_h_stride, uint8_t *from, size_t from_h_stride, size_t width, size_t height);
 #endif

@@ -2,12 +2,7 @@
 #define __ENCODEC_H__
 #include "buffer.h"
 #include "module.h"
-
-enum STREAM_FORMAT
-{
-	STREAM_H264,
-	STREAM_H265,
-};
+#include "codec.h"
 
 struct encodec_info
 {

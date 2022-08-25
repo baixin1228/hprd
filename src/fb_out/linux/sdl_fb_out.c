@@ -11,10 +11,13 @@ struct sdl_fd_out
 	SDL_Renderer* sdlRenderer;
 	SDL_Texture* sdlTexture;
 	SDL_Thread *refresh_thread;
+	SDL_Rect sdlRect;
 	uint32_t fb_width;
 	uint32_t fb_height;
+	uint32_t linesize;
 	int screen_w;
 	int screen_h;
+	int fb_format;
 };
 
 
@@ -28,7 +31,7 @@ int refresh_video(void *opaque){
 		SDL_Event event;
 		event.type = REFRESH_EVENT;
 		SDL_PushEvent(&event);
-		SDL_Delay(33);
+		SDL_Delay(25);
 	}
 	return 0;
 }
@@ -47,7 +50,7 @@ static int sdl_dev_init(struct module_data *dev)
 		printf( "Could not initialize SDL - %s\n", SDL_GetError()); 
 		return -1;
 	}
-	
+
 	dev->priv = (void *)priv;
 	
 	return 0;
@@ -57,20 +60,17 @@ static int _com_fb_fmt_to_sdl_fmt(enum COMMON_BUFFER_FORMAT format)
 {
 	switch(format)
 	{
-		case RGB444:
-			return SDL_PIXELFORMAT_RGB444;
-		break;
-		case RGB888:
-			return SDL_PIXELFORMAT_RGB888;
+		case ARGB8888:
+			return SDL_PIXELFORMAT_ARGB8888;
 		break;
 		case YUV420P:
-			return SDL_PIXELFORMAT_YV12;
+			return SDL_PIXELFORMAT_IYUV;
 		break;
 		case NV12:
 			return SDL_PIXELFORMAT_NV12;
 		break;
 		default:
-			return SDL_PIXELFORMAT_RGB888;
+			return SDL_PIXELFORMAT_ARGB8888;
 		break;
 	}
 }
@@ -93,16 +93,21 @@ static int sdl_set_fb_info(struct module_data *dev, struct frame_buffer_info fb_
 	}
 	priv->sdlRenderer = SDL_CreateRenderer(priv->screen, -1, 0);
 
-	priv->refresh_thread = SDL_CreateThread(refresh_video,NULL,NULL);
-
 	priv->sdlTexture = SDL_CreateTexture(priv->sdlRenderer, _com_fb_fmt_to_sdl_fmt(fb_info.format), 
 		SDL_TEXTUREACCESS_STREAMING, priv->fb_width, priv->fb_height);
+
+	priv->refresh_thread = SDL_CreateThread(refresh_video,NULL,NULL);
+
+	priv->sdlRect.x = 0;
+	priv->sdlRect.y = 0;
+	priv->sdlRect.w = priv->screen_w;
+	priv->sdlRect.h = priv->screen_h;
+	priv->fb_format = fb_info.format;
 	return 0;
 }
 
 static int sdl_put_buffer(struct module_data *dev, struct common_buffer *buffer)
 {
-	SDL_Rect sdlRect;
 	struct sdl_fd_out *priv = (struct sdl_fd_out *)dev->priv;
 
 	if(!priv->sdlTexture)
@@ -111,15 +116,30 @@ static int sdl_put_buffer(struct module_data *dev, struct common_buffer *buffer)
 		return -1;
 	}
 
-	SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptr, priv->fb_width * 4);  
+	switch(priv->fb_format)
+	{
+		case ARGB8888:
+			SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptr, priv->fb_width * 4);
+		break;
+		case YUV420P:
+			// SDL_UpdateYUVTexture(priv->sdlTexture, NULL,
+			// 	     buffer->ptr, priv->fb_width,
+			// 	     buffer->ptr + priv->fb_width * priv->fb_height, priv->fb_width / 2,
+			// 	     buffer->ptr + priv->fb_width * priv->fb_height * 5 / 4
+			// 	     , priv->fb_width / 2);
 
-	sdlRect.x = 0;
-	sdlRect.y = 0;
-	sdlRect.w = priv->screen_w;
-	sdlRect.h = priv->screen_h;
+			SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptr, priv->fb_width);
+		break;
+		case NV12:
+			SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptr, priv->fb_width);
+		break;
+		default:
+			SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptr, priv->fb_width * 4);
+		break;
+	}
 
 	SDL_RenderClear(priv->sdlRenderer);
-	SDL_RenderCopy(priv->sdlRenderer, priv->sdlTexture, NULL, &sdlRect);
+	SDL_RenderCopy(priv->sdlRenderer, priv->sdlTexture, NULL, &priv->sdlRect);
 	SDL_RenderPresent(priv->sdlRenderer);
 	return 0;
 }

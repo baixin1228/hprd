@@ -1,5 +1,5 @@
 sw_scale_src = ['libswscale.c']
-sw_scale_deps = [ dependency('libswscale'), dependency('libavcodec')]
+sw_scale_deps = [ dependency('libswscale')]
 
 sw_scale_lib = static_library('ffmpeg-codec-lib', sw_scale_src,
                                    dependencies: sw_scale_deps,

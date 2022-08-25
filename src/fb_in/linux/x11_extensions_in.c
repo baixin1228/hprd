@@ -23,6 +23,7 @@ struct x11_extensions
 	XShmSegmentInfo shm;
 	XImage *xim;
 	struct common_buffer buffer;
+	uint32_t fb_idx;
 };
 
 
@@ -32,6 +33,8 @@ static struct common_buffer * xext_get_frame_buffer(struct module_data *dev)
 	XShmGetImage(priv->display, priv->root_win, priv->xim,
 		0, 0, AllPlanes);
 	XSync(priv->display, False);
+	priv->fb_idx++;
+	priv->buffer.id = priv->fb_idx;
 	return &priv->buffer;
 }
 
@@ -114,8 +117,12 @@ static int xext_dev_init(struct module_data *dev)
 	priv->buffer.hor_stride = w;
 	priv->buffer.height = h;
 	priv->buffer.ver_stride = h;
-	priv->buffer.bpp = 24;
-	priv->buffer.ptr = priv->xim->data;
+	priv->buffer.format = ARGB8888;
+	priv->buffer.bpp = 32;
+	priv->buffer.size = w * h * 4;
+	priv->buffer.ptr = (uint8_t *)priv->xim->data;
+
+	priv->fb_idx = 0;
 
 	dev->priv = (void *)priv;
 	return 0;
@@ -137,7 +144,7 @@ static int xext_get_fb_info(struct module_data *dev, struct frame_buffer_info *f
 {
 	struct x11_extensions *priv = (struct x11_extensions *)dev->priv;
 
-	fb_info->format = RGB888;
+	fb_info->format = priv->buffer.format;
 	fb_info->width = priv->buffer.width;
 	fb_info->height = priv->buffer.height;
 	fb_info->hor_stride = priv->buffer.hor_stride;

@@ -6,6 +6,10 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+typedef void * Server;
+typedef void * Client;
+typedef void * Piple;
+
 #define PKT_MAGIC 0xABCDEF1234567890
 
 #define MAX_PKT_SIZE 1472
@@ -65,9 +69,10 @@ enum PIPLE_STATE
 struct rt_net_piple
 {
     uint16_t id;
+    Client client;
     enum PIPLE_STATE state;
     enum RT_PIPLE_TYPE piple_type;
-    void *(* recv_callback)(int piple_id, uint8_t *buf, uint16_t len);
+    void *(* recv_callback)(Piple piple_fd, uint8_t *buf, uint16_t len);
     struct piple_pkt send_pkt;
     pthread_mutex_t send_lock;
 };
@@ -75,6 +80,8 @@ struct rt_net_piple
 #define PIPLE_MAX 128
 struct rt_net_client
 {
+    short id;
+    Server server;
     struct sockaddr_in tcp_client_addr;
     struct sockaddr_in udp_client_addr;
 

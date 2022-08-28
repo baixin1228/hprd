@@ -2,20 +2,20 @@
 #include <stdlib.h>
 #include "rt_net_piple.h"
 
-int server_id;
-int client_id;
-void *callback(int piple_id, uint8_t *buf, uint16_t len)
+void *callback(Piple piple_fd, uint8_t *buf, uint16_t len)
 {
-	printf("piple_id:%d len:%u buf:%s\n", piple_id, len, buf);
-	rt_net_send(server_id, client_id, piple_id, (const uint8_t *)"return", 7);
+	printf("piple_fd:%p len:%u buf:%s\n", piple_fd, len, buf);
+	rt_net_send(piple_fd, (const uint8_t *)"return", 7);
 	return NULL;
 }
 
 int main()
 {
-	int piple_id;
-	server_id = rt_net_init_server("0.0.0.0", 6000);
-	if(server_id == -1)
+	Server server_fd;
+	Client client_fd;
+	Piple piple_fd;
+	server_fd = rt_net_init_server("0.0.0.0", 6000);
+	if(server_fd == NULL)
 	{
 		printf("init server fail.\n");
 		return -1;
@@ -23,17 +23,17 @@ int main()
 
 	while(1)
 	{
-		client_id = rt_net_server_accept(server_id);
-		if(client_id == -1)
+		client_fd = rt_net_server_accept(server_fd);
+		if(client_fd == NULL)
 		{
 			break;
 		}
-		piple_id = rt_net_piple_accept(server_id, client_id);
-		if(piple_id == -1)
+		piple_fd = rt_net_piple_accept(client_fd);
+		if(piple_fd == NULL)
 		{
 			break;
 		}
-		rt_net_piple_bind(server_id, client_id, piple_id, callback);
+		rt_net_piple_bind(piple_fd, callback);
 	}
 	return 0;
 }

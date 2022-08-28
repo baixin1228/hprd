@@ -7,271 +7,217 @@
 #include "rt_net_piple.h"
 #include "rt_net_socket.h"
 
-#define SERVER_MAX 1024
-uint16_t server_idx = 0;
-pthread_mutex_t server_mutex = PTHREAD_MUTEX_INITIALIZER;
-static struct rt_net_server *servers[SERVER_MAX];
+pthread_mutex_t server_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t client_lock = PTHREAD_MUTEX_INITIALIZER;
 
-int rt_net_init_server(char *addr, uint16_t port)
+Server rt_net_init_server(char *addr, uint16_t port)
 {
-	int ret = -1;
-	pthread_mutex_lock(&server_mutex);
-	if(server_idx < SERVER_MAX)
+	Server ret = NULL;
+	struct rt_net_server *server;
+	pthread_mutex_lock(&server_lock);
+
+	server = (struct rt_net_server *)calloc(1, sizeof(struct rt_net_server));
+	if(server != NULL)
 	{
-		servers[server_idx] = (struct rt_net_server *)calloc(1, sizeof(struct rt_net_server));
-		if(servers[server_idx] != NULL)
+		pthread_mutex_init(&server->accept_lock, NULL);
+		if(net_server_init(server, addr, port) != -1)
 		{
-			pthread_mutex_init(&servers[server_idx]->accept_lock, NULL);
-			ret = 0;
+			ret = (Server)server;
+		}else{
+			free(server);
 		}
+	}else{
+		func_error("calloc fail.");
 	}
 
-	if(ret == 0)
-	{
-		if(net_server_init(servers[server_idx], addr, port) != -1)
-		{
-			ret = server_idx;
-			server_idx++;
-		}else
-			free(servers[server_idx]);
-	}
-	pthread_mutex_unlock(&server_mutex);
+	pthread_mutex_unlock(&server_lock);
 
 	return ret;
 }
 
-int rt_net_release_server(int server_id)
+int rt_net_release_server(Server server_fd)
 {
 	int i;
 	int ret = -1;
-	struct rt_net_server *server;
+	struct rt_net_server *server = (struct rt_net_server *)server_fd;;
 	struct rt_net_client *client;
-	pthread_mutex_lock(&server_mutex);
-	if(server_idx < SERVER_MAX)
+
+	pthread_mutex_lock(&server_lock);
+	if(server)
 	{
-		if(servers[server_id])
+		for (i = 0; i < server->client_idx; ++i)
 		{
-			server = servers[server_id];
-			for (i = 0; i < server->client_idx; ++i)
+			if(server->clients[i])
 			{
-				if(server->clients[i])
-				{
-					client = server->clients[i];
-					net_client_release(client);
-					free(client);
-					server->clients[i] = NULL;
-				}
+				client = server->clients[i];
+				server->clients[i] = NULL;
+				net_client_release(client);
+				free(client);
 			}
-			net_server_release(server);
-			free(server);
-
-			servers[server_id] = NULL;
-			ret = 0;
 		}
+		net_server_release(server);
+		free(server);
+		ret = 0;
+	}else{
+		func_error("Not find server.");
 	}
-	pthread_mutex_unlock(&server_mutex);
+	pthread_mutex_unlock(&server_lock);
 	return ret;
 }
 
-uint32_t client_idx = 0;
-pthread_mutex_t client_mutex = PTHREAD_MUTEX_INITIALIZER;
-struct rt_net_client *clients[CLIENT_MAX];
-
-int rt_net_init_client(char *addr, uint16_t port)
+Client rt_net_init_client(char *addr, uint16_t port)
 {
-	int ret = -1;
-	pthread_mutex_lock(&client_mutex);
-	if(client_idx < CLIENT_MAX)
+	Client ret = NULL;
+	struct rt_net_client *client;
+
+	pthread_mutex_lock(&client_lock);
+	client = (struct rt_net_client *)calloc(1, sizeof(struct rt_net_client));
+	if(client != NULL)
 	{
-		clients[client_idx] = (struct rt_net_client *)calloc(1, sizeof(struct rt_net_client));
-		if(clients[client_idx] != NULL)
+		pthread_mutex_init(&client->piple_open_lock, NULL);
+		pthread_mutex_init(&client->accept_piple_lock, NULL);
+		pthread_cond_init(&client->msg_signal, NULL);
+		client->id = -1;
+		client->server = NULL;
+		if(net_client_init(client, addr, port) != -1)
 		{
-			pthread_mutex_init(&clients[client_idx]->piple_open_lock, NULL);
-			pthread_mutex_init(&clients[client_idx]->accept_piple_lock, NULL);
-			pthread_cond_init(&clients[client_idx]->msg_signal, NULL);
-			ret = 0;
-		}
-	}
-
-	if(ret == 0)
-	{
-		if(net_client_init(clients[client_idx], addr, port) != -1)
-		{
-			ret = client_idx;
-			client_idx++;
-		}else
-			free(clients[client_idx]);
-	}
-	pthread_mutex_unlock(&client_mutex);
-
-	return ret;
-}
-
-static struct rt_net_client *_get_client(int server_id, int client_id)
-{
-	struct rt_net_client *client = NULL;
-	struct rt_net_server *server = NULL;
-
-	if(server_idx >= 0 && server_idx < SERVER_MAX)
-	{
-		if(servers[server_id])
-		{
-			server = servers[server_id];
-		}
-	}
-	if(server == NULL)
-	{
-		func_error("not find server.");
-	}
-
-	if(client_idx >= 0 && client_idx < CLIENT_MAX)
-	{
-		if(server)
-			client = server->clients[client_id];
-		else
-			client = clients[client_id];
-
-		func_error("client %p.", client);
-		return client;
-	}
-	return NULL;
-}
-
-int rt_net_release_client(int server_id, int client_id)
-{
-	int ret = -1;
-
-	struct rt_net_client *client = NULL;
-	struct rt_net_server *server = NULL;
-
-	pthread_mutex_lock(&server_mutex);
-	pthread_mutex_lock(&client_mutex);
-
-	if(server_idx >= 0 && server_idx < SERVER_MAX)
-	{
-		if(servers[server_id])
-		{
-			server = servers[server_id];
-		}
-	}
-
-	if(client_idx >= 0 && client_idx < CLIENT_MAX)
-	{
-		if(server)
-		{
-			client = server->clients[client_id];
-			server->clients[client_id] = NULL;
+			ret = (Client)client;
 		}else{
-			client = clients[client_id];
-			clients[client_id] = NULL;
+			free(client);
 		}
+	}else{
+		func_error("calloc fail.");
+	}
+	pthread_mutex_unlock(&client_lock);
 
+	return ret;
+}
+
+int rt_net_release_client(Client client_fd)
+{
+	int ret = -1;
+	struct rt_net_server *server = NULL;
+	struct rt_net_client *client = (struct rt_net_client *)client_fd;
+
+	if(client != NULL)
+	{
+		pthread_mutex_lock(&client_lock);
+		net_client_release(client);
+		if(client->server)
+		{
+			pthread_mutex_lock(&server_lock);
+			server = (struct rt_net_server *)client->server;
+			if(server->clients[client->id])
+				server->clients[client->id] = NULL;
+			pthread_mutex_unlock(&server_lock);
+		}
+		free(client);
+		pthread_mutex_unlock(&client_lock);
+		ret = 0;
+	}else{
+		func_error("Not find client.");
+	}
+
+	return ret;
+}
+
+Client rt_net_server_accept(Server server_fd)
+{
+	Client ret = NULL;
+	struct rt_net_client *client;
+	struct rt_net_server *server = (struct rt_net_server *)server_fd;
+
+	if(server)
+	{
+		pthread_mutex_lock(&server->accept_lock);
+		client = (struct rt_net_client *)calloc(1, sizeof(struct rt_net_client));
 		if(client != NULL)
 		{
-			net_client_release(client);
-			free(client);
-			ret = 0;
-		}
-	}
-
-	pthread_mutex_unlock(&client_mutex);
-	pthread_mutex_unlock(&server_mutex);
-	return ret;
-}
-
-
-int rt_net_server_accept(int server_id)
-{
-	int ret = -1;
-	struct rt_net_server *server;
-	if(server_idx < SERVER_MAX)
-	{
-		if(servers[server_id])
-		{
-			server = servers[server_id];
-			pthread_mutex_lock(&server->accept_lock);
-			clients[server->client_idx] = (struct rt_net_client *)calloc(1, sizeof(struct rt_net_client));
-			if(clients[server->client_idx] != NULL)
+			pthread_mutex_init(&client->piple_open_lock, NULL);
+			pthread_mutex_init(&client->accept_piple_lock, NULL);
+			pthread_cond_init(&client->msg_signal, NULL);
+			if(tcp_accept(server, client) == 0)
 			{
-				pthread_mutex_init(&clients[server->client_idx]->piple_open_lock, NULL);
-				pthread_mutex_init(&clients[server->client_idx]->accept_piple_lock, NULL);
-				pthread_cond_init(&clients[server->client_idx]->msg_signal, NULL);
-				ret = tcp_accept(server, clients[server->client_idx]);
-				if(ret == 0)
-				{
-					ret = server->client_idx;
-					server->client_idx++;
-				}else{
-					free(clients[server->client_idx]);
-					clients[server->client_idx] = NULL;
-				}
+				server->clients[server->client_idx] = client;
+				client->id = server->client_idx;
+				client->server = server_fd;
+				server->client_idx++;
+				ret = (Client)client;
+			}else{
+				free(client);
 			}
-			pthread_mutex_unlock(&server->accept_lock);
+		}else{
+			func_error("calloc fail.");
 		}
+		pthread_mutex_unlock(&server->accept_lock);
+	}else{
+		func_error("Not find server.");
 	}
+
 	return ret;
 }
 
-int rt_net_open_piple(
-	int server_id,
-	int client_id,
+Piple rt_net_open_piple(
+	Client client_fd,
 	enum RT_PIPLE_TYPE piple_type,
 	uint8_t piple_id,
-	void *(* recv_callback)(int piple_id, uint8_t *buf, uint16_t len))
+	void *(* recv_callback)(Piple piple_fd, uint8_t *buf, uint16_t len))
 {
-	int ret = -1;
+	Piple ret = NULL;
 	struct piple_pkt pkt;
-	struct rt_net_client *client = _get_client(server_id, client_id);
 	struct rt_net_piple *piple;
+	struct rt_net_client *client = (struct rt_net_client *)client_fd;
 
 	if(client)
 	{
 		pthread_mutex_lock(&client->piple_open_lock);
 
-		client->piples[client->piple_idx] = calloc(1, sizeof(struct rt_net_piple));
-		if(client->piples[client->piple_idx] == NULL)
-			return -1;
-		piple = client->piples[client->piple_idx];
-		piple->id = client->piple_idx;
-		piple->piple_type = piple_type;
-		piple->recv_callback = recv_callback;
-		pthread_mutex_init(&piple->send_lock, NULL);
-		piple->state = PIPLE_OPENING;
-		pkt.head.cmd = OPEN_PIPLE;
-		pkt.head.piple_id = client->piple_idx;
-		pkt.head.data_len = 0;
-		tcp_send_pkt(client, (uint8_t *)&pkt, sizeof(pkt.head));
-		while(pthread_cond_wait(&client->msg_signal, &client->piple_open_lock))
+		piple = calloc(1, sizeof(struct rt_net_piple));
+		if(piple != NULL)
 		{
-			if(piple->state == PIPLE_OPENED)
+			client->piples[client->piple_idx] = piple;
+			piple->id = client->piple_idx;
+			client->piple_idx++;
+
+			piple->piple_type = piple_type;
+			piple->recv_callback = recv_callback;
+			piple->state = PIPLE_OPENING;
+
+			pthread_mutex_init(&piple->send_lock, NULL);
+			pkt.head.cmd = OPEN_PIPLE;
+			pkt.head.piple_id = piple->id;
+			pkt.head.data_len = 0;
+			tcp_send_pkt(client, (uint8_t *)&pkt, sizeof(pkt.head));
+			while(pthread_cond_wait(&client->msg_signal, &client->piple_open_lock))
 			{
-				ret = 0;
-				break;
+				if(piple->state == PIPLE_OPENED)
+				{
+					ret = (Piple)piple;
+					break;
+				}
+				if(piple->state == PIPLE_ERROR)
+				{
+					func_error("Piple open error.");
+					break;
+				}
 			}
-			if(piple->state == PIPLE_ERROR)
-			{
-				break;
-			}
+		}else{
+			func_error("calloc fail.");
 		}
 		pthread_mutex_unlock(&client->piple_open_lock);
+	}else{
+		func_error("Not find client.");
 	}
 	return ret;
 }
 
-int rt_net_piple_accept(
-	int server_id,
-	int client_id)
+Piple rt_net_piple_accept(Client client_fd)
 {
 	int i;
-	if(server_id < 0)
-	{
-		func_error("server id is null.");
-		return -1;
-	}
+	Piple ret = NULL;
+	struct rt_net_client *client = (struct rt_net_client *)client_fd;
 
-	struct rt_net_client *client = _get_client(server_id, client_id);
-
-	while(client)
+	if(client)
 	{
 		pthread_mutex_lock(&client->accept_piple_lock);
 		pthread_cond_wait(&client->msg_signal, &client->accept_piple_lock);
@@ -280,180 +226,200 @@ int rt_net_piple_accept(
 			if(client->piples[i] != NULL &&
 				client->piples[i]->state == PIPLE_OPENING)
 			{
-				return i;
+				return (Piple)client->piples[i];
 			}
 		}
 		pthread_mutex_unlock(&client->accept_piple_lock);
+	}else{
+		func_error("not find client.");
 	}
-	func_error("not find client.");
-	return -1;
+
+	return ret;
 }
 
 int rt_net_piple_bind(
-	int server_id,
-	int client_id,
-	uint8_t piple_id,
-	void *(* recv_callback)(int piple_id, uint8_t *buf, uint16_t len))
+	Piple piple_fd,
+	void *(* recv_callback)(Piple piple_fd, uint8_t *buf, uint16_t len))
 {
-	if(server_id < 0)
-	{
-		func_error("server id is null.");
-		return -1;
-	}
-
 	int ret = -1;
 	struct piple_pkt pkt;
-	struct rt_net_piple *piple;
-	struct rt_net_client *client = _get_client(server_id, client_id);
+	struct rt_net_client *client;
+	struct rt_net_piple *piple = (struct rt_net_piple *)piple_fd;
 
-	if(client)
+	if(piple)
 	{
-		if(client->piples[piple_id] == NULL)
-			return -1;
-		piple = client->piples[piple_id];
-		pthread_mutex_lock(&piple->send_lock);
-		piple->id = client->piple_idx;
-		piple->recv_callback = recv_callback;
-		pthread_mutex_init(&piple->send_lock, NULL);
-		pkt.head.cmd = BIND_PIPLE;
-		pkt.head.piple_id = piple_id;
-		pkt.head.data_len = 0;
-		tcp_send_pkt(client, (uint8_t *)&pkt, sizeof(pkt.head));
-		while(pthread_cond_wait(&client->msg_signal, &piple->send_lock))
+		client = (struct rt_net_client *)piple->client;
+		if(client)
 		{
-			if(piple->state == PIPLE_OPENED)
+			piple->id = client->piple_idx;
+			piple->recv_callback = recv_callback;
+
+			pthread_mutex_lock(&piple->send_lock);
+			pkt.head.cmd = BIND_PIPLE;
+			pkt.head.piple_id = piple->id;
+			pkt.head.data_len = 0;
+			tcp_send_pkt(client, (uint8_t *)&pkt, sizeof(pkt.head));
+			while(pthread_cond_wait(&client->msg_signal, &piple->send_lock))
 			{
-				ret = 0;
-				break;
+				if(piple->state == PIPLE_OPENED)
+				{
+					ret = 0;
+					break;
+				}
+				if(piple->state == PIPLE_ERROR)
+				{
+					func_error("bind piple response error.");
+					break;
+				}
 			}
-			if(piple->state == PIPLE_ERROR)
-			{
-				func_error("bind piple response error.");
-				break;
-			}
+			pthread_mutex_unlock(&piple->send_lock);
+		}else{
+			func_error("not find client.");
 		}
-		pthread_mutex_unlock(&piple->send_lock);
-		return ret;
+	}else{
+		func_error("not find piple.");
 	}
-	func_error("not find client.");
-	return -1;
+	return ret;
 }
 
 bool rt_net_has_piple(
-	int server_id,
-	int client_id,
+	Client client_fd,
 	uint8_t piple_id)
 {
-	struct rt_net_client *client = _get_client(server_id, client_id);
+	struct rt_net_client *client = (struct rt_net_client *)client_fd;
 	if(client)
 	{
-		if(client->piples[piple_id] != NULL)
+		if(client->piples[piple_id] != NULL && client->piples[piple_id]->state == PIPLE_OPENED)
 		{
 			return true;
 		}
-		return false;
+	}else{
+		func_error("not find client.");
 	}
 	return false;
 }
 
-int rt_net_close_piple(
-	int server_id,
-	int client_id,
-	int piple_id)
+Piple rt_net_get_piple(
+	Client client_fd,
+	uint8_t piple_id)
 {
-	int ret;
-	struct rt_net_piple *piple;
-	struct rt_net_client *client = _get_client(server_id, client_id);
+	struct rt_net_client *client = (struct rt_net_client *)client_fd;
 	if(client)
 	{
-		if(client->piples[piple_id] == NULL)
+		if(client->piples[piple_id] != NULL && client->piples[piple_id]->state == PIPLE_OPENED)
 		{
-			piple = client->piples[piple_id];
-			if(piple->state == PIPLE_OPENED)
+			return (Piple)client->piples[piple_id];
+		}
+	}else{
+		func_error("not find client.");
+	}
+	return NULL;
+}
+
+int rt_net_close_piple(
+	Client client_fd,
+	Piple piple_fd)
+{
+	int ret;
+	struct rt_net_client *client;
+	struct rt_net_piple *piple = (struct rt_net_piple *)piple_fd;
+
+	if(piple)
+	{
+		if(piple->state == PIPLE_OPENED)
+		{
+			client = (struct rt_net_client *)piple->client;
+			if(client)
 			{
 				pthread_mutex_lock(&piple->send_lock);
 				piple->send_pkt.head.cmd = CLOSE_PIPLE;
-				piple->send_pkt.head.piple_id = piple_id;
+				piple->send_pkt.head.piple_id = piple->id;
 				piple->send_pkt.head.data_len = 0;
-				ret = tcp_send_pkt(client, (uint8_t *)&piple->send_pkt, sizeof(piple->send_pkt.head));
-				while(pthread_cond_wait(&client->msg_signal, &piple->send_lock))
+				if(tcp_send_pkt(client, (uint8_t *)&piple->send_pkt, sizeof(piple->send_pkt.head)) != -1)
 				{
-					if(piple->state == PIPLE_CLOSED)
+					while(pthread_cond_wait(&client->msg_signal, &piple->send_lock))
 					{
-						ret = 0;
-						break;
+						if(piple->state == PIPLE_CLOSED)
+						{
+							ret = 0;
+							break;
+						}
+						if(piple->state == PIPLE_ERROR)
+						{
+							func_error("close piple response error.");
+							break;
+						}
 					}
-					if(piple->state == PIPLE_ERROR)
-					{
-						func_error("close piple response error.");
-						break;
-					}
+				}else{
+					func_error("tcp_send_pkt error.");
 				}
 				pthread_mutex_lock(&piple->send_lock);
-				return ret;
+			}else{
+				func_error("not find client.");
 			}
+		}else{
 			func_error("piple not open.");
-			return -1;
 		}
+	}else{
 		func_error("not find piple.");
-		return -1;
 	}
-	func_error("not find client.");
-	return -1;
+	return ret;
 }
 
 int rt_net_send(
-	int server_id,
-	int client_id,
-	int piple_id,
+	Piple piple_fd,
 	const uint8_t *buf,
 	size_t len)
 {
-	int ret;
-	struct rt_net_piple *piple;
-	struct rt_net_client *client = _get_client(server_id, client_id);
-	if(client)
+	int ret = -1;
+	struct rt_net_client *client;
+	struct rt_net_piple *piple = (struct rt_net_piple *)piple_fd;
+	if(piple)
 	{
-		if(client->piples[piple_id] == NULL)
+		if(piple->state == PIPLE_OPENED)
 		{
-			piple = client->piples[piple_id];
-			if(piple->state == PIPLE_OPENED)
+			client = (struct rt_net_client *)piple->client;
+			if(client)
 			{
 				pthread_mutex_lock(&piple->send_lock);
 				piple->send_pkt.head.cmd = PIPLE_DATA;
-				piple->send_pkt.head.piple_id = piple_id;
+				piple->send_pkt.head.piple_id = piple->id;
 				memcpy(piple->send_pkt.data, buf, len);
 				piple->send_pkt.head.data_len = len;
 				ret = tcp_send_pkt(client, (const uint8_t *)&piple->send_pkt, sizeof(piple->send_pkt.head));
 				pthread_mutex_lock(&piple->send_lock);
-				return ret;
+			}else{
+				func_error("not find client.");
 			}
+		}else{
 			func_error("piple not open.");
-			return -1;
 		}
+	}else{
 		func_error("not find piple.");
-		return -1;
 	}
-	func_error("not find client.");
-	return -1;
+	return ret;
 }
 
 void _on_data_recv(struct rt_net_client *client, uint8_t *buf, uint16_t len)
 {
+	struct rt_net_piple *piple;
 	struct piple_pkt *pkt = (struct piple_pkt *)buf;
+
 	if(len >= sizeof(pkt->head))
 	{
 		switch(pkt->head.cmd)
 		{
 			case OPEN_PIPLE:
 			{
-				if(client->piples[pkt->head.piple_id] == NULL)
+				piple = client->piples[pkt->head.piple_id];
+				if(piple == NULL)
 				{
-					client->piples[client->piple_idx] = calloc(1, sizeof(struct rt_net_piple));
-					if(client->piples[client->piple_idx] == NULL)
+					piple = calloc(1, sizeof(struct rt_net_piple));
+					if(piple == NULL)
 					{
 						pkt->head.cmd = OPEN_REP_ERROR;
 					}else{
+						client->piples[pkt->head.piple_id] = piple;
 						pkt->head.cmd = OPEN_REP_SUCCESS;
 					}
 				}else{
@@ -461,8 +427,11 @@ void _on_data_recv(struct rt_net_client *client, uint8_t *buf, uint16_t len)
 				}
 				if(pkt->head.cmd == OPEN_REP_SUCCESS)
 				{
-					client->piples[client->piple_idx]->state = PIPLE_OPENING;
-					client->piples[client->piple_idx]->piple_type = pkt->head.piple_type;
+					piple->id = pkt->head.piple_id;
+					piple->client = (Client)client;
+					piple->state = PIPLE_OPENING;
+					piple->piple_type = pkt->head.piple_type;
+					pthread_mutex_init(&piple->send_lock, NULL);
 				}
 				pthread_cond_signal(&client->msg_signal);
 				tcp_send_pkt(client, (uint8_t *)pkt, sizeof(pkt->head));
@@ -530,7 +499,7 @@ void _on_data_recv(struct rt_net_client *client, uint8_t *buf, uint16_t len)
 					if(client->piples[client->piple_idx]->state == PIPLE_OPENED)
 					{
 						if(client->piples[client->piple_idx]->recv_callback)
-							client->piples[client->piple_idx]->recv_callback(client->piples[client->piple_idx]->id, pkt->data, pkt->head.data_len);
+							client->piples[client->piple_idx]->recv_callback((Piple)client->piples[client->piple_idx], pkt->data, pkt->head.data_len);
 						else
 						log_warning("PIPLE_DATA recv_callback is null, Data will be discarded.");
 					}else{
@@ -577,6 +546,6 @@ void _on_data_recv(struct rt_net_client *client, uint8_t *buf, uint16_t len)
 			}
 		}
 	}else{
-		func_error("pkt is too small.");
+		func_error("pkt is too small, len:%d", len);
 	}
 }

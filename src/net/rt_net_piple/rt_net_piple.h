@@ -6,45 +6,40 @@
 
 #define NONE_SERVER -1
 
-int rt_net_init_server(char * addr, uint16_t port);
-int rt_net_release_server(int server_id);
+Server rt_net_init_server(char *addr, uint16_t port);
+int rt_net_release_server(Server server_fd);
 
-int rt_net_init_client(char * addr, uint16_t port);
-int rt_net_release_client(int server_id, int client_id);
+Client rt_net_init_client(char *addr, uint16_t port);
+int rt_net_release_client(Client client_fd);
 
-int rt_net_server_accept(int server_id);
+Client rt_net_server_accept(Server server_fd);
 
-int rt_net_open_piple(
-	int server_id,
-	int client_id,
+Piple rt_net_open_piple(
+	Client client_fd,
 	enum RT_PIPLE_TYPE piple_type,
 	uint8_t piple_id,
-	void *(* callback)(int piple_id, uint8_t *buf, uint16_t len));
+	void *(* recv_callback)(Piple piple_fd, uint8_t *buf, uint16_t len));
 
-int rt_net_piple_accept(
-	int server_id,
-	int client_id);
+Piple rt_net_piple_accept(Client client_fd);
 
 int rt_net_piple_bind(
-	int server_id,
-	int client_id,
-	uint8_t piple_id,
-	void *(* recv_callback)(int piple_id, uint8_t *buf, uint16_t len));
+	Piple piple_fd,
+	void *(* recv_callback)(Piple piple_fd, uint8_t *buf, uint16_t len));
 
 bool rt_net_has_piple(
-	int server_id,
-	int client_id,
+	Client client_fd,
+	uint8_t piple_id);
+
+Piple rt_net_get_piple(
+	Client client_fd,
 	uint8_t piple_id);
 
 int rt_net_close_piple(
-	int server_id,
-	int client_id,
-	int piple_id);
+	Client client_fd,
+	Piple piple_fd);
 
 int rt_net_send(
-	int server_id,
-	int client_id,
-	int piple_id,
+	Piple piple_fd,
 	const uint8_t *buf,
 	size_t len);
 

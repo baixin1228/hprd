@@ -109,11 +109,11 @@ static void *_tcp_recv_process(void *arg)
     struct rt_net_client *client = (struct rt_net_client *)arg;
     struct pkt_buf *buf = malloc(sizeof(struct pkt_buf));
 
-    log_info("client connect ip:%s port:%d\n", 
+    log_info("tcp start recv from ip:%s port:%d", 
             inet_ntoa(client->tcp_client_addr.sin_addr),
             ntohs(client->tcp_client_addr.sin_port));
 
-    while(client->close_flag)
+    while(!client->close_flag)
     {
         ret = tcp_recv_process(client, buf);
         if(ret > 0)
@@ -125,7 +125,7 @@ static void *_tcp_recv_process(void *arg)
             break;
     }
 
-    log_info("client closed ip:%s port:%d\n", 
+    log_info("tcp stop recv from ip:%s port:%d", 
             inet_ntoa(client->tcp_client_addr.sin_addr),
             ntohs(client->tcp_client_addr.sin_port));
 
@@ -140,7 +140,7 @@ int tcp_accept(struct rt_net_server *server, struct rt_net_client *client)
     client->tcp_fd = accept(server->tcp_listen_fd, (struct sockaddr*)&client->tcp_client_addr, &length);
     if(client->tcp_fd < 0)
     {
-        func_error("tcp accept failed.\n");
+        func_error("tcp accept failed.");
         return -1;
     }
 
@@ -155,12 +155,12 @@ static void *_udp_recv_process(void *arg)
     struct rt_net_client *client = (struct rt_net_client *)arg;
     uint32_t len = sizeof(client->udp_recv_addr);
 
-    while(client->close_flag)
+    log_info("upd start recv from ip:%s,port:%d",
+        inet_ntoa(client->udp_recv_addr.sin_addr),
+        ntohs(client->udp_recv_addr.sin_port));
+    while(!client->close_flag)
     {
         recvfrom(client->udp_fd, (uint8_t *)buf, MAX_PKT_SIZE, 0, (struct sockaddr*)&client->udp_recv_addr, &len);
-        log_info("udp client ip:%s,port:%d\n",
-            inet_ntoa(client->udp_recv_addr.sin_addr),
-            ntohs(client->udp_recv_addr.sin_port));
 
         client->udp_state = true;
         if(ntohl(buf->head.magic) == PKT_MAGIC)
@@ -171,6 +171,9 @@ static void *_udp_recv_process(void *arg)
             log_warning("udp magic error.");
         }
     }
+    log_info("upd stop recv from ip:%s,port:%d",
+        inet_ntoa(client->udp_recv_addr.sin_addr),
+        ntohs(client->udp_recv_addr.sin_port));
 
     free(buf);
     return NULL;
@@ -208,19 +211,19 @@ int net_server_init(struct rt_net_server *server, char *addr, uint16_t port)
 
     if(bind(server->tcp_listen_fd, (struct sockaddr *)&server->tcp_server_addr, sizeof(server->tcp_server_addr)) != 0)
     {
-        func_error("tcp bind failed.\n");
+        func_error("tcp bind failed.");
         return -1;
     }
 
     if(bind(server->udp_client.udp_fd, (struct sockaddr *)&server->udp_client.udp_client_addr, sizeof(server->udp_client.udp_client_addr)) != 0)
     {
-        func_error("udp bind failed.\n");
+        func_error("udp bind failed.");
         goto FAIL1;
     }
 
     if(listen(server->tcp_listen_fd, 1024) != 0)
     {
-        func_error("tcp listen failed.\n");
+        func_error("tcp listen failed.");
         goto FAIL2;
     }
 
@@ -276,7 +279,7 @@ int net_client_init(struct rt_net_client *client, char *addr, uint16_t port)
 
     if(connect(client->tcp_fd, (struct sockaddr *)&client->tcp_client_addr, sizeof(client->tcp_client_addr)) != 0)
     {
-        func_error("tcp connect failed.\n");
+        func_error("tcp connect failed.");
         return -1;
     }
 

@@ -14,7 +14,7 @@ client_libs = [	fb_convert,
 				]
 
 hprd_client = executable('hprd_client', ['client.c'], 
-				include_directories : include_directories('../include'),
+				include_directories : include_directories('../../../include'),
 				dependencies : client_deps,
 				link_whole : client_libs,
 				link_args : ['-Wl,-T,@0@/@1@'.format(meson.current_source_dir(), 'main_link.lds')],

@@ -11,6 +11,8 @@ common_dep = declare_dependency(
 	link_with : common,
 	)
 
+subdir('net')
+
 subdir('fb_convert')
 
 subdir('codec')

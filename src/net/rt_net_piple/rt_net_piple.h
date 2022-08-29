@@ -34,9 +34,7 @@ Piple rt_net_get_piple(
 	Client client_fd,
 	uint8_t piple_id);
 
-int rt_net_close_piple(
-	Client client_fd,
-	Piple piple_fd);
+int rt_net_close_piple(Piple piple_fd);
 
 int rt_net_send(
 	Piple piple_fd,

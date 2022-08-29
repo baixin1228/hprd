@@ -102,16 +102,15 @@ int rt_net_release_client(Client client_fd)
 	if(client != NULL)
 	{
 		pthread_mutex_lock(&client_lock);
-		net_client_release(client);
 		if(client->server)
 		{
 			pthread_mutex_lock(&server_lock);
 			server = (struct rt_net_server *)client->server;
-			if(server->clients[client->id])
+			if(server->clients && server->clients[client->id])
 				server->clients[client->id] = NULL;
 			pthread_mutex_unlock(&server_lock);
 		}
-		free(client);
+		net_client_release(client);
 		pthread_mutex_unlock(&client_lock);
 		ret = 0;
 	}else{
@@ -178,6 +177,7 @@ Piple rt_net_open_piple(
 			client->piples[client->piple_idx] = piple;
 			piple->id = client->piple_idx;
 			client->piple_idx++;
+			piple->client = (Client)client;
 
 			piple->piple_type = piple_type;
 			piple->recv_callback = recv_callback;
@@ -188,8 +188,9 @@ Piple rt_net_open_piple(
 			pkt.head.piple_id = piple->id;
 			pkt.head.data_len = 0;
 			tcp_send_pkt(client, (uint8_t *)&pkt, sizeof(pkt.head));
-			while(pthread_cond_wait(&client->msg_signal, &client->piple_open_lock))
+			while(1)
 			{
+				pthread_cond_wait(&client->msg_signal, &client->piple_open_lock);
 				if(piple->state == PIPLE_OPENED)
 				{
 					ret = (Piple)piple;
@@ -220,13 +221,17 @@ Piple rt_net_piple_accept(Client client_fd)
 	if(client)
 	{
 		pthread_mutex_lock(&client->accept_piple_lock);
-		pthread_cond_wait(&client->msg_signal, &client->accept_piple_lock);
-		for (i = 0; i < PIPLE_MAX; ++i)
+		while(!ret)
 		{
-			if(client->piples[i] != NULL &&
-				client->piples[i]->state == PIPLE_OPENING)
+			pthread_cond_wait(&client->msg_signal, &client->accept_piple_lock);
+			for (i = 0; i < PIPLE_MAX; ++i)
 			{
-				return (Piple)client->piples[i];
+				if(client->piples[i] != NULL &&
+					client->piples[i]->state == PIPLE_OPENING)
+				{
+					ret = (Piple)client->piples[i];
+					break;
+				}
 			}
 		}
 		pthread_mutex_unlock(&client->accept_piple_lock);
@@ -259,8 +264,9 @@ int rt_net_piple_bind(
 			pkt.head.piple_id = piple->id;
 			pkt.head.data_len = 0;
 			tcp_send_pkt(client, (uint8_t *)&pkt, sizeof(pkt.head));
-			while(pthread_cond_wait(&client->msg_signal, &piple->send_lock))
+			while(1)
 			{
+				pthread_cond_wait(&client->msg_signal, &piple->send_lock);
 				if(piple->state == PIPLE_OPENED)
 				{
 					ret = 0;
@@ -316,11 +322,9 @@ Piple rt_net_get_piple(
 	return NULL;
 }
 
-int rt_net_close_piple(
-	Client client_fd,
-	Piple piple_fd)
+int rt_net_close_piple(Piple piple_fd)
 {
-	int ret;
+	int ret = -1;
 	struct rt_net_client *client;
 	struct rt_net_piple *piple = (struct rt_net_piple *)piple_fd;
 
@@ -337,8 +341,9 @@ int rt_net_close_piple(
 				piple->send_pkt.head.data_len = 0;
 				if(tcp_send_pkt(client, (uint8_t *)&piple->send_pkt, sizeof(piple->send_pkt.head)) != -1)
 				{
-					while(pthread_cond_wait(&client->msg_signal, &piple->send_lock))
+					while(1)
 					{
+						pthread_cond_wait(&client->msg_signal, &piple->send_lock);
 						if(piple->state == PIPLE_CLOSED)
 						{
 							ret = 0;
@@ -353,7 +358,7 @@ int rt_net_close_piple(
 				}else{
 					func_error("tcp_send_pkt error.");
 				}
-				pthread_mutex_lock(&piple->send_lock);
+				pthread_mutex_unlock(&piple->send_lock);
 			}else{
 				func_error("not find client.");
 			}
@@ -374,6 +379,13 @@ int rt_net_send(
 	int ret = -1;
 	struct rt_net_client *client;
 	struct rt_net_piple *piple = (struct rt_net_piple *)piple_fd;
+
+	// if(len > PIPLE_DATA_LEN_MAX)
+	// {
+ //        func_error("data size is too long.");
+ //        return ret;
+	// }
+
 	if(piple)
 	{
 		if(piple->state == PIPLE_OPENED)
@@ -386,8 +398,8 @@ int rt_net_send(
 				piple->send_pkt.head.piple_id = piple->id;
 				memcpy(piple->send_pkt.data, buf, len);
 				piple->send_pkt.head.data_len = len;
-				ret = tcp_send_pkt(client, (const uint8_t *)&piple->send_pkt, sizeof(piple->send_pkt.head));
-				pthread_mutex_lock(&piple->send_lock);
+				ret = tcp_send_pkt(client, (const uint8_t *)&piple->send_pkt, len + sizeof(piple->send_pkt.head));
+				pthread_mutex_unlock(&piple->send_lock);
 			}else{
 				func_error("not find client.");
 			}
@@ -400,6 +412,64 @@ int rt_net_send(
 	return ret;
 }
 
+void _show_protocol(struct rt_net_client *client, uint8_t *buf, uint16_t len)
+{
+	struct piple_pkt *pkt = (struct piple_pkt *)buf;
+	switch(pkt->head.cmd)
+	{
+		case OPEN_PIPLE:
+		{
+			log_info("cmd:OPEN_PIPLE client:%p piple:%d.", client, pkt->head.piple_id);
+			break;
+		}
+		case OPEN_REP_ERROR:
+		{
+			log_info("cmd:OPEN_REP_ERROR client:%p piple:%d.", client, pkt->head.piple_id);
+			break;
+		}
+		case OPEN_REP_SUCCESS:
+		{
+			log_info("cmd:OPEN_REP_SUCCESS client:%p piple:%d.", client, pkt->head.piple_id);
+			break;
+		}
+		case BIND_PIPLE:
+		{
+			log_info("cmd:BIND_PIPLE client:%p piple:%d.", client, pkt->head.piple_id);
+			break;
+		}
+		case BIND_REP_ERROR:
+		{
+			log_info("cmd:BIND_REP_ERROR client:%p piple:%d.", client, pkt->head.piple_id);
+			break;
+		}
+		case BIND_REP_SUCCESS:
+		{
+			log_info("cmd:BIND_REP_SUCCESS client:%p piple:%d.", client, pkt->head.piple_id);
+			break;
+		}
+		case PIPLE_DATA:
+		{
+			log_info("cmd:PIPLE_DATA client:%p piple:%d.", client, pkt->head.piple_id);
+			break;
+		}
+		case CLOSE_PIPLE:
+		{
+			log_info("cmd:CLOSE_PIPLE client:%p piple:%d.", client, pkt->head.piple_id);
+			break;
+		}
+		case CLOSE_PIPLE_REP_ERROR:
+		{
+			log_info("cmd:CLOSE_PIPLE_REP_ERROR client:%p piple:%d.", client, pkt->head.piple_id);
+			break;
+		}
+		case CLOSE_PIPLE_REP_SUCCESS:
+		{
+			log_info("cmd:CLOSE_PIPLE_REP_SUCCESS client:%p piple:%d.", client, pkt->head.piple_id);
+			break;
+		}
+	}
+}
+
 void _on_data_recv(struct rt_net_client *client, uint8_t *buf, uint16_t len)
 {
 	struct rt_net_piple *piple;
@@ -407,6 +477,7 @@ void _on_data_recv(struct rt_net_client *client, uint8_t *buf, uint16_t len)
 
 	if(len >= sizeof(pkt->head))
 	{
+		_show_protocol(client, buf, len);
 		switch(pkt->head.cmd)
 		{
 			case OPEN_PIPLE:
@@ -432,76 +503,81 @@ void _on_data_recv(struct rt_net_client *client, uint8_t *buf, uint16_t len)
 					piple->state = PIPLE_OPENING;
 					piple->piple_type = pkt->head.piple_type;
 					pthread_mutex_init(&piple->send_lock, NULL);
+					pthread_cond_broadcast(&client->msg_signal);
 				}
-				pthread_cond_signal(&client->msg_signal);
 				tcp_send_pkt(client, (uint8_t *)pkt, sizeof(pkt->head));
 				break;
 			}
 			case OPEN_REP_ERROR:
 			{
-				if(client->piples[pkt->head.piple_id] == NULL)
+				piple = client->piples[pkt->head.piple_id];
+				if(piple == NULL)
 				{
 					func_error("OPEN_REP_ERROR not find piple, piple id:%d", pkt->head.piple_id);
 				}else{
-					client->piples[pkt->head.piple_id]->state = PIPLE_ERROR;
+					piple->state = PIPLE_ERROR;
 				}
-				pthread_cond_signal(&client->msg_signal);
+				pthread_cond_broadcast(&client->msg_signal);
 				break;
 			}
 			case OPEN_REP_SUCCESS:
 			{
-				pthread_cond_signal(&client->msg_signal);
+				pthread_cond_broadcast(&client->msg_signal);
 				break;
 			}
 			case BIND_PIPLE:
 			{
-				if(client->piples[pkt->head.piple_id] == NULL)
+				piple = client->piples[pkt->head.piple_id];
+				if(piple == NULL)
 				{
 					func_error("BIND_PIPLE not find piple, piple id:%d", pkt->head.piple_id);
 					pkt->head.cmd = BIND_REP_ERROR;
 				}else{
-					client->piples[client->piple_idx]->state = PIPLE_OPENED;
+					piple->state = PIPLE_OPENED;
 					pkt->head.cmd = BIND_REP_SUCCESS;
 				}
-				pthread_cond_signal(&client->msg_signal);
 				tcp_send_pkt(client, (uint8_t *)pkt, sizeof(pkt->head));
+				pthread_cond_broadcast(&client->msg_signal);
 				break;
 			}
 			case BIND_REP_ERROR:
 			{
-				if(client->piples[pkt->head.piple_id] == NULL)
+				piple = client->piples[pkt->head.piple_id];
+				if(piple == NULL)
 				{
 					func_error("BIND_REP_ERROR not find piple, piple id:%d", pkt->head.piple_id);
 				}else{
-					client->piples[pkt->head.piple_id]->state = PIPLE_ERROR;
+					piple->state = PIPLE_ERROR;
+					pthread_cond_broadcast(&client->msg_signal);
 				}
-				pthread_cond_signal(&client->msg_signal);
 				break;
 			}
 			case BIND_REP_SUCCESS:
 			{
-				if(client->piples[pkt->head.piple_id] == NULL)
+				piple = client->piples[pkt->head.piple_id];
+				if(piple == NULL)
 				{
 					func_error("BIND_REP_SUCCESS not find piple, piple id:%d", pkt->head.piple_id);
 				}else{
-					client->piples[client->piple_idx]->state = PIPLE_OPENED;
+					piple->state = PIPLE_OPENED;
+					pthread_cond_broadcast(&client->msg_signal);
 				}
-				pthread_cond_signal(&client->msg_signal);
 				break;
 			}
 			case PIPLE_DATA:
 			{
-				if(client->piples[pkt->head.piple_id] == NULL)
+				piple = client->piples[pkt->head.piple_id];
+				if(piple == NULL)
 				{
 					func_error("PIPLE_DATA not find piple, piple id:%d", pkt->head.piple_id);
 					pkt->head.cmd = CLOSE_PIPLE_REP_ERROR;
 				}else{
-					if(client->piples[client->piple_idx]->state == PIPLE_OPENED)
+					if(piple->state == PIPLE_OPENED)
 					{
-						if(client->piples[client->piple_idx]->recv_callback)
-							client->piples[client->piple_idx]->recv_callback((Piple)client->piples[client->piple_idx], pkt->data, pkt->head.data_len);
+						if(piple->recv_callback)
+							piple->recv_callback((Piple)piple, pkt->data, pkt->head.data_len);
 						else
-						log_warning("PIPLE_DATA recv_callback is null, Data will be discarded.");
+							log_warning("PIPLE_DATA recv_callback is null, Data will be discarded.");
 					}else{
 						func_error("PIPLE_DATA piple is not open.");
 					}
@@ -510,38 +586,41 @@ void _on_data_recv(struct rt_net_client *client, uint8_t *buf, uint16_t len)
 			}
 			case CLOSE_PIPLE:
 			{
-				if(client->piples[pkt->head.piple_id] == NULL)
+				piple = client->piples[pkt->head.piple_id];
+				if(piple == NULL)
 				{
 					func_error("CLOSE_PIPLE not find piple, piple id:%d", pkt->head.piple_id);
 					pkt->head.cmd = CLOSE_PIPLE_REP_ERROR;
 				}else{
-					client->piples[client->piple_idx]->state = PIPLE_CLOSED;
+					piple->state = PIPLE_CLOSED;
 					pkt->head.cmd = CLOSE_PIPLE_REP_SUCCESS;
 				}
-				pthread_cond_signal(&client->msg_signal);
+				pthread_cond_broadcast(&client->msg_signal);
 				tcp_send_pkt(client, (uint8_t *)pkt, sizeof(pkt->head));
 				break;
 			}
 			case CLOSE_PIPLE_REP_ERROR:
 			{
-				if(client->piples[pkt->head.piple_id] == NULL)
+				piple = client->piples[pkt->head.piple_id];
+				if(piple == NULL)
 				{
 					func_error("CLOSE_PIPLE_REP_ERROR not find piple, piple id:%d", pkt->head.piple_id);
 				}else{
-					client->piples[client->piple_idx]->state = PIPLE_ERROR;
+					piple->state = PIPLE_ERROR;
 				}
-				pthread_cond_signal(&client->msg_signal);
+				pthread_cond_broadcast(&client->msg_signal);
 				break;
 			}
 			case CLOSE_PIPLE_REP_SUCCESS:
 			{
-				if(client->piples[pkt->head.piple_id] == NULL)
+				piple = client->piples[pkt->head.piple_id];
+				if(piple == NULL)
 				{
 					func_error("CLOSE_PIPLE_REP_SUCCESS not find piple, piple id:%d", pkt->head.piple_id);
 				}else{
-					client->piples[client->piple_idx]->state = PIPLE_CLOSED;
+					piple->state = PIPLE_CLOSED;
 				}
-				pthread_cond_signal(&client->msg_signal);
+				pthread_cond_broadcast(&client->msg_signal);
 				break;
 			}
 		}

@@ -29,6 +29,8 @@ int main()
 	}
 
 	rt_net_send(piple_fd, (const uint8_t *)"123", 4);
+	rt_net_close_piple(piple_fd);
+	rt_net_release_client(client_fd);
 	sleep(3);
 	return 0;
 }

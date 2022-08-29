@@ -10,21 +10,21 @@ typedef void * Server;
 typedef void * Client;
 typedef void * Piple;
 
-#define PKT_MAGIC 0xABCDEF1234567890
+#define PKT_MAGIC 0xABCDEF12
 
 #define MAX_PKT_SIZE 1472
 
-struct pkt_head{
-    uint64_t magic;
-    uint64_t idx;
-    uint16_t data_len;
-};
-
+#pragma pack(4)
 struct pkt_buf
 {
-    struct pkt_head head;
-    uint8_t data[MAX_PKT_SIZE - sizeof(struct pkt_head)];
+    struct PKT_HEAD{
+        uint32_t magic;
+        uint32_t idx;
+        uint32_t data_len;
+    } head;
+    uint8_t data[MAX_PKT_SIZE - sizeof(struct PKT_HEAD)];
 };
+#pragma pack()
 
 enum RT_PIPLE_CTRL
 {
@@ -47,6 +47,7 @@ enum RT_PIPLE_TYPE
     RT_UNIMPORTANT_PIPLE,
 };
 
+#pragma pack(1)
 struct piple_pkt
 {
     struct PIPLE_PKT_HEAD {
@@ -55,8 +56,10 @@ struct piple_pkt
         enum RT_PIPLE_TYPE piple_type;
         uint16_t data_len;
     }head;
-    uint8_t data[MAX_PKT_SIZE - sizeof(struct pkt_head) - sizeof(struct PIPLE_PKT_HEAD)];
+    uint8_t data[MAX_PKT_SIZE - sizeof(struct PKT_HEAD) - sizeof(struct PIPLE_PKT_HEAD)];
 };
+#pragma pack()
+#define PIPLE_DATA_LEN_MAX (MAX_PKT_SIZE - sizeof(struct PKT_HEAD) - sizeof(struct PIPLE_PKT_HEAD))
 
 enum PIPLE_STATE
 {
@@ -98,7 +101,6 @@ struct rt_net_client
     int tcp_fd;
     int udp_fd;
 
-	bool close_flag;
     bool udp_state;
     
 	pthread_t udp_recv_thread;

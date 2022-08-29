@@ -14,17 +14,22 @@
 int tcp_send_pkt(struct rt_net_client *client, const uint8_t *buf, uint16_t len)
 {
     int ret;
-    if(len > MAX_PKT_SIZE - sizeof(client->tcp_send_buf.head))
+    if(ALIGN4(len) > MAX_PKT_SIZE - sizeof(client->tcp_send_buf.head))
+    {
+        func_error("data size is too long.");
         return -1;
+    }
 
-    client->tcp_send_buf.head.magic = PKT_MAGIC;
+    client->tcp_send_buf.head.magic = htonl(PKT_MAGIC);
     client->tcp_send_buf.head.idx = htonl(client->tcp_send_idx);
-    client->tcp_send_buf.head.data_len = len;
+    client->tcp_send_buf.head.data_len = ALIGN4(len);
 
     if(len > 0)
         memcpy(client->tcp_send_buf.data, buf, len);
 
-    ret = send(client->tcp_fd, (const void *)&client->tcp_send_buf, len + sizeof(client->tcp_send_buf.head), 0);
+    ret = send(client->tcp_fd, (const void *)&client->tcp_send_buf,
+        ALIGN4(len) + sizeof(client->tcp_send_buf.head),
+        0);
     if(ret != -1)
         client->tcp_send_idx++;
     return ret;
@@ -39,21 +44,24 @@ int udp_send_pkt(struct rt_net_client *client, const uint8_t *buf, uint16_t len)
         return -1;
     }
 
-    if(len > MAX_PKT_SIZE - sizeof(client->udp_send_buf.head))
+    if(ALIGN4(len) > MAX_PKT_SIZE - sizeof(client->udp_send_buf.head))
     {
         func_error("data size is too long.");
         return -1;
     }
 
-    client->tcp_send_buf.head.magic = PKT_MAGIC;
+    client->udp_send_buf.head.magic = htonl(PKT_MAGIC);
     client->udp_send_buf.head.idx = htonl(client->udp_send_idx);
-    client->udp_send_buf.head.data_len = len;
+    client->udp_send_buf.head.data_len = ALIGN4(len);
 
     if(len > 0)
         memcpy(client->udp_send_buf.data, buf, len);
 
-    ret = sendto(client->tcp_fd, (const void *)&client->udp_send_buf, len + sizeof(client->udp_send_buf.head), 0,
-        (struct sockaddr*)&client->udp_client_addr, sizeof(client->udp_client_addr));
+    ret = sendto(client->udp_fd, (const void *)&client->udp_send_buf,
+        ALIGN4(len) + sizeof(client->udp_send_buf.head),
+        0,
+        (struct sockaddr*)&client->udp_client_addr,
+        sizeof(client->udp_client_addr));
 
     if(ret != -1)
         client->udp_send_idx++;
@@ -63,33 +71,40 @@ int udp_send_pkt(struct rt_net_client *client, const uint8_t *buf, uint16_t len)
 
 static int _tcp_recv_len(struct rt_net_client *client, uint8_t *buf, int len)
 {
-    int recvlen;
-    int len_tmp = len;
-    while(len_tmp != 0)
+    int recv_tmp;
+    int recv_len = 0;
+    while(recv_len < len)
     {
-        recvlen = recv(client->tcp_fd, buf, len_tmp, 0);
-        if(recvlen <= 0)
+        recv_tmp = recv(client->tcp_fd, buf + recv_len, len - recv_len, 0);
+        if(recv_tmp <= 0)
             return -1;
-        len_tmp -= recvlen;
+        recv_len += recv_tmp;
     }
     return len;
 }
 
 static int _tcp_recv_pkt(struct rt_net_client *client, struct pkt_buf *buf)
 {
-    if(_tcp_recv_len(client, (uint8_t *)&buf->head.idx, sizeof(buf->head) - sizeof(buf->head.magic)) == -1)
+    int ret;
+
+    ret = _tcp_recv_len(client, (uint8_t *)&buf->head.idx, sizeof(buf->head) - sizeof(buf->head.magic));
+    if(ret == -1)
         return -1;
 
-    if(buf->head.data_len <= sizeof(buf->data))
+    if(buf->head.data_len > 0)
     {
-        return _tcp_recv_len(client, buf->data, buf->head.data_len);
-    }else{
-        func_error("pkt data len is too large.");
+        if(buf->head.data_len <= sizeof(buf->data))
+        {
+            ret = _tcp_recv_len(client, buf->data, buf->head.data_len);
+        }else{
+            func_error("pkt data len is too large.");
+        }
     }
-    return 0;
+
+    return ret;
 }
 
-static int tcp_recv_process(struct rt_net_client *client, struct pkt_buf *buf)
+static int tcp_try_recv(struct rt_net_client *client, struct pkt_buf *buf)
 {  
     int ret = _tcp_recv_len(client, (uint8_t *)&buf->head.magic, sizeof(buf->head.magic));
     if(ret != -1)
@@ -97,6 +112,9 @@ static int tcp_recv_process(struct rt_net_client *client, struct pkt_buf *buf)
         if(ntohl(buf->head.magic) == PKT_MAGIC)
         {
             ret = _tcp_recv_pkt(client, buf);
+        }else{
+            log_warning("tcp recv: magic is invaild. %lx %lx %lx", buf->head.magic, ntohl(buf->head.magic), htonl(PKT_MAGIC));
+            ret = 0;
         }
     }
  
@@ -105,7 +123,7 @@ static int tcp_recv_process(struct rt_net_client *client, struct pkt_buf *buf)
 
 static void *_tcp_recv_process(void *arg)
 {
-    int ret;
+    int ret = 0;
     struct rt_net_client *client = (struct rt_net_client *)arg;
     struct pkt_buf *buf = malloc(sizeof(struct pkt_buf));
 
@@ -113,16 +131,13 @@ static void *_tcp_recv_process(void *arg)
             inet_ntoa(client->tcp_client_addr.sin_addr),
             ntohs(client->tcp_client_addr.sin_port));
 
-    while(!client->close_flag)
+    while(ret != -1)
     {
-        ret = tcp_recv_process(client, buf);
+        ret = tcp_try_recv(client, buf);
         if(ret > 0)
         {
             _on_data_recv(client, buf->data, buf->head.data_len);
         }
-
-        if(ret == -1)
-            break;
     }
 
     log_info("tcp stop recv from ip:%s port:%d", 
@@ -130,6 +145,7 @@ static void *_tcp_recv_process(void *arg)
             ntohs(client->tcp_client_addr.sin_port));
 
     close(client->tcp_fd);
+    free(buf);
     free(client);
     return NULL;
 }
@@ -145,35 +161,42 @@ int tcp_accept(struct rt_net_server *server, struct rt_net_client *client)
     }
 
     pthread_create(&client->tcp_recv_thread, NULL, _tcp_recv_process, client);  
-    pthread_detach(client->tcp_recv_thread);
     return 0;
 }
 
 static void *_udp_recv_process(void *arg)
 {
+    int ret = 1;
     struct pkt_buf *buf = malloc(sizeof(struct pkt_buf));
     struct rt_net_client *client = (struct rt_net_client *)arg;
     uint32_t len = sizeof(client->udp_recv_addr);
 
     log_info("upd start recv from ip:%s,port:%d",
-        inet_ntoa(client->udp_recv_addr.sin_addr),
-        ntohs(client->udp_recv_addr.sin_port));
-    while(!client->close_flag)
+        inet_ntoa(client->udp_client_addr.sin_addr),
+        ntohs(client->udp_client_addr.sin_port));
+    while(ret > 0)
     {
-        recvfrom(client->udp_fd, (uint8_t *)buf, MAX_PKT_SIZE, 0, (struct sockaddr*)&client->udp_recv_addr, &len);
+        ret = recvfrom(client->udp_fd, (uint8_t *)buf, MAX_PKT_SIZE, 0, (struct sockaddr*)&client->udp_recv_addr, &len);
 
-        client->udp_state = true;
-        if(ntohl(buf->head.magic) == PKT_MAGIC)
+        if(ret > 0)
         {
-            if(buf->head.data_len <= sizeof(buf->data) && buf->head.data_len > 0)
-                _on_data_recv(client, buf->data, buf->head.data_len);
-        }else{
-            log_warning("udp magic error.");
+            if(client->udp_state == false)
+            {
+                client->udp_state = true;
+                log_info("udp connected");
+            }
+            if(ntohl(buf->head.magic) == PKT_MAGIC)
+            {
+                if(buf->head.data_len <= sizeof(buf->data) && buf->head.data_len > 0)
+                    _on_data_recv(client, buf->data, buf->head.data_len);
+            }else{
+                log_warning("udp magic error.");
+            }
         }
     }
     log_info("upd stop recv from ip:%s,port:%d",
-        inet_ntoa(client->udp_recv_addr.sin_addr),
-        ntohs(client->udp_recv_addr.sin_port));
+        inet_ntoa(client->udp_client_addr.sin_addr),
+        ntohs(client->udp_client_addr.sin_port));
 
     free(buf);
     return NULL;
@@ -240,9 +263,9 @@ FAIL1:
 
 int net_server_release(struct rt_net_server *server)
 {
-    server->udp_client.close_flag = true;
-
+    shutdown(server->udp_client.udp_fd, SHUT_RDWR);
     close(server->udp_client.udp_fd);
+    shutdown(server->tcp_listen_fd, SHUT_RDWR);
     close(server->tcp_listen_fd);
 
     if(server->udp_client.udp_recv_thread)
@@ -284,9 +307,7 @@ int net_client_init(struct rt_net_client *client, char *addr, uint16_t port)
     }
 
     pthread_create(&client->tcp_recv_thread, NULL, _tcp_recv_process, client);  
-    pthread_detach(client->tcp_recv_thread);
     pthread_create(&client->udp_recv_thread, NULL, _udp_recv_process, client);  
-    pthread_detach(client->udp_recv_thread);
 
     client->udp_state = true;
     udp_send_pkt(client, NULL, 0);
@@ -296,13 +317,14 @@ int net_client_init(struct rt_net_client *client, char *addr, uint16_t port)
 
 int net_client_release(struct rt_net_client *client)
 {
-    client->close_flag = true;
-    
-    close(client->tcp_fd);
+    shutdown(client->udp_fd, SHUT_RDWR);
     close(client->udp_fd);
+    shutdown(client->tcp_fd, SHUT_RDWR);
+    close(client->tcp_fd);
 
     if(client->tcp_recv_thread)
         pthread_join(client->tcp_recv_thread, NULL);
+
     if(client->udp_recv_thread)
         pthread_join(client->udp_recv_thread, NULL);
     return 0;

@@ -30,7 +30,7 @@ int main()
 	rt_net_send(piple_fd, (const uint8_t *)"123", 4);
 	rt_net_close_piple(piple_fd);
 
-	piple_fd = rt_net_open_piple(client_fd, RELIABLE_PIPLE, 0, callback);
+	piple_fd = rt_net_open_piple(client_fd, RELIABLE_PIPLE, 1, callback);
 	if(piple_fd == NULL)
 	{
 		printf("open piple fail.\n");
@@ -39,7 +39,7 @@ int main()
 	rt_net_send(piple_fd, (const uint8_t *)"456", 4);
 	rt_net_close_piple(piple_fd);
 
-	piple_fd = rt_net_open_piple(client_fd, RT_IMPORTANT_PIPLE, 1, callback);
+	piple_fd = rt_net_open_piple(client_fd, RT_IMPORTANT_PIPLE, 0, callback);
 	if(piple_fd == NULL)
 	{
 		printf("open piple fail.\n");

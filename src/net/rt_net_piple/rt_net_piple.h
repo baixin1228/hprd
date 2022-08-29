@@ -17,7 +17,7 @@ Client rt_net_server_accept(Server server_fd);
 Piple rt_net_open_piple(
 	Client client_fd,
 	enum RT_PIPLE_TYPE piple_type,
-	uint8_t piple_id,
+	uint8_t piple_channel,
 	void *(* recv_callback)(Piple piple_fd, uint8_t *buf, uint16_t len));
 
 Piple rt_net_piple_accept(Client client_fd);
@@ -28,11 +28,11 @@ int rt_net_piple_bind(
 
 bool rt_net_has_piple(
 	Client client_fd,
-	uint8_t piple_id);
+	uint8_t piple_channel);
 
 Piple rt_net_get_piple(
 	Client client_fd,
-	uint8_t piple_id);
+	uint8_t piple_channel);
 
 int rt_net_close_piple(Piple piple_fd);
 

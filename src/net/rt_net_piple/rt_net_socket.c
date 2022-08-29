@@ -20,6 +20,9 @@ int tcp_send_pkt(struct rt_net_client *client, const uint8_t *buf, uint16_t len)
         return -1;
     }
 
+    if(len > 0)
+        _show_protocol(client, buf, len, true);
+
     client->tcp_send_buf.head.magic = htonl(PKT_MAGIC);
     client->tcp_send_buf.head.idx = htonl(client->tcp_send_idx);
     client->tcp_send_buf.head.data_len = ALIGN4(len);
@@ -49,6 +52,9 @@ int udp_send_pkt(struct rt_net_client *client, const uint8_t *buf, uint16_t len)
         func_error("data size is too long.");
         return -1;
     }
+
+    if(len > 0)
+        _show_protocol(client, buf, len, true);
 
     client->udp_send_buf.head.magic = htonl(PKT_MAGIC);
     client->udp_send_buf.head.idx = htonl(client->udp_send_idx);

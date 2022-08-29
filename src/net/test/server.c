@@ -29,13 +29,16 @@ int main()
 			printf("server_accept fail client_fd is null.\n");
 			break;
 		}
-		piple_fd = rt_net_piple_accept(client_fd);
-		if(piple_fd == NULL)
+		while(1)
 		{
-			printf("piple_accept fail piple_fd is null.\n");
-			break;
+			piple_fd = rt_net_piple_accept(client_fd);
+			if(piple_fd == NULL)
+			{
+				printf("piple_accept fail piple_fd is null.\n");
+				break;
+			}
+			rt_net_piple_bind(piple_fd, callback);
 		}
-		rt_net_piple_bind(piple_fd, callback);
 	}
 	return 0;
 }

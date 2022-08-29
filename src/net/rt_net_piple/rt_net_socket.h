@@ -14,6 +14,13 @@ typedef void * Piple;
 
 #define MAX_PKT_SIZE 1472
 
+enum RT_PIPLE_TYPE
+{
+    RELIABLE_PIPLE = 1,
+    RT_IMPORTANT_PIPLE,
+    RT_UNIMPORTANT_PIPLE,
+};
+
 #pragma pack(4)
 struct pkt_buf
 {
@@ -40,20 +47,18 @@ enum RT_PIPLE_CTRL
     CLOSE_PIPLE_REP_SUCCESS,
 };
 
-enum RT_PIPLE_TYPE
-{
-    RELIABLE_PIPLE,
-    RT_IMPORTANT_PIPLE,
-    RT_UNIMPORTANT_PIPLE,
-};
-
+#define PIPLE_CHANNEL(piple_id)                             (piple_id & 0xFF)
+#define PIPLE_CLIENT(piple_id)                              (piple_id >> 8 & 0xFFFF)
+#define PIPLE_SERVER(piple_id)                              (piple_id >> 24 & 0xFF)
+#define GET_PIPLE_ID(server_id, client_id, piple_channel)   (server_id << 24 | (client_id & 0xFFFF) << 8 | (piple_channel & 0xFF))
 #pragma pack(1)
 struct piple_pkt
 {
     struct PIPLE_PKT_HEAD {
         enum RT_PIPLE_CTRL cmd;
-        uint16_t piple_id;
+        uint32_t piple_id;
         enum RT_PIPLE_TYPE piple_type;
+        uint32_t idx;
         uint16_t data_len;
     }head;
     uint8_t data[MAX_PKT_SIZE - sizeof(struct PKT_HEAD) - sizeof(struct PIPLE_PKT_HEAD)];
@@ -63,7 +68,7 @@ struct piple_pkt
 
 enum PIPLE_STATE
 {
-    PIPLE_OPENING,
+    PIPLE_OPENING = 1,
     PIPLE_OPENED,
     PIPLE_ERROR,
     PIPLE_CLOSED,
@@ -71,19 +76,23 @@ enum PIPLE_STATE
 
 struct rt_net_piple
 {
-    uint16_t id;
+    uint32_t id;
     Client client;
     enum PIPLE_STATE state;
     enum RT_PIPLE_TYPE piple_type;
+
+    uint32_t send_idx;
+    uint32_t recv_idx;
+
     void *(* recv_callback)(Piple piple_fd, uint8_t *buf, uint16_t len);
     struct piple_pkt send_pkt;
     pthread_mutex_t send_lock;
 };
 
-#define PIPLE_MAX 128
+#define PIPLE_MAX 64
 struct rt_net_client
 {
-    short id;
+    int id;
     Server server;
     struct sockaddr_in tcp_client_addr;
     struct sockaddr_in udp_client_addr;
@@ -93,10 +102,10 @@ struct rt_net_client
     struct pkt_buf tcp_send_buf;
     struct pkt_buf udp_send_buf;
 
-    uint64_t tcp_send_idx;
-    uint64_t tcp_recv_idx;
-    uint64_t udp_send_idx;
-    uint64_t udp_recv_idx;
+    uint32_t tcp_send_idx;
+    uint32_t tcp_recv_idx;
+    uint32_t udp_send_idx;
+    uint32_t udp_recv_idx;
 
     int tcp_fd;
     int udp_fd;
@@ -106,16 +115,17 @@ struct rt_net_client
 	pthread_t udp_recv_thread;
 	pthread_t tcp_recv_thread;
 
-	uint16_t piple_idx;
     pthread_cond_t msg_signal;
+    uint8_t msg_timeout;
     pthread_mutex_t piple_open_lock;
 	pthread_mutex_t accept_piple_lock;
 	struct rt_net_piple *piples[PIPLE_MAX];
 };
 
-#define CLIENT_MAX 10240
+#define CLIENT_MAX 1024
 struct rt_net_server
 {
+    int id;
     pthread_mutex_t accept_lock;
 
     struct sockaddr_in tcp_server_addr;
@@ -134,4 +144,7 @@ int net_server_init(struct rt_net_server *server, char *addr, uint16_t port);
 int net_server_release(struct rt_net_server *server);
 int net_client_init(struct rt_net_client *client, char *addr, uint16_t port);
 int net_client_release(struct rt_net_client *client);
+
+void _show_protocol(struct rt_net_client *client, const uint8_t *buf, uint16_t len, bool is_send);
+
 #endif

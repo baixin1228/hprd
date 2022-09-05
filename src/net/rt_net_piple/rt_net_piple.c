@@ -16,6 +16,34 @@ pthread_mutex_t client_lock = PTHREAD_MUTEX_INITIALIZER;
 uint16_t server_idx = 0;
 struct rt_net_server *servers[MAX_SERVER];
 
+static uint64_t tm_to_ns(struct timespec tm)
+{
+	return tm.tv_sec * 1000000000 + tm.tv_nsec;
+}
+
+static struct timespec ns_to_tm(uint64_t ns)
+{
+	struct timespec tm;
+	tm.tv_sec = ns / 1000000000;
+	tm.tv_nsec = ns - (tm.tv_sec * 1000000000);
+	return tm;
+}
+
+static int _time_outwait(
+	struct rt_net_client *client,
+	pthread_cond_t *__restrict __cond,
+	pthread_mutex_t *__restrict __mutex)
+{
+	struct timespec start_tm;
+	struct timespec end_tm;
+	clock_gettime(CLOCK_MONOTONIC, &start_tm);
+	end_tm = ns_to_tm(tm_to_ns(start_tm) + client->msg_timeout * 1000000000UL);
+	if(pthread_cond_timedwait(__cond, __mutex, &end_tm) == ETIMEDOUT)
+		return -1;
+
+	return 0;
+}
+
 Server rt_net_init_server(char *addr, uint16_t port)
 {
 	Server ret = NULL;
@@ -79,9 +107,75 @@ int rt_net_release_server(Server server_fd)
 	return ret;
 }
 
+void init_next_pkt(struct rt_net_client *client, struct piple_pkt *pkt)
+{
+	pkt->head.idx = client->send_pkt_idx;
+	client->send_pkt_idx++;
+}
+
+enum CMD_RESPONSE __send_cmd(struct rt_net_client *client, struct piple_pkt *pkt, pthread_mutex_t *lock, enum CMD_RESPONSE *cmd_ret, bool tcp_udp)
+{
+	enum CMD_RESPONSE ret = CMD_ERROR;
+	pthread_mutex_lock(lock);
+	*cmd_ret = CMD_NONE;
+
+	if(tcp_udp)
+	{
+		if(tcp_send_pkt(client, (uint8_t *)pkt, sizeof(pkt->head)) != -1)
+		{
+			func_error("tcp_send_pkt error.");
+			return ret;
+		}
+	}else{
+		if(udp_send_pkt(client, (uint8_t *)pkt, sizeof(pkt->head)) != -1)
+		{
+			func_error("udp_send_pkt error.");
+			return ret;
+		}
+		if(udp_send_pkt(client, (uint8_t *)pkt, sizeof(pkt->head)) != -1)
+		{
+			func_error("udp_send_pkt error.");
+			return ret;
+		}
+		if(udp_send_pkt(client, (uint8_t *)pkt, sizeof(pkt->head)) != -1)
+		{
+			func_error("udp_send_pkt error.");
+			return ret;
+		}
+	}
+
+	while(1)
+	{
+		if(*cmd_ret != CMD_NONE)
+		{
+			ret = *cmd_ret;
+			break;
+		}
+		if(_time_outwait(client, &client->msg_signal, lock) == -1)
+		{
+			ret = CMD_TIME_OUT;
+			log_warning("signal: waiting timeout.");
+			break;
+		}
+	}
+	pthread_mutex_unlock(lock);
+	return ret;
+}
+
+enum CMD_RESPONSE _client_send_cmd(struct rt_net_client *client, struct piple_pkt *pkt, bool tcp_udp)
+{
+	return __send_cmd(client, pkt, &client->client_lock, &client->cmd_ret, tcp_udp);
+}
+
+enum CMD_RESPONSE _piple_send_cmd(struct rt_net_client *client, struct rt_net_piple *piple, struct piple_pkt *pkt, bool tcp_udp)
+{
+	return __send_cmd(client, pkt, &piple->piple_lock, &piple->cmd_ret, tcp_udp);
+}
+
 Client rt_net_init_client(char *addr, uint16_t port)
 {
 	Client ret = NULL;
+	struct piple_pkt pkt;
 	struct rt_net_client *client;
 	struct rt_net_server *server;
 
@@ -107,13 +201,12 @@ Client rt_net_init_client(char *addr, uint16_t port)
 	client = (struct rt_net_client *)calloc(1, sizeof(struct rt_net_client));
 	if(client != NULL)
 	{
-		pthread_mutex_init(&client->piple_open_lock, NULL);
-		pthread_mutex_init(&client->accept_piple_lock, NULL);
+		pthread_mutex_init(&client->client_lock, NULL);
 
 		pthread_condattr_t attr;
 		pthread_condattr_init(&attr);
-	    pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
-	    pthread_cond_init(&client->msg_signal, &attr);
+		pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
+		pthread_cond_init(&client->msg_signal, &attr);
 
 		server->clients[server->client_idx] = client;
 		client->id = server->client_idx;
@@ -122,7 +215,23 @@ Client rt_net_init_client(char *addr, uint16_t port)
 		server->client_idx++;
 		if(net_client_init(client, addr, port) != -1)
 		{
-			ret = (Client)client;
+			init_next_pkt(client, &pkt);
+			pkt.head.cmd = TCP_CONNECT;
+			pkt.head.uri = GET_URI(server->id, client->id, 0);
+			pkt.head.piple_type = 0;
+			pkt.head.data_len = 0;
+			if(_client_send_cmd(client, &pkt, true) == CMD_OK)
+			{
+				ret = (Client)client;
+				init_next_pkt(client, &pkt);
+				pkt.head.cmd = UDP_CONNECT;
+				if(_client_send_cmd(client, &pkt, false) != CMD_OK)
+				{
+					func_error("udp connect fail.");
+				}
+			}else{
+				func_error("tcp connect fail.");
+			}
 		}else{
 			free(client);
 		}
@@ -173,12 +282,12 @@ Client rt_net_server_accept(Server server_fd)
 		client = (struct rt_net_client *)calloc(1, sizeof(struct rt_net_client));
 		if(client != NULL)
 		{
-			pthread_mutex_init(&client->piple_open_lock, NULL);
-			pthread_mutex_init(&client->accept_piple_lock, NULL);
+			pthread_mutex_init(&client->client_lock, NULL);
+			pthread_mutex_init(&client->client_lock, NULL);
 			pthread_condattr_t attr;
 			pthread_condattr_init(&attr);
-		    pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
-		    pthread_cond_init(&client->msg_signal, &attr);
+			pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
+			pthread_cond_init(&client->msg_signal, &attr);
 			if(tcp_accept(server, client) == 0)
 			{
 				server->clients[server->client_idx] = client;
@@ -199,36 +308,6 @@ Client rt_net_server_accept(Server server_fd)
 	}
 
 	return ret;
-}
-
-
- 
-static long long tm_to_ns(struct timespec tm)
-{
-	return tm.tv_sec * 1000000000 + tm.tv_nsec;
-}
- 
-static struct timespec ns_to_tm(long long ns)
-{
-	struct timespec tm;
-	tm.tv_sec = ns / 1000000000;
-	tm.tv_nsec = ns - (tm.tv_sec * 1000000000);
-	return tm;
-}
-
-static int _time_outwait(
-	struct rt_net_client *client,
-	pthread_cond_t *__restrict __cond,
-	pthread_mutex_t *__restrict __mutex)
-{
-	struct timespec start_tm;
-	struct timespec end_tm;
-	clock_gettime(CLOCK_MONOTONIC, &start_tm);
-	end_tm = ns_to_tm(tm_to_ns(start_tm) + client->msg_timeout * 1000000000);
-	if(pthread_cond_timedwait(__cond, __mutex, &end_tm) == ETIMEDOUT)
-		return -1;
-
-	return 0;
 }
 
 Piple rt_net_open_piple(
@@ -252,44 +331,31 @@ Piple rt_net_open_piple(
 			return NULL;
 		}
 
-		pthread_mutex_lock(&client->piple_open_lock);
 		piple = calloc(1, sizeof(struct rt_net_piple));
 		if(piple != NULL)
 		{
 			if(!client->piples[piple_channel])
 			{
 				client->piples[piple_channel] = piple;
-				piple->id = 0;
+				piple->uri = 0;
 				piple->client = (Client)client;
 
 				piple->piple_type = piple_type;
 				piple->recv_callback = recv_callback;
 				piple->state = PIPLE_OPENING;
 
-				pthread_mutex_init(&piple->send_lock, NULL);
+				pthread_mutex_init(&piple->piple_lock, NULL);
+				init_next_pkt(client, &pkt);
 				pkt.head.cmd = OPEN_PIPLE;
-				pkt.head.piple_id = GET_PIPLE_ID(server->id, client->id, piple_channel);
+				pkt.head.uri = GET_URI(server->id, client->id, piple_channel);
 				pkt.head.piple_type = piple->piple_type;
 				pkt.head.data_len = 0;
-				tcp_send_pkt(client, (uint8_t *)&pkt, sizeof(pkt.head));
-				while(1)
+				if(_client_send_cmd(client, &pkt, true) == CMD_OK)
 				{
-					if(piple->state == PIPLE_OPENED)
-					{
-						ret = (Piple)piple;
-						break;
-					}
-					if(piple->state == PIPLE_ERROR)
-					{
-						func_error("Piple open error.");
-						break;
-					}
-					if(_time_outwait(client, &client->msg_signal, &client->piple_open_lock) == -1)
-					{
-						piple->state = PIPLE_ERROR;
-						log_warning("open piple: waiting server timeout.");
-						break;
-					}
+					ret = (Piple)piple;
+				}else{
+					piple->state = PIPLE_ERROR;
+					func_error("Piple open error.");
 				}
 			}else{
 				func_error("The channel is already open.");
@@ -297,7 +363,6 @@ Piple rt_net_open_piple(
 		}else{
 			func_error("calloc fail.");
 		}
-		pthread_mutex_unlock(&client->piple_open_lock);
 	}else{
 		func_error("Not find client.");
 	}
@@ -312,7 +377,7 @@ Piple rt_net_piple_accept(Client client_fd)
 
 	if(client)
 	{
-		pthread_mutex_lock(&client->accept_piple_lock);
+		pthread_mutex_lock(&client->client_lock);
 		while(!ret)
 		{
 			for (i = 0; i < PIPLE_MAX; ++i)
@@ -325,9 +390,9 @@ Piple rt_net_piple_accept(Client client_fd)
 				}
 			}
 			if(!ret)
-				pthread_cond_wait(&client->msg_signal, &client->accept_piple_lock);
+				pthread_cond_wait(&client->msg_signal, &client->client_lock);
 		}
-		pthread_mutex_unlock(&client->accept_piple_lock);
+		pthread_mutex_unlock(&client->client_lock);
 	}else{
 		func_error("not find client.");
 	}
@@ -344,6 +409,7 @@ int rt_net_piple_bind(
 	struct rt_net_client *client;
 	struct rt_net_piple *piple = (struct rt_net_piple *)piple_fd;
 
+	printf("%s\n", __func__);
 	if(piple)
 	{
 		client = (struct rt_net_client *)piple->client;
@@ -351,30 +417,16 @@ int rt_net_piple_bind(
 		{
 			piple->recv_callback = recv_callback;
 
-			pthread_mutex_lock(&piple->send_lock);
+			init_next_pkt(client, &pkt);
 			pkt.head.cmd = BIND_PIPLE;
-			pkt.head.piple_id = piple->id;
+			pkt.head.uri = piple->uri;
 			pkt.head.data_len = 0;
-			tcp_send_pkt(client, (uint8_t *)&pkt, sizeof(pkt.head));
-			while(1)
+			if(_piple_send_cmd(client, piple, &pkt, true) == CMD_OK)
 			{
-				if(piple->state == PIPLE_OPENED)
-				{
-					ret = 0;
-					break;
-				}
-				if(piple->state == PIPLE_ERROR)
-				{
-					func_error("bind piple response error.");
-					break;
-				}
-				if(_time_outwait(client, &client->msg_signal, &piple->send_lock) == -1)
-				{
-					log_warning("piple bind: waiting client timeout.");
-					break;
-				}
+				ret = 0;
+			}else{
+				func_error("bind piple response error.");
 			}
-			pthread_mutex_unlock(&piple->send_lock);
 		}else{
 			func_error("not find client.");
 		}
@@ -431,36 +483,18 @@ int rt_net_close_piple(Piple piple_fd)
 			client = (struct rt_net_client *)piple->client;
 			if(client)
 			{
-				pthread_mutex_lock(&piple->send_lock);
+				init_next_pkt(client, &piple->send_pkt);
 				piple->send_pkt.head.cmd = CLOSE_PIPLE;
-				piple->send_pkt.head.piple_id = piple->id;
+				piple->send_pkt.head.uri = piple->uri;
 				piple->send_pkt.head.data_len = 0;
-				if(tcp_send_pkt(client, (uint8_t *)&piple->send_pkt, sizeof(piple->send_pkt.head)) != -1)
+				if(_piple_send_cmd(client, piple, &piple->send_pkt, true) == CMD_OK)
 				{
-					while(1)
-					{
-						if(piple->state == PIPLE_CLOSED)
-						{
-							client->piples[PIPLE_CHANNEL(piple->id)] = NULL;
-							free(piple);
-							ret = 0;
-							break;
-						}
-						if(piple->state == PIPLE_ERROR)
-						{
-							func_error("close piple response error.");
-							break;
-						}
-						if(_time_outwait(client, &client->msg_signal, &piple->send_lock) == -1)
-						{
-							log_warning("piple close: waiting timeout.");
-							break;
-						}
-					}
+					client->piples[PIPLE_CHANNEL(piple->uri)] = NULL;
+					free(piple);
+					ret = 0;
 				}else{
-					func_error("tcp_send_pkt error.");
+					func_error("bind piple response error.");
 				}
-				pthread_mutex_unlock(&piple->send_lock);
 			}else{
 				func_error("not find client.");
 			}
@@ -479,10 +513,9 @@ int _send(
 	const uint8_t *buf,
 	size_t len)
 {
+	init_next_pkt(client, &piple->send_pkt);
 	piple->send_pkt.head.cmd = PIPLE_DATA;
-	piple->send_pkt.head.piple_id = piple->id;
-	piple->send_pkt.head.idx = piple->send_idx;
-	piple->send_idx++;
+	piple->send_pkt.head.uri = piple->uri;
 	memcpy(piple->send_pkt.data, buf, len);
 	piple->send_pkt.head.data_len = len;
 	switch(piple->piple_type)
@@ -500,6 +533,7 @@ int _send(
 				if(udp_send_pkt(client, (const uint8_t *)&piple->send_pkt, len + sizeof(piple->send_pkt.head)) == -1)
 					return -1;
 			}
+			return len;
 			break;
 		}
 		case RT_UNIMPORTANT_PIPLE:
@@ -533,7 +567,7 @@ int rt_net_send(
 			client = (struct rt_net_client *)piple->client;
 			if(client)
 			{
-				pthread_mutex_lock(&piple->send_lock);
+				pthread_mutex_lock(&piple->piple_lock);
 				ret = 0;
 				while(len > 0)
 				{
@@ -553,7 +587,7 @@ int rt_net_send(
 					ret += send_tmp;
 					len -= send_tmp;
 				}
-				pthread_mutex_unlock(&piple->send_lock);
+				pthread_mutex_unlock(&piple->piple_lock);
 			}else{
 				func_error("not find client.");
 			}
@@ -568,6 +602,7 @@ int rt_net_send(
 
 void _show_protocol(struct rt_net_client *client, const uint8_t *buf, uint16_t len, bool is_send)
 {
+	char *cmd;
 	char *direction_str;
 	struct piple_pkt *pkt = (struct piple_pkt *)buf;
 
@@ -580,57 +615,96 @@ void _show_protocol(struct rt_net_client *client, const uint8_t *buf, uint16_t l
 
 	switch(pkt->head.cmd)
 	{
+		case TCP_CONNECT:
+		{
+			cmd = "TCP_CONNECT";
+			break;
+		}
+		case TCP_CONNECT_RET_ERROR:
+		{
+			cmd = "TCP_CONNECT_RET_ERROR";
+			break;
+		}
+		case TCP_CONNECT_RET_SUCCESS:
+		{
+			cmd = "TCP_CONNECT_RET_SUCCESS";
+			break;
+		}
+		case UDP_CONNECT:
+		{
+			cmd = "UDP_CONNECT";
+			break;
+		}
+		case UDP_CONNECT_RET_ERROR:
+		{
+			cmd = "UDP_CONNECT_RET_ERROR";
+			break;
+		}
+		case UDP_CONNECT_RET_SUCCESS:
+		{
+			cmd = "UDP_CONNECT_RET_SUCCESS";
+			break;
+		}
 		case OPEN_PIPLE:
 		{
-			log_info("cmd:%25s %s client:%p piple:%d.", "OPEN_PIPLE", direction_str, client, PIPLE_CHANNEL(pkt->head.piple_id));
+			cmd = "OPEN_PIPLE";
 			break;
 		}
 		case OPEN_REP_ERROR:
 		{
-			log_info("cmd:%25s %s client:%p piple:%d.", "OPEN_REP_ERROR", direction_str, client, PIPLE_CHANNEL(pkt->head.piple_id));
+			cmd = "OPEN_REP_ERROR";
 			break;
 		}
 		case OPEN_REP_SUCCESS:
 		{
-			log_info("cmd:%25s %s client:%p piple:%d.", "OPEN_REP_SUCCESS", direction_str, client, PIPLE_CHANNEL(pkt->head.piple_id));
+			cmd = "OPEN_REP_SUCCESS";
 			break;
 		}
 		case BIND_PIPLE:
 		{
-			log_info("cmd:%25s %s client:%p piple:%d.", "BIND_PIPLE", direction_str, client, PIPLE_CHANNEL(pkt->head.piple_id));
+			cmd = "BIND_PIPLE";
 			break;
 		}
 		case BIND_REP_ERROR:
 		{
-			log_info("cmd:%25s %s client:%p piple:%d.", "BIND_REP_ERROR", direction_str, client, PIPLE_CHANNEL(pkt->head.piple_id));
+			cmd = "BIND_REP_ERROR";
 			break;
 		}
 		case BIND_REP_SUCCESS:
 		{
-			log_info("cmd:%25s %s client:%p piple:%d.", "BIND_REP_SUCCESS", direction_str, client, PIPLE_CHANNEL(pkt->head.piple_id));
+			cmd = "BIND_REP_SUCCESS";
 			break;
 		}
 		case PIPLE_DATA:
 		{
-			log_info("cmd:%25s %s client:%p piple:%d.", "PIPLE_DATA", direction_str, client, PIPLE_CHANNEL(pkt->head.piple_id));
+			cmd = "PIPLE_DATA";
 			break;
 		}
 		case CLOSE_PIPLE:
 		{
-			log_info("cmd:%25s %s client:%p piple:%d.", "CLOSE_PIPLE", direction_str, client, PIPLE_CHANNEL(pkt->head.piple_id));
+			cmd = "CLOSE_PIPLE";
 			break;
 		}
 		case CLOSE_PIPLE_REP_ERROR:
 		{
-			log_info("cmd:%25s %s client:%p piple:%d.", "CLOSE_PIPLE_REP_ERROR", direction_str, client, PIPLE_CHANNEL(pkt->head.piple_id));
+			cmd = "CLOSE_PIPLE_REP_ERROR";
 			break;
 		}
 		case CLOSE_PIPLE_REP_SUCCESS:
 		{
-			log_info("cmd:%25s %s client:%p piple:%d.", "CLOSE_PIPLE_REP_SUCCESS", direction_str, client, PIPLE_CHANNEL(pkt->head.piple_id));
+			cmd = "CLOSE_PIPLE_REP_SUCCESS";
 			break;
 		}
 	}
+	log_info("cmd:%25s %s client:%p piple:%d.", cmd, direction_str, client, PIPLE_CHANNEL(pkt->head.uri));
+}
+
+void sync_cmd_ret(struct rt_net_client *client, enum CMD_RESPONSE *cmd_ret, enum CMD_RESPONSE ret)
+{
+	pthread_mutex_lock(&client->client_lock);
+	*cmd_ret = ret;
+	pthread_cond_broadcast(&client->msg_signal);
+	pthread_mutex_unlock(&client->client_lock);
 }
 
 void _on_data_recv(struct rt_net_client *client, uint8_t *buf, uint16_t len)
@@ -643,17 +717,51 @@ void _on_data_recv(struct rt_net_client *client, uint8_t *buf, uint16_t len)
 	{
 		_show_protocol(client, buf, len, false);
 		
-		if(pkt->head.cmd != OPEN_PIPLE)
+		if(pkt->head.cmd > OPEN_PIPLE)
 		{
-			piple = client->piples[PIPLE_CHANNEL(pkt->head.piple_id)];
+			piple = client->piples[PIPLE_CHANNEL(pkt->head.uri)];
 			if(!piple)
 			{
-				func_error("not find piple, piple id:%x channel:%d", pkt->head.piple_id, PIPLE_CHANNEL(pkt->head.piple_id));
+				func_error("not find piple, piple id:%x channel:%d", pkt->head.uri, PIPLE_CHANNEL(pkt->head.uri));
 			}
 		}
 
 		switch(pkt->head.cmd)
 		{
+			case TCP_CONNECT:
+			{
+				client->uri = pkt->head.uri;
+				pkt->head.cmd = TCP_CONNECT_RET_SUCCESS;
+				tcp_send_pkt(client, (uint8_t *)pkt, sizeof(pkt->head));
+				break;
+			}
+			case TCP_CONNECT_RET_ERROR:
+			{
+				sync_cmd_ret(client, &client->cmd_ret, CMD_ERROR);
+				break;
+			}
+			case TCP_CONNECT_RET_SUCCESS:
+			{
+				sync_cmd_ret(client, &client->cmd_ret, CMD_OK);
+				break;
+			}
+			case UDP_CONNECT:
+			{
+				client->udp_state = true;
+				pkt->head.cmd = UDP_CONNECT_RET_SUCCESS;
+				udp_send_pkt(client, (uint8_t *)pkt, sizeof(pkt->head));
+				break;
+			}
+			case UDP_CONNECT_RET_ERROR:
+			{
+				sync_cmd_ret(client, &client->cmd_ret, CMD_ERROR);
+				break;
+			}
+			case UDP_CONNECT_RET_SUCCESS:
+			{
+				sync_cmd_ret(client, &client->cmd_ret, CMD_OK);
+				break;
+			}
 			case OPEN_PIPLE:
 			{
 				server = (struct rt_net_server *)client->server;
@@ -665,7 +773,7 @@ void _on_data_recv(struct rt_net_client *client, uint8_t *buf, uint16_t len)
 						func_error("calloc fail.");
 						pkt->head.cmd = OPEN_REP_ERROR;
 					}else{
-						client->piples[PIPLE_CHANNEL(pkt->head.piple_id)] = piple;
+						client->piples[PIPLE_CHANNEL(pkt->head.uri)] = piple;
 						pkt->head.cmd = OPEN_REP_SUCCESS;
 					}
 				}else{
@@ -675,13 +783,15 @@ void _on_data_recv(struct rt_net_client *client, uint8_t *buf, uint16_t len)
 
 				if(pkt->head.cmd == OPEN_REP_SUCCESS)
 				{
-					piple->id = pkt->head.piple_id;
-					pkt->head.piple_id = GET_PIPLE_ID(server->id, client->id, PIPLE_CHANNEL(pkt->head.piple_id));
+					pthread_mutex_lock(&client->client_lock);
+					piple->uri = pkt->head.uri;
+					pkt->head.uri = GET_URI(server->id, client->id, PIPLE_CHANNEL(pkt->head.uri));
 					piple->client = (Client)client;
 					piple->state = PIPLE_OPENING;
 					piple->piple_type = pkt->head.piple_type;
-					pthread_mutex_init(&piple->send_lock, NULL);
+					pthread_mutex_init(&piple->piple_lock, NULL);
 					pthread_cond_broadcast(&client->msg_signal);
+					pthread_mutex_unlock(&client->client_lock);
 				}
 				tcp_send_pkt(client, (uint8_t *)pkt, sizeof(pkt->head));
 				break;
@@ -691,7 +801,7 @@ void _on_data_recv(struct rt_net_client *client, uint8_t *buf, uint16_t len)
 				if(piple != NULL)
 				{
 					piple->state = PIPLE_ERROR;
-					pthread_cond_broadcast(&client->msg_signal);
+					sync_cmd_ret(client, &client->cmd_ret, CMD_ERROR);
 				}
 				break;
 			}
@@ -699,8 +809,8 @@ void _on_data_recv(struct rt_net_client *client, uint8_t *buf, uint16_t len)
 			{
 				if(piple != NULL)
 				{
-					piple->id = pkt->head.piple_id;
-					pthread_cond_broadcast(&client->msg_signal);
+					piple->uri = pkt->head.uri;
+					sync_cmd_ret(client, &client->cmd_ret, CMD_OK);
 				}
 				break;
 			}
@@ -711,7 +821,6 @@ void _on_data_recv(struct rt_net_client *client, uint8_t *buf, uint16_t len)
 					piple->state = PIPLE_OPENED;
 					pkt->head.cmd = BIND_REP_SUCCESS;
 					tcp_send_pkt(client, (uint8_t *)pkt, sizeof(pkt->head));
-					pthread_cond_broadcast(&client->msg_signal);
 				}
 				break;
 			}
@@ -720,7 +829,7 @@ void _on_data_recv(struct rt_net_client *client, uint8_t *buf, uint16_t len)
 				if(piple != NULL)
 				{
 					piple->state = PIPLE_ERROR;
-					pthread_cond_broadcast(&client->msg_signal);
+					sync_cmd_ret(client, &piple->cmd_ret, CMD_ERROR);
 				}
 				break;
 			}
@@ -729,7 +838,7 @@ void _on_data_recv(struct rt_net_client *client, uint8_t *buf, uint16_t len)
 				if(piple != NULL)
 				{
 					piple->state = PIPLE_OPENED;
-					pthread_cond_broadcast(&client->msg_signal);
+					sync_cmd_ret(client, &piple->cmd_ret, CMD_OK);
 				}
 				break;
 			}
@@ -756,11 +865,10 @@ void _on_data_recv(struct rt_net_client *client, uint8_t *buf, uint16_t len)
 					pkt->head.cmd = CLOSE_PIPLE_REP_ERROR;
 				}else{
 					piple->state = PIPLE_CLOSED;
-					client->piples[PIPLE_CHANNEL(piple->id)] = NULL;
+					client->piples[PIPLE_CHANNEL(piple->uri)] = NULL;
 					free(piple);
 					pkt->head.cmd = CLOSE_PIPLE_REP_SUCCESS;
 				}
-				pthread_cond_broadcast(&client->msg_signal);
 				tcp_send_pkt(client, (uint8_t *)pkt, sizeof(pkt->head));
 				break;
 			}
@@ -769,7 +877,7 @@ void _on_data_recv(struct rt_net_client *client, uint8_t *buf, uint16_t len)
 				if(piple != NULL)
 				{
 					piple->state = PIPLE_ERROR;
-					pthread_cond_broadcast(&client->msg_signal);
+					sync_cmd_ret(client, &piple->cmd_ret, CMD_ERROR);
 				}
 				break;
 			}
@@ -778,7 +886,7 @@ void _on_data_recv(struct rt_net_client *client, uint8_t *buf, uint16_t len)
 				if(piple != NULL)
 				{
 					piple->state = PIPLE_CLOSED;
-					pthread_cond_broadcast(&client->msg_signal);
+					sync_cmd_ret(client, &piple->cmd_ret, CMD_OK);
 				}
 				break;
 			}
@@ -795,18 +903,20 @@ void _on_udp_data_recv(struct rt_net_client *client, uint8_t *buf, uint16_t len)
 
 	if(len >= sizeof(pkt->head))
 	{
-		server = servers[PIPLE_SERVER(pkt->head.piple_id)];
+		server = servers[PIPLE_SERVER(pkt->head.uri)];
 		if(!server)
 		{
-			func_error("not find server, id:%d", PIPLE_SERVER(pkt->head.piple_id));
+			func_error("not find server, id:%d", PIPLE_SERVER(pkt->head.uri));
 			return;
 		}
-		client = server->clients[PIPLE_CLIENT(pkt->head.piple_id)];
+		client = server->clients[PIPLE_CLIENT(pkt->head.uri)];
+		printf("client:%p client:%d\n", client, PIPLE_CLIENT(pkt->head.uri));
 		if(!client)
 		{
-			func_error("not find client, id:%d", PIPLE_CLIENT(pkt->head.piple_id));
+			func_error("not find client, id:%d", PIPLE_CLIENT(pkt->head.uri));
 			return;
 		}
+
 		_on_data_recv(client, buf, len);
 	}else{
 		func_error("pkt is too small, len:%d", len);

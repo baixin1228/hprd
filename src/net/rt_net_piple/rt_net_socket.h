@@ -35,6 +35,12 @@ struct pkt_buf
 
 enum RT_PIPLE_CTRL
 {
+    TCP_CONNECT,
+    TCP_CONNECT_RET_ERROR,
+    TCP_CONNECT_RET_SUCCESS,
+    UDP_CONNECT,
+    UDP_CONNECT_RET_ERROR,
+    UDP_CONNECT_RET_SUCCESS,
     OPEN_PIPLE,
     OPEN_REP_ERROR,
     OPEN_REP_SUCCESS,
@@ -47,16 +53,17 @@ enum RT_PIPLE_CTRL
     CLOSE_PIPLE_REP_SUCCESS,
 };
 
-#define PIPLE_CHANNEL(piple_id)                             (piple_id & 0xFF)
-#define PIPLE_CLIENT(piple_id)                              (piple_id >> 8 & 0xFFFF)
-#define PIPLE_SERVER(piple_id)                              (piple_id >> 24 & 0xFF)
-#define GET_PIPLE_ID(server_id, client_id, piple_channel)   (server_id << 24 | (client_id & 0xFFFF) << 8 | (piple_channel & 0xFF))
+#define PIPLE_CHANNEL(uri)                             (uri & 0xFF)
+#define PIPLE_CLIENT(uri)                              (uri >> 8 & 0xFFFF)
+#define PIPLE_SERVER(uri)                              (uri >> 24 & 0xFF)
+#define GET_URI(server_id, client_id, piple_channel)   (server_id << 24 | (client_id & 0xFFFF) << 8 | (piple_channel & 0xFF))
+
 #pragma pack(1)
 struct piple_pkt
 {
     struct PIPLE_PKT_HEAD {
         enum RT_PIPLE_CTRL cmd;
-        uint32_t piple_id;
+        uint32_t uri;
         enum RT_PIPLE_TYPE piple_type;
         uint32_t idx;
         uint16_t data_len;
@@ -65,6 +72,14 @@ struct piple_pkt
 };
 #pragma pack()
 #define PIPLE_DATA_LEN_MAX (MAX_PKT_SIZE - sizeof(struct PKT_HEAD) - sizeof(struct PIPLE_PKT_HEAD))
+
+enum CMD_RESPONSE
+{
+    CMD_OK = 0,
+    CMD_ERROR,
+    CMD_TIME_OUT,
+    CMD_NONE,
+};
 
 enum PIPLE_STATE
 {
@@ -76,8 +91,12 @@ enum PIPLE_STATE
 
 struct rt_net_piple
 {
-    uint32_t id;
+    /* server_id + client_id + piple_channle */
+    uint32_t uri;
     Client client;
+    
+    enum CMD_RESPONSE cmd_ret;
+
     enum PIPLE_STATE state;
     enum RT_PIPLE_TYPE piple_type;
 
@@ -86,13 +105,17 @@ struct rt_net_piple
 
     void *(* recv_callback)(Piple piple_fd, uint8_t *buf, uint16_t len);
     struct piple_pkt send_pkt;
-    pthread_mutex_t send_lock;
+    pthread_mutex_t piple_lock;
 };
 
 #define PIPLE_MAX 64
 struct rt_net_client
 {
     int id;
+    /* server_id + client_id + piple_channle = 0 */
+    uint32_t uri;
+    enum CMD_RESPONSE cmd_ret;
+
     Server server;
     struct sockaddr_in tcp_client_addr;
     struct sockaddr_in udp_client_addr;
@@ -101,6 +124,9 @@ struct rt_net_client
 
     struct pkt_buf tcp_send_buf;
     struct pkt_buf udp_send_buf;
+
+    uint32_t send_pkt_idx;
+    uint32_t recv_pkt_idx;
 
     uint32_t tcp_send_idx;
     uint32_t tcp_recv_idx;
@@ -117,8 +143,7 @@ struct rt_net_client
 
     pthread_cond_t msg_signal;
     uint8_t msg_timeout;
-    pthread_mutex_t piple_open_lock;
-	pthread_mutex_t accept_piple_lock;
+	pthread_mutex_t client_lock;
 	struct rt_net_piple *piples[PIPLE_MAX];
 };
 

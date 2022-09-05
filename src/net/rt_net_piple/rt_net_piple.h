@@ -42,4 +42,5 @@ int rt_net_send(
 	size_t len);
 
 void _on_data_recv(struct rt_net_client *client, uint8_t *buf, uint16_t len);
+void _on_udp_data_recv(struct rt_net_client *client, uint8_t *buf, uint16_t len);
 #endif

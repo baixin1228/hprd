@@ -186,15 +186,10 @@ static void *_udp_recv_process(void *arg)
 
         if(ret > 0)
         {
-            if(client->udp_state == false)
-            {
-                client->udp_state = true;
-                log_info("udp connected");
-            }
             if(ntohl(buf->head.magic) == PKT_MAGIC)
             {
-                if(buf->head.data_len <= sizeof(buf->data) && buf->head.data_len > 0)
-                    _on_data_recv(client, buf->data, buf->head.data_len);
+                if(buf->head.data_len <= sizeof(buf->data))
+                    _on_udp_data_recv(client, buf->data, buf->head.data_len);
             }else{
                 log_warning("udp magic error.");
             }
@@ -314,9 +309,7 @@ int net_client_init(struct rt_net_client *client, char *addr, uint16_t port)
 
     pthread_create(&client->tcp_recv_thread, NULL, _tcp_recv_process, client);  
     pthread_create(&client->udp_recv_thread, NULL, _udp_recv_process, client);  
-
     client->udp_state = true;
-    udp_send_pkt(client, NULL, 0);
 
     return 0;
 }

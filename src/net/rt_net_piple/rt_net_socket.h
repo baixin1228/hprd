@@ -6,9 +6,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-typedef void * Server;
-typedef void * Client;
-typedef void * Piple;
+typedef int64_t Server;
+typedef int64_t Client;
+typedef int64_t Piple;
 
 #define PKT_MAGIC 0xABCDEF12
 
@@ -36,11 +36,11 @@ struct pkt_buf
 enum RT_PIPLE_CTRL
 {
     TCP_CONNECT,
-    TCP_CONNECT_RET_ERROR,
-    TCP_CONNECT_RET_SUCCESS,
+    TCP_CONNECT_REP_ERROR,
+    TCP_CONNECT_REP_SUCCESS,
     UDP_CONNECT,
-    UDP_CONNECT_RET_ERROR,
-    UDP_CONNECT_RET_SUCCESS,
+    UDP_CONNECT_REP_ERROR,
+    UDP_CONNECT_REP_SUCCESS,
     OPEN_PIPLE,
     OPEN_REP_ERROR,
     OPEN_REP_SUCCESS,
@@ -53,9 +53,9 @@ enum RT_PIPLE_CTRL
     CLOSE_PIPLE_REP_SUCCESS,
 };
 
-#define PIPLE_CHANNEL(uri)                             (uri & 0xFF)
-#define PIPLE_CLIENT(uri)                              (uri >> 8 & 0xFFFF)
-#define PIPLE_SERVER(uri)                              (uri >> 24 & 0xFF)
+#define URI_CHANNEL(uri)                             (uri & 0xFF)
+#define URI_CLIENT(uri)                              (uri >> 8 & 0xFFFF)
+#define URI_SERVER(uri)                              (uri >> 24 & 0xFF)
 #define GET_URI(server_id, client_id, piple_channel)   (server_id << 24 | (client_id & 0xFFFF) << 8 | (piple_channel & 0xFF))
 
 #pragma pack(1)
@@ -75,25 +75,40 @@ struct piple_pkt
 
 enum CMD_RESPONSE
 {
-    CMD_OK = 0,
+    CMD_NONE,
+    CMD_TCP_CONNECT_ERROR,
+    CMD_TCP_CONNECT_SUCCESS,
+    CMD_UDP_CONNECT_ERROR,
+    CMD_UDP_CONNECT_SUCCESS,
+    CMD_OPEN_ERROR,
+    CMD_OPEN_SUCCESS,
+    CMD_BIND,
+    CMD_BIND_ERROR,
+    CMD_BIND_SUCCESS,
+    CMD_CLOSE_PIPLE_ERROR,
+    CMD_CLOSE_PIPLE_SUCCESS,
     CMD_ERROR,
     CMD_TIME_OUT,
-    CMD_NONE,
 };
 
 enum PIPLE_STATE
 {
     PIPLE_OPENING = 1,
+    PIPLE_WAITING,
     PIPLE_OPENED,
     PIPLE_ERROR,
     PIPLE_CLOSED,
 };
 
+struct rt_net_server;
+struct rt_net_client;
+
 struct rt_net_piple
 {
     /* server_id + client_id + piple_channle */
     uint32_t uri;
-    Client client;
+    uint32_t opposite_uri;
+    struct rt_net_client *client;
     
     enum CMD_RESPONSE cmd_ret;
 
@@ -116,11 +131,10 @@ struct rt_net_client
     uint32_t uri;
     enum CMD_RESPONSE cmd_ret;
 
-    Server server;
+    struct rt_net_server *server;
     struct sockaddr_in tcp_client_addr;
-    struct sockaddr_in udp_client_addr;
-
-    struct sockaddr_in udp_recv_addr;
+    struct sockaddr_in udp_listen_addr;
+    struct sockaddr_in udp_opposite_addr;
 
     struct pkt_buf tcp_send_buf;
     struct pkt_buf udp_send_buf;
@@ -153,7 +167,7 @@ struct rt_net_server
     int id;
     pthread_mutex_t accept_lock;
 
-    struct sockaddr_in tcp_server_addr;
+    struct sockaddr_in tcp_listen_addr;
     struct rt_net_client udp_client;
 
     int tcp_listen_fd;

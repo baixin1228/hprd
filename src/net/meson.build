@@ -1,6 +1,7 @@
 rt_net_piple_src = [
 	'rt_net_piple/rt_net_socket.c',
-	'rt_net_piple/rt_net_piple.c'
+	'rt_net_piple/rt_net_piple.c',
+	'rt_net_piple/rt_net_piple_recv.c'
 ]
 
 rt_net_piple = static_library('rt-net-piple-lib',

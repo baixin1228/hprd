@@ -41,6 +41,12 @@ int rt_net_send(
 	const uint8_t *buf,
 	size_t len);
 
-void _on_data_recv(struct rt_net_client *client, uint8_t *buf, uint16_t len);
+void _on_data_recv(struct rt_net_client *client, uint8_t *buf, uint16_t len, struct rt_net_client *udp_client);
 void _on_udp_data_recv(struct rt_net_client *client, uint8_t *buf, uint16_t len);
+void init_next_pkt(struct rt_net_client *client, struct piple_pkt *pkt);
+int _release_client(struct rt_net_client *client);
+struct rt_net_server *_get_server(uint32_t uri);
+struct rt_net_client *_get_client(uint32_t uri);
+struct rt_net_piple *_get_piple(uint32_t uri);
+
 #endif

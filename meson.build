@@ -6,5 +6,4 @@ if get_option('buildtype').startswith('debug')
   add_project_arguments('-DDEBUG', language : 'c')
 endif
 
-subdir('test')
-subdir('src')
+subdir('src2')

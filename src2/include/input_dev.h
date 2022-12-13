@@ -6,7 +6,7 @@ struct input_dev_ops;
 
 struct input_objct
 {
-	struct input_dev_ops *ops;
+	void *priv;
 }
 
 struct input_dev_ops

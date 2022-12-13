@@ -12,6 +12,8 @@
 #include "module.h"
 #include "fb_in.h"
 
+#define DEFAULT_DISPLAY ":0"
+
 struct x11_extensions
 {
 	Display* display;
@@ -21,16 +23,15 @@ struct x11_extensions
 	Visual* visual;
 	int depth;
 	XShmSegmentInfo shm;
-	XImage *xim;
-	struct common_buffer buffer;
+	XImage *ximg;
+	struct raw_buffer buffer;
 	uint32_t fb_idx;
 };
 
-
-static struct common_buffer * xext_get_frame_buffer(struct module_data *dev)
+static struct raw_buffer * xext_get_frame_buffer(struct input_objct *obj)
 {
-	struct x11_extensions *priv = (struct x11_extensions *)dev->priv;
-	XShmGetImage(priv->display, priv->root_win, priv->xim,
+	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
+	XShmGetImage(priv->display, priv->root_win, priv->ximg,
 		0, 0, AllPlanes);
 	XSync(priv->display, False);
 	priv->fb_idx++;
@@ -38,8 +39,7 @@ static struct common_buffer * xext_get_frame_buffer(struct module_data *dev)
 	return &priv->buffer;
 }
 
-#define DISPLAY_NAME ":0"
-static int xext_dev_init(struct module_data *dev)
+static int xext_dev_init(struct input_objct *obj)
 {
 	int ret = -1;
 	struct x11_extensions *priv;
@@ -51,12 +51,12 @@ static int xext_dev_init(struct module_data *dev)
 		goto FAIL1;
 	}
 
-	priv->display = XOpenDisplay(DISPLAY_NAME);
+	priv->display = XOpenDisplay(DEFAULT_DISPLAY);
 
 	if(priv->display == NULL)
 	{
 		func_error("XOpenDisplay: cannot displayect to X server %s.",
-			XDisplayName(DISPLAY_NAME));
+			XDisplayName(DEFAULT_DISPLAY));
 		goto FAIL2;
 	}
 	if(XShmQueryExtension(priv->display) == False)
@@ -83,16 +83,16 @@ static int xext_dev_init(struct module_data *dev)
 	log_info("x11 xext informations of screen:%d width:%d height:%d." , priv->screen_num
 		, w , h);
 
-	priv->xim = XShmCreateImage(priv->display, priv->visual, priv->depth, ZPixmap, NULL,
+	priv->ximg = XShmCreateImage(priv->display, priv->visual, priv->depth, ZPixmap, NULL,
 		&priv->shm, w, h);
 
-	if (priv->xim == NULL) {
+	if (priv->ximg == NULL) {
 		func_error("XShmCreateImage failed.");
 		goto FAIL3;
 	}
 
 	priv->shm.shmid = shmget(IPC_PRIVATE,
-		(size_t)priv->xim->bytes_per_line * priv->xim->height, IPC_CREAT | 0600);
+		(size_t)priv->ximg->bytes_per_line * priv->ximg->height, IPC_CREAT | 0600);
 
 	if (priv->shm.shmid == -1) {
 		func_error("shmget failed.");
@@ -100,7 +100,7 @@ static int xext_dev_init(struct module_data *dev)
 	}
 
 	priv->shm.readOnly = False;
-	priv->shm.shmaddr = priv->xim->data = (char *) shmat(priv->shm.shmid, 0, 0);
+	priv->shm.shmaddr = priv->ximg->data = (char *) shmat(priv->shm.shmid, 0, 0);
 
 	if (priv->shm.shmaddr == (char *)-1) {
 		func_error("shmat failed.");
@@ -120,18 +120,18 @@ static int xext_dev_init(struct module_data *dev)
 	priv->buffer.format = ARGB8888;
 	priv->buffer.bpp = 32;
 	priv->buffer.size = w * h * 4;
-	priv->buffer.ptr = (uint8_t *)priv->xim->data;
+	priv->buffer.ptr = (uint8_t *)priv->ximg->data;
 
 	priv->fb_idx = 0;
 
-	dev->priv = (void *)priv;
+	obj->priv = (void *)priv;
 	return 0;
 FAIL6:
 	shmdt(priv->shm.shmaddr);
 FAIL5:
 	shmctl(priv->shm.shmid, IPC_RMID, 0);
 FAIL4:
-	XDestroyImage(priv->xim);
+	XDestroyImage(priv->ximg);
 FAIL3:
 	XCloseDisplay(priv->display);
 FAIL2:
@@ -140,9 +140,9 @@ FAIL1:
 	return ret;
 }
 
-static int xext_get_fb_info(struct module_data *dev, struct frame_buffer_info *fb_info)
+static int xext_get_fb_info(struct input_objct *obj, struct frame_buffer_info *fb_info)
 {
-	struct x11_extensions *priv = (struct x11_extensions *)dev->priv;
+	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
 
 	fb_info->format = priv->buffer.format;
 	fb_info->width = priv->buffer.width;
@@ -152,14 +152,14 @@ static int xext_get_fb_info(struct module_data *dev, struct frame_buffer_info *f
 	return 0;
 }
 
-static int xext_dev_release(struct module_data *dev)
+static int xext_dev_release(struct input_objct *obj)
 {
-	struct x11_extensions *priv = (struct x11_extensions *)dev->priv;
+	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
 
 	XShmDetach(priv->display, &priv->shm);
 	shmdt(priv->shm.shmaddr);
 	shmctl(priv->shm.shmid, IPC_RMID, 0);
-	XDestroyImage(priv->xim);
+	XDestroyImage(priv->ximg);
 	XCloseDisplay(priv->display);
 	free(priv);
 	return 0;

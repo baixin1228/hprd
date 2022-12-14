@@ -6,4 +6,4 @@ if get_option('buildtype').startswith('debug')
   add_project_arguments('-DDEBUG', language : 'c')
 endif
 
-subdir('src2')
+subdir('src2/output_dev/sdl_output')

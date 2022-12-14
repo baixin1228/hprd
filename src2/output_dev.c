@@ -33,7 +33,7 @@ struct output_objct *output_dev_init(void)
 	return output_obj;
 }
 
-int output_set_info(struct output_objct *output_obj, struct frame_buffer_info fb_info)
+int output_set_info(struct output_objct *output_obj, struct fb_info *fb_info)
 {
 	struct output_dev_ops *dev_ops;
 	
@@ -43,14 +43,16 @@ int output_set_info(struct output_objct *output_obj, struct frame_buffer_info fb
 	dev_ops = (struct output_dev_ops *)output_obj->ops;
 	if(dev_ops)
 	{
-		if(dev_ops->set_fb_info)
-			return dev_ops->set_fb_info(output_obj, fb_info);
+		if(dev_ops->set_info)
+			return dev_ops->set_info(output_obj, fb_info);
+		else
+			printf("output dev not find func:set_info\n");
 	}
 
 	return -1;
 }
 
-int output_put_fb(struct output_objct *output_obj, struct common_buffer *buffer)
+int output_put_fb(struct output_objct *output_obj, struct raw_buffer *buffer)
 {
 	struct output_dev_ops *dev_ops;
 	
@@ -62,6 +64,8 @@ int output_put_fb(struct output_objct *output_obj, struct common_buffer *buffer)
 	{
 		if(dev_ops->put_buffer)
 			return dev_ops->put_buffer(output_obj, buffer);
+		else
+			printf("output dev not find func:put_buffer\n");
 	}
 
 	return -1;
@@ -77,8 +81,10 @@ int output_main_loop(struct output_objct *output_obj)
 	dev_ops = (struct output_dev_ops *)output_obj->ops;
 	if(dev_ops)
 	{
-		if(dev_ops->main_loop)
-			return dev_ops->main_loop(output_obj);
+		if(dev_ops->event_loop)
+			return dev_ops->event_loop(output_obj);
+		else
+			printf("output dev not find func:event_loop\n");
 	}
 
 	return -1;

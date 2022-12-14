@@ -14,7 +14,7 @@ void* load_lib_data(const char *patch, const char *key)
 	return obj;
 }
 
-int load_lib(void* handle)
+int release_lib(void* handle)
 {
 	return dlclose(handle);
 }

@@ -7,3 +7,4 @@ if get_option('buildtype').startswith('debug')
 endif
 
 subdir('src2/output_dev/sdl_output')
+subdir('src2')

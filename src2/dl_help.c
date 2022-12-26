@@ -1,16 +1,24 @@
+#include <fcntl.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <dlfcn.h>
 
-void* load_lib(const char *patch)
+void* load_lib(const char *path)
 {
-	void* handle = dlopen(patch, RTLD_LAZY);
-	return handle;
+	if(access(path, F_OK))
+		return NULL;
+
+	return dlopen(path, RTLD_LAZY);
 }
 
-void* load_lib_data(const char *patch, const char *key)
+void* load_lib_data(const char *path, const char *key)
 {
-	void* handle = dlopen(patch, RTLD_LAZY);
-	void* obj = dlsym(handle, key);
+	void* obj = NULL;
+	void* handle = load_lib(path);
+	if(handle)
+	{
+		obj = dlsym(handle, key);
+	}
 	return obj;
 }
 

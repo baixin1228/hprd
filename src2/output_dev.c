@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "util.h"
 #include "dl_help.h"
@@ -13,11 +14,13 @@ struct output_objct *output_dev_init(void)
 
 	output_obj = calloc(1, sizeof(struct output_objct));
 
-	dev_ops = (struct output_dev_ops *)load_lib_data("output_dev/sdl_output/libsdl_output.so", "dev_ops");
+	dev_ops = (struct output_dev_ops *)load_lib_data("src2/output_dev/sdl_output/libsdl_output.so", "dev_ops");
 
 	if(!dev_ops)
 	{
-		log_error("load libsdl_output.so fail.");
+		char path_tmp[255];
+		getcwd(path_tmp, 255);
+		log_error("load libsdl_output.so fail. dir:%s\n", path_tmp);
 		exit(-1);
 	}
 

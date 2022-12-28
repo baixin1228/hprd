@@ -1,87 +1,88 @@
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "util.h"
-#include "buffer.h"
-#include "fb_in.h"
+#include "dl_help.h"
+#include "input_dev.h"
+#include "frame_buffer.h"
 
-MODULE_BOUNDARY(null_func, FRAMEBUFFER_INPUT_DEV);
-
-struct module_data *fb_in_init_dev(void)
+struct input_object *input_dev_init(void)
 {
 	int ret;
-	struct fb_in_ops *dev_ops;
-	struct module_data *fb_in_data;
+	struct input_dev_ops *dev_ops;
+	struct input_object *input_obj;
 
-	fb_in_data = calloc(1, sizeof(struct module_data));
+	input_obj = calloc(1, sizeof(struct input_object));
 
-	const struct __module_item *item;
-	FOREACH_ITEM(item, null_func, FRAMEBUFFER_INPUT_DEV)
+	dev_ops = (struct input_dev_ops *)load_lib_data("src2/input_dev/xcb_input/libxcb_input.so", "dev_ops");
+
+	if(!dev_ops)
 	{
-		dev_ops = item->handler();
-		log_info("%s init...", dev_ops->name);
-		ret = dev_ops->init(fb_in_data);
-		if(ret == 0)
-		{
-			fb_in_data->ops = (void *)dev_ops;
-			break;
-		}
+		char path_tmp[255];
+		getcwd(path_tmp, 255);
+		log_error("load xcb_input.so fail. dir:%s\n", path_tmp);
+		exit(-1);
 	}
 
-	if(fb_in_data->ops == 0)
+	ret = dev_ops->init(input_obj);
+	if(ret == 0)
 	{
-		free(fb_in_data);
-		return NULL;
-	}else
-		return fb_in_data;
+		input_obj->ops = dev_ops;
+	}else{
+		log_error("xcb_input.so init fail.");
+		exit(-1);
+	}
+	
+	return input_obj;
 }
 
 
-int fb_in_get_info(struct module_data *fb_in_data, struct frame_buffer_info *fb_info)
+int input_get_info(struct input_object *input_obj, struct fb_info *fb_info)
 {
-	struct fb_in_ops *dev_ops;
+	struct input_dev_ops *dev_ops;
 
-	if(!fb_in_data)
+	if(!input_obj)
 		return -1;
 
-	dev_ops = (struct fb_in_ops *)fb_in_data->ops;
+	dev_ops = (struct input_dev_ops *)input_obj->ops;
 	if(dev_ops)
 	{
-		if(dev_ops->get_fb_info)
-			return dev_ops->get_fb_info(fb_in_data, fb_info);
+		if(dev_ops->get_info)
+			return dev_ops->get_info(input_obj, fb_info);
 	}
 
 	return -1;
 }
 
-struct common_buffer *fb_in_get_fb(struct module_data *fb_in_data)
+struct raw_buffer *input_get_fb(struct input_object *input_obj)
 {
-	struct fb_in_ops *dev_ops;
+	struct input_dev_ops *dev_ops;
 
-	if(!fb_in_data)
+	if(!input_obj)
 		return NULL;
 
-	dev_ops = (struct fb_in_ops *)fb_in_data->ops;
+	dev_ops = (struct input_dev_ops *)input_obj->ops;
 	if(dev_ops)
 	{
-		if(dev_ops->get_data)
-			return dev_ops->get_data(fb_in_data);
+		if(dev_ops->get_buffer)
+			return dev_ops->get_buffer(input_obj);
 	}
 
 	return NULL;
 }
 
-int fb_in_main_loop(struct module_data *fb_in_data)
+int input_main_loop(struct input_object *input_obj)
 {
-	struct fb_in_ops *dev_ops;
+	struct input_dev_ops *dev_ops;
 
-	if(!fb_in_data)
+	if(!input_obj)
 		return -1;
 
-	dev_ops = (struct fb_in_ops *)fb_in_data->ops;
+	dev_ops = (struct input_dev_ops *)input_obj->ops;
 	if(dev_ops)
 	{
-		if(dev_ops->main_loop)
-			return dev_ops->main_loop(fb_in_data);
+		if(dev_ops->event_loop)
+			return dev_ops->event_loop(input_obj);
 	}
 
 	return -1;

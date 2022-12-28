@@ -8,9 +8,8 @@
 #include <X11/extensions/XShm.h>
 
 #include "util.h"
-#include "buffer.h"
-#include "module.h"
-#include "fb_in.h"
+#include "frame_buffer.h"
+#include "input_dev.h"
 
 #define DEFAULT_DISPLAY ":0"
 
@@ -25,21 +24,9 @@ struct x11_extensions
 	XShmSegmentInfo shm;
 	XImage *ximg;
 	struct raw_buffer buffer;
-	uint32_t fb_idx;
 };
 
-static struct raw_buffer * xext_get_frame_buffer(struct input_objct *obj)
-{
-	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
-	XShmGetImage(priv->display, priv->root_win, priv->ximg,
-		0, 0, AllPlanes);
-	XSync(priv->display, False);
-	priv->fb_idx++;
-	priv->buffer.id = priv->fb_idx;
-	return &priv->buffer;
-}
-
-static int xext_dev_init(struct input_objct *obj)
+static int xext_dev_init(struct input_object *obj)
 {
 	int ret = -1;
 	struct x11_extensions *priv;
@@ -120,9 +107,7 @@ static int xext_dev_init(struct input_objct *obj)
 	priv->buffer.format = ARGB8888;
 	priv->buffer.bpp = 32;
 	priv->buffer.size = w * h * 4;
-	priv->buffer.ptr = (uint8_t *)priv->ximg->data;
-
-	priv->fb_idx = 0;
+	priv->buffer.ptr = priv->ximg->data;
 
 	obj->priv = (void *)priv;
 	return 0;
@@ -140,7 +125,7 @@ FAIL1:
 	return ret;
 }
 
-static int xext_get_fb_info(struct input_objct *obj, struct frame_buffer_info *fb_info)
+static int xext_get_fb_info(struct input_object *obj, struct fb_info *fb_info)
 {
 	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
 
@@ -152,7 +137,16 @@ static int xext_get_fb_info(struct input_objct *obj, struct frame_buffer_info *f
 	return 0;
 }
 
-static int xext_dev_release(struct input_objct *obj)
+static struct raw_buffer *xext_get_frame_buffer(struct input_object *obj)
+{
+	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
+	XShmGetImage(priv->display, priv->root_win, priv->ximg,
+		0, 0, AllPlanes);
+	XSync(priv->display, False);
+	return &priv->buffer;
+}
+
+static int xext_dev_release(struct input_object *obj)
 {
 	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
 
@@ -165,11 +159,11 @@ static int xext_dev_release(struct input_objct *obj)
 	return 0;
 }
 
-struct input_dev_ops x11_extensions_input_dev = 
+struct input_dev_ops dev_ops = 
 {
 	.name 				= "x11_extensions_input_dev",
 	.init 				= xext_dev_init,
-	.get_fb_info		= xext_get_fb_info,
-	.get_data 		 	= xext_get_frame_buffer,
+	.get_info			= xext_get_fb_info,
+	.get_buffer 		= xext_get_frame_buffer,
 	.release 			= xext_dev_release
 };

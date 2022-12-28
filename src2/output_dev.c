@@ -4,15 +4,15 @@
 #include "util.h"
 #include "dl_help.h"
 #include "output_dev.h"
+#include "frame_buffer.h"
 
-
-struct output_objct *output_dev_init(void)
+struct output_object *output_dev_init(void)
 {
 	int ret;
 	struct output_dev_ops *dev_ops;
-	struct output_objct *output_obj;
+	struct output_object *output_obj;
 
-	output_obj = calloc(1, sizeof(struct output_objct));
+	output_obj = calloc(1, sizeof(struct output_object));
 
 	dev_ops = (struct output_dev_ops *)load_lib_data("src2/output_dev/sdl_output/libsdl_output.so", "dev_ops");
 
@@ -36,7 +36,7 @@ struct output_objct *output_dev_init(void)
 	return output_obj;
 }
 
-int output_set_info(struct output_objct *output_obj, struct fb_info *fb_info)
+int output_set_info(struct output_object *output_obj, struct fb_info *fb_info)
 {
 	struct output_dev_ops *dev_ops;
 	
@@ -55,7 +55,7 @@ int output_set_info(struct output_objct *output_obj, struct fb_info *fb_info)
 	return -1;
 }
 
-int output_put_fb(struct output_objct *output_obj, struct raw_buffer *buffer)
+int output_put_fb(struct output_object *output_obj, struct raw_buffer *buffer)
 {
 	struct output_dev_ops *dev_ops;
 	
@@ -74,7 +74,7 @@ int output_put_fb(struct output_objct *output_obj, struct raw_buffer *buffer)
 	return -1;
 }
 
-int output_main_loop(struct output_objct *output_obj)
+int output_main_loop(struct output_object *output_obj)
 {
 	struct output_dev_ops *dev_ops;
 

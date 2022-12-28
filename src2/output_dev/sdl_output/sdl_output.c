@@ -36,7 +36,7 @@ int refresh_video(void *opaque){
 	return 0;
 }
 
-static int sdl_dev_init(struct output_objct *obj)
+static int sdl_dev_init(struct output_object *obj)
 {
 	struct sdl_fd_out *priv;
 
@@ -75,7 +75,7 @@ static int _com_fmt_to_sdl_fmt(enum FRAMEBUFFER_FORMAT format)
 	}
 }
 
-static int sdl_set_fb_info(struct output_objct *obj, struct fb_info *fb_info)
+static int sdl_set_fb_info(struct output_object *obj, struct fb_info *fb_info)
 {
 	struct sdl_fd_out *priv = (struct sdl_fd_out *)obj->priv;
 
@@ -87,8 +87,8 @@ static int sdl_set_fb_info(struct output_objct *obj, struct fb_info *fb_info)
 	//SDL 2.0 Support for multiple windows
 	priv->screen = SDL_CreateWindow("Simplest Video Play SDL2", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
 		priv->screen_w, priv->screen_h,SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
-	if(!priv->screen) {  
-		printf("SDL: could not create window - exiting:%s\n",SDL_GetError());  
+	if(!priv->screen) {
+		printf("SDL: could not create window - exiting:%s\n",SDL_GetError());
 		return -1;
 	}
 	priv->sdlRenderer = SDL_CreateRenderer(priv->screen, -1, 0);
@@ -106,7 +106,7 @@ static int sdl_set_fb_info(struct output_objct *obj, struct fb_info *fb_info)
 	return 0;
 }
 
-static int sdl_put_buffer(struct output_objct *obj, struct raw_buffer *buffer)
+static int sdl_put_buffer(struct output_object *obj, struct raw_buffer *buffer)
 {
 	struct sdl_fd_out *priv = (struct sdl_fd_out *)obj->priv;
 
@@ -144,7 +144,7 @@ static int sdl_put_buffer(struct output_objct *obj, struct raw_buffer *buffer)
 	return 0;
 }
 
-static int sdl_main_loop(struct output_objct *obj)
+static int sdl_main_loop(struct output_object *obj)
 {
 	SDL_Event event;
 	struct sdl_fd_out *priv = (struct sdl_fd_out *)obj->priv;
@@ -154,13 +154,13 @@ static int sdl_main_loop(struct output_objct *obj)
 	while(1)
 	{
 		SDL_WaitEvent(&event);
-		if(event.type==REFRESH_EVENT)
+		if(event.type == REFRESH_EVENT)
 		{
-			obj->on_event();
-		}else if(event.type==SDL_WINDOWEVENT){
+			obj->on_event(obj);
+		}else if(event.type == SDL_WINDOWEVENT){
 			/* If Resize */
 			SDL_GetWindowSize(priv->screen,&priv->screen_w,&priv->screen_h);
-		}else if(event.type==SDL_QUIT){
+		}else if(event.type == SDL_QUIT){
 			exit(0);
 		}
 	}

@@ -1,5 +1,7 @@
-src = ['server.c', 'output_dev.c', 'dl_help.c']
+subdir('output_dev/sdl_output')
+subdir('input_dev/xcb_input')
 
+src = ['server.c', 'output_dev.c', 'input_dev.c', 'dl_help.c']
 
 hprd_server = executable('server', src,
 	include_directories : include_directories('include'),

@@ -28,6 +28,9 @@ struct output_dev_ops
 struct output_object *output_dev_init(void);
 int output_set_info(struct output_object *output_obj, struct fb_info *fb_info);
 int output_put_fb(struct output_object *output_obj, struct raw_buffer *buffer);
+int output_regist_event_callback(struct output_object *output_obj,
+	void (* on_event)(struct output_object *obj));
+
 int output_main_loop(struct output_object *output_obj);
 
 #endif

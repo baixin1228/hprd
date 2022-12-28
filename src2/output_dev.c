@@ -74,6 +74,16 @@ int output_put_fb(struct output_object *output_obj, struct raw_buffer *buffer)
 	return -1;
 }
 
+int output_regist_event_callback(struct output_object *output_obj, void (* on_event)(struct output_object *obj))
+{
+	if(!output_obj)
+		return -1;
+
+	output_obj->on_event = on_event;
+
+	return 0;
+}
+
 int output_main_loop(struct output_object *output_obj)
 {
 	struct output_dev_ops *dev_ops;

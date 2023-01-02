@@ -1,6 +1,8 @@
 #ifndef __FRAME_BUFFER_H__
 #define __FRAME_BUFFER_H__
 
+#include "common.h"
+
 enum FRAMEBUFFER_FORMAT
 {
 	ARGB8888,

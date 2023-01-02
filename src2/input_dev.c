@@ -54,12 +54,29 @@ int input_get_info(struct input_object *input_obj, struct fb_info *fb_info)
 	return -1;
 }
 
-struct raw_buffer *input_get_fb(struct input_object *input_obj)
+int input_map_fb(struct input_object *input_obj, int buf_id)
 {
 	struct input_dev_ops *dev_ops;
 
 	if(!input_obj)
-		return NULL;
+		return -1;
+
+	dev_ops = (struct input_dev_ops *)input_obj->ops;
+	if(dev_ops)
+	{
+		if(dev_ops->map_buffer)
+			return dev_ops->map_buffer(input_obj, buf_id);
+	}
+
+	return -1;
+}
+
+int input_get_fb(struct input_object *input_obj)
+{
+	struct input_dev_ops *dev_ops;
+
+	if(!input_obj)
+		return -1;
 
 	dev_ops = (struct input_dev_ops *)input_obj->ops;
 	if(dev_ops)
@@ -68,7 +85,24 @@ struct raw_buffer *input_get_fb(struct input_object *input_obj)
 			return dev_ops->get_buffer(input_obj);
 	}
 
-	return NULL;
+	return -1;
+}
+
+int input_put_fb(struct input_object *input_obj, int buf_id)
+{
+	struct input_dev_ops *dev_ops;
+
+	if(!input_obj)
+		return -1;
+
+	dev_ops = (struct input_dev_ops *)input_obj->ops;
+	if(dev_ops)
+	{
+		if(dev_ops->put_buffer)
+			return dev_ops->put_buffer(input_obj, buf_id);
+	}
+
+	return -1;
 }
 
 int input_main_loop(struct input_object *input_obj)

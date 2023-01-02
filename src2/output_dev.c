@@ -55,7 +55,45 @@ int output_set_info(struct output_object *output_obj, struct fb_info *fb_info)
 	return -1;
 }
 
-int output_put_fb(struct output_object *output_obj, struct raw_buffer *buffer)
+int output_map_fb(struct output_object *output_obj, int buf_id)
+{
+	struct output_dev_ops *dev_ops;
+	
+	if(!output_obj)
+		return -1;
+
+	dev_ops = (struct output_dev_ops *)output_obj->ops;
+	if(dev_ops)
+	{
+		if(dev_ops->map_buffer)
+			return dev_ops->map_buffer(output_obj, buf_id);
+		else
+			printf("output dev not find func:map_buffer\n");
+	}
+
+	return -1;
+}
+
+int output_get_fb(struct output_object *output_obj)
+{
+	struct output_dev_ops *dev_ops;
+	
+	if(!output_obj)
+		return -1;
+
+	dev_ops = (struct output_dev_ops *)output_obj->ops;
+	if(dev_ops)
+	{
+		if(dev_ops->get_buffer)
+			return dev_ops->get_buffer(output_obj);
+		else
+			printf("output dev not find func:get_buffer\n");
+	}
+
+	return -1;
+}
+
+int output_put_fb(struct output_object *output_obj, int buf_id)
 {
 	struct output_dev_ops *dev_ops;
 	
@@ -66,7 +104,7 @@ int output_put_fb(struct output_object *output_obj, struct raw_buffer *buffer)
 	if(dev_ops)
 	{
 		if(dev_ops->put_buffer)
-			return dev_ops->put_buffer(output_obj, buffer);
+			return dev_ops->put_buffer(output_obj, buf_id);
 		else
 			printf("output dev not find func:put_buffer\n");
 	}

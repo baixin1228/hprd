@@ -17,17 +17,19 @@ struct output_dev_ops
 	char * name;
 	int (* init)(struct output_object *obj);
 	int (* set_info)(struct output_object *obj, struct fb_info *info);
-	int (* map_buffer)(struct output_object *obj, struct raw_buffer *buf);
-	int (* put_buffer)(struct output_object *obj, struct raw_buffer *buf);
-	struct raw_buffer *(* get_buffer)(struct output_object *obj);
-	int (* unmap_buffer)(struct output_object *obj, struct raw_buffer *buf);
+	int (* map_buffer)(struct output_object *obj, int buf_id);
+	int (* put_buffer)(struct output_object *obj, int buf_id);
+	int (* get_buffer)(struct output_object *obj);
+	int (* unmap_buffer)(struct output_object *obj, int buf_id);
 	int (* event_loop)(struct output_object *obj);
 	int (* release)(struct output_object *obj);
 };
 
 struct output_object *output_dev_init(void);
 int output_set_info(struct output_object *output_obj, struct fb_info *fb_info);
-int output_put_fb(struct output_object *output_obj, struct raw_buffer *buffer);
+int output_map_fb(struct output_object *output_obj, int buf_id);
+int output_get_fb(struct output_object *output_obj);
+int output_put_fb(struct output_object *output_obj, int buf_id);
 int output_regist_event_callback(struct output_object *output_obj,
 	void (* on_event)(struct output_object *obj));
 

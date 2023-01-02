@@ -4,6 +4,7 @@
 
 #include "util.h"
 #include "output_dev.h"
+#include "buffer_pool.h"
 
 struct sdl_fd_out
 {
@@ -18,6 +19,7 @@ struct sdl_fd_out
 	int screen_w;
 	int screen_h;
 	int fb_format;
+	int cur_buf_id;
 };
 
 
@@ -103,12 +105,30 @@ static int sdl_set_fb_info(struct output_object *obj, struct fb_info *fb_info)
 	priv->sdlRect.w = priv->screen_w;
 	priv->sdlRect.h = priv->screen_h;
 	priv->fb_format = fb_info->format;
+	priv->cur_buf_id = -1;
 	return 0;
 }
 
-static int sdl_put_buffer(struct output_object *obj, struct raw_buffer *buffer)
+static int sdl_map_buffer(struct output_object *obj, int buf_id) { return 0; }
+
+static int sdl_get_buffer(struct output_object *obj)
 {
 	struct sdl_fd_out *priv = (struct sdl_fd_out *)obj->priv;
+	return priv->cur_buf_id;
+}
+
+static int sdl_put_buffer(struct output_object *obj, 
+	int buf_id)
+{
+	struct raw_buffer *buffer;
+	struct sdl_fd_out *priv = (struct sdl_fd_out *)obj->priv;
+
+	buffer = get_raw_buffer(buf_id);
+	if(buffer == NULL)
+	{
+		func_error("sdl get buffer fail! buf_id:%d", buf_id);
+		return -1;
+	}
 
 	if(!priv->sdlTexture)
 	{
@@ -141,6 +161,8 @@ static int sdl_put_buffer(struct output_object *obj, struct raw_buffer *buffer)
 	SDL_RenderClear(priv->sdlRenderer);
 	SDL_RenderCopy(priv->sdlRenderer, priv->sdlTexture, NULL, &priv->sdlRect);
 	SDL_RenderPresent(priv->sdlRenderer);
+	priv->cur_buf_id = buf_id;
+
 	return 0;
 }
 
@@ -173,6 +195,8 @@ struct output_dev_ops dev_ops =
 	.name				= "sdl_fb_out",
 	.init				= sdl_dev_init,
 	.set_info			= sdl_set_fb_info,
+	.map_buffer			= sdl_map_buffer,
+	.get_buffer			= sdl_get_buffer,
 	.put_buffer			= sdl_put_buffer,
 	.event_loop			= sdl_main_loop,
 };

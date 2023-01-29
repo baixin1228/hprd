@@ -38,14 +38,14 @@ static int svc_decode_init(struct module_data *deccodec_dev, struct decodec_info
     svc_data = calloc(1, sizeof(*svc_data));
     if(!svc_data)
     {
-        func_error("calloc fail, check free memery.");
+        log_error("calloc fail, check free memery.");
         goto FAIL1;
     }
 
     // OpenH264Version libver = WelsGetCodecVersion();
 
     if (WelsCreateDecoder(&svc_data->decoder)) {
-        func_error("Unable to create decoder");
+        log_error("Unable to create decoder");
         goto FAIL2;
     }
 
@@ -63,7 +63,7 @@ static int svc_decode_init(struct module_data *deccodec_dev, struct decodec_info
     param.sVideoProperty.eVideoBsType = VIDEO_BITSTREAM_DEFAULT;
 
     if ((*svc_data->decoder)->Initialize(svc_data->decoder, &param) != cmResultSuccess) {
-        func_error("openh264 Initialize failed\n");
+        log_error("openh264 Initialize failed\n");
         goto FAIL2;
     }
 
@@ -109,11 +109,11 @@ static int svc_push_pkt(struct module_data *encodec_dev, struct common_buffer *b
 #endif
     }
     if (state != dsErrorFree) {
-        func_error("DecodeFrame failed");
+        log_error("DecodeFrame failed");
         return -1;
     }
     if (svc_data->info.iBufferStatus != 1) {
-        func_error("No frame produced");
+        log_error("No frame produced");
         return -1;
     }
 

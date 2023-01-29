@@ -163,7 +163,7 @@ int _ffmpeg_alloc_buffer(struct ffmpeg_dec_data *data)
 
 	if(av_codec_ctx->width == 0 || av_codec_ctx->height == 0)
 	{
-		func_error("stream width or height is 0.\n");
+		log_error("stream width or height is 0.\n");
 		return -1;
 	}
 
@@ -192,7 +192,7 @@ int _ffmpeg_alloc_buffer(struct ffmpeg_dec_data *data)
 				data->fbs[i].ptr = malloc(av_codec_ctx->width * av_codec_ctx->height * 2);
 			break;
 			default:
-				func_error("frame format not support.");
+				log_error("frame format not support.");
 				return -1;
 			break;
 		}
@@ -248,7 +248,7 @@ void *_ffmpeg_dec_thread(void *opaque)
 				}
 				case AVERROR(EINVAL):
 				{
-					func_error("codec not open.");
+					log_error("codec not open.");
 					break;
 				}
 				case AVERROR_INPUT_CHANGED:
@@ -292,14 +292,14 @@ int ffmpeg_dec_init(struct module_data *dev, struct decodec_info enc_info)
     data = calloc(1, sizeof(*data));
     if(!data)
     {
-        func_error("calloc fail, check free memery.");
+        log_error("calloc fail, check free memery.");
         goto FAIL1;
     }
 
     data->queue = calloc(1, sizeof(*data->queue));
     if(!data->queue)
     {
-        func_error("calloc fail, check free memery.");
+        log_error("calloc fail, check free memery.");
         goto FAIL2;
     }
 
@@ -307,7 +307,7 @@ int ffmpeg_dec_init(struct module_data *dev, struct decodec_info enc_info)
 	data->av_codec = avcodec_find_decoder(format);
 	if(!data->av_codec)
 	{
-		func_error("ffmpeg dec not find decoder:%x.", format);
+		log_error("ffmpeg dec not find decoder:%x.", format);
         goto FAIL3;
 	}
 	data->av_ctx->video_codec_id = format;
@@ -316,7 +316,7 @@ int ffmpeg_dec_init(struct module_data *dev, struct decodec_info enc_info)
 	AVIOContext *avio = avio_alloc_context(data->iobuffer, F_BUFFER_SIZE, 0, data, fill_iobuffer, NULL, NULL);
     if (!avio)
     {
-        func_error("avio_alloc_context error!");
+        log_error("avio_alloc_context error!");
         goto FAIL4;
     }
 	data->av_ctx->pb = avio;
@@ -362,7 +362,7 @@ static enum PUSH_STATUS ffmepg_put_packet(struct module_data *dev, struct common
 	if(ret == QUEUE_FULL)
 		return PUSH_BUFFER_FULL;
 
-    func_error("put package fail!");
+    log_error("put package fail!");
 	return PUSH_FAIL;
 }
 
@@ -377,12 +377,12 @@ static struct common_buffer *ffmepg_get_frame(struct module_data *dev)
 	if(data->stream_idx == -1)
 	{
 		if(avformat_open_input(&data->av_ctx, NULL, NULL, NULL) != 0){
-			func_error("ffmpeg couldn't open input stream.");
+			log_error("ffmpeg couldn't open input stream.");
 			return NULL;
 		}
 
 		if(avformat_find_stream_info(data->av_ctx, NULL) < 0){
-			func_error("ffmpeg couldn't find stream information.");
+			log_error("ffmpeg couldn't find stream information.");
 			return NULL;
 		}
 
@@ -393,7 +393,7 @@ static struct common_buffer *ffmepg_get_frame(struct module_data *dev)
 			}
 		
 		if(stream_tmp == -1){
-			func_error("ffmpeg Didn't find a video stream.");
+			log_error("ffmpeg Didn't find a video stream.");
 			return NULL;
 		}
 
@@ -401,19 +401,19 @@ static struct common_buffer *ffmepg_get_frame(struct module_data *dev)
 
 	    data->av_codec = avcodec_find_decoder(origin_par->codec_id);
 	    if (!data->av_codec) {
-	        func_error("Can't find decoder");
+	        log_error("Can't find decoder");
 			return NULL;
 	    }
 
 	    data->av_codec_ctx = avcodec_alloc_context3(data->av_codec);
 	    if (!data->av_codec_ctx) {
-	        func_error("Can't allocate decoder context");
+	        log_error("Can't allocate decoder context");
 			return NULL;
 	    }
 
 	    result = avcodec_parameters_to_context(data->av_codec_ctx, origin_par);
 	    if (result) {
-	        func_error("Can't copy decoder context");
+	        log_error("Can't copy decoder context");
 			return NULL;
 	    }
 
@@ -422,7 +422,7 @@ static struct common_buffer *ffmepg_get_frame(struct module_data *dev)
 		data->av_codec_ctx->thread_type = FF_THREAD_FRAME;
 
 		if(avcodec_open2(data->av_codec_ctx, data->av_codec, NULL) < 0){
-			func_error("Could not open codec.");
+			log_error("Could not open codec.");
 			return NULL;
 		}
 		if(_ffmpeg_alloc_buffer(data) == 0)
@@ -434,7 +434,7 @@ static struct common_buffer *ffmepg_get_frame(struct module_data *dev)
 
 	if(data->stream_idx == -1)
 	{
-		func_error("ffmpeg dec error, stream_idx is -1.");
+		log_error("ffmpeg dec error, stream_idx is -1.");
 		return NULL;
 	}
 

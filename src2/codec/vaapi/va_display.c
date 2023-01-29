@@ -151,9 +151,9 @@ va_open_display(void)
     }
 
     if (!va_dpy)  {
-        func_error("error: failed to initialize display");
+        log_error("error: failed to initialize display");
         if (g_display_name)
-            func_error(" '%s'", g_display_name);
+            log_error(" '%s'", g_display_name);
         exit(1);
     }
     return va_dpy;

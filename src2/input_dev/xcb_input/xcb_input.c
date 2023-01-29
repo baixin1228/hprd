@@ -44,7 +44,7 @@ static int xext_dev_init(struct input_object *obj)
 	priv = calloc(1, sizeof(*priv));
 	if(!priv)
 	{
-		func_error("calloc fail, check free memery.");
+		log_error("calloc fail, check free memery.");
 		goto FAIL1;
 	}
 
@@ -52,7 +52,7 @@ static int xext_dev_init(struct input_object *obj)
 
 	if(priv->display == NULL)
 	{
-		func_error("XOpenDisplay: cannot displayect to X server %s.",
+		log_error("XOpenDisplay: cannot displayect to X server %s.",
 			XDisplayName(DEFAULT_DISPLAY));
 		goto FAIL2;
 	}
@@ -67,7 +67,7 @@ static int xext_dev_init(struct input_object *obj)
 	if(XGetWindowAttributes(priv->display, priv->root_win,
 		&priv->windowattr) == 0)
 	{
-		func_error("icvVideoRender: failed to get window attributes.");
+		log_error("icvVideoRender: failed to get window attributes.");
 		goto FAIL3;
 	}
 
@@ -117,7 +117,7 @@ static int xext_map_buffer(struct input_object *obj, int buf_id)
 		&xext_buf->shm, priv->width, priv->height);
 
 	if (xext_buf->ximg == NULL) {
-		func_error("XShmCreateImage failed.");
+		log_error("XShmCreateImage failed.");
 		return -1;
 	}
 
@@ -125,7 +125,7 @@ static int xext_map_buffer(struct input_object *obj, int buf_id)
 		(size_t)xext_buf->ximg->bytes_per_line * xext_buf->ximg->height, IPC_CREAT | 0600);
 
 	if (xext_buf->shm.shmid == -1) {
-		func_error("shmget failed.");
+		log_error("shmget failed.");
 		goto FAIL1;
 	}
 
@@ -133,12 +133,12 @@ static int xext_map_buffer(struct input_object *obj, int buf_id)
 	xext_buf->shm.shmaddr = xext_buf->ximg->data = (char *) shmat(xext_buf->shm.shmid, 0, 0);
 
 	if (xext_buf->shm.shmaddr == (char *)-1) {
-		func_error("shmat failed.");
+		log_error("shmat failed.");
 		goto FAIL2;
 	}
 
 	if (!XShmAttach(priv->display, &xext_buf->shm)) {
-		func_error("XShmAttach failed.");
+		log_error("XShmAttach failed.");
 		goto FAIL3;
 	}
 	xext_buf->is_free = true;

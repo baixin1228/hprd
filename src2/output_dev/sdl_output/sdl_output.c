@@ -45,7 +45,7 @@ static int sdl_dev_init(struct output_object *obj)
 	priv = calloc(1, sizeof(*priv));
 	if(!priv)
 	{
-		func_error("calloc fail, check free memery.");
+		log_error("calloc fail, check free memery.");
 	}
 
 	if(SDL_Init(SDL_INIT_VIDEO)) {  
@@ -126,13 +126,13 @@ static int sdl_put_buffer(struct output_object *obj,
 	buffer = get_raw_buffer(buf_id);
 	if(buffer == NULL)
 	{
-		func_error("sdl get buffer fail! buf_id:%d", buf_id);
+		log_error("sdl get buffer fail! buf_id:%d", buf_id);
 		return -1;
 	}
 
 	if(!priv->sdlTexture)
 	{
-		func_error("sdl texture is none!");
+		log_error("sdl texture is none!");
 		return -1;
 	}
 

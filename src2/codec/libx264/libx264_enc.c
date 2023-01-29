@@ -35,7 +35,7 @@ static int _com_fb_fmt_to_x264_fmt(enum COMMON_BUFFER_FORMAT format)
     {
         case ARGB8888:
         {
-        	func_error("not support fb format ARGB8888.");
+        	log_error("not support fb format ARGB8888.");
             return -1;
         	break;
         }
@@ -58,7 +58,7 @@ static int x264_enc_init(struct module_data *encodec_dev, struct encodec_info en
     enc_data = calloc(1, sizeof(*enc_data));
     if(!enc_data)
     {
-        func_error("calloc fail, check free memery.");
+        log_error("calloc fail, check free memery.");
         goto FAIL1;
     }
  
@@ -100,7 +100,7 @@ static int x264_enc_init(struct module_data *encodec_dev, struct encodec_info en
 
 	enc_data->x264_enc_ctx = x264_encoder_open(&enc_data->x264_params);
 	if(enc_data->x264_enc_ctx == NULL){
-		func_error("x264_encoder_open err.");
+		log_error("x264_encoder_open err.");
 		goto FAIL2;
 	}
 
@@ -134,7 +134,7 @@ static int x264_enc_init(struct module_data *encodec_dev, struct encodec_info en
 		}
 		default:
 		{
-			func_error("Colorspace Not Support.");
+			log_error("Colorspace Not Support.");
 			goto FAIL3;
 		}
 	}
@@ -192,7 +192,7 @@ static int x264_frame_enc(struct module_data *encodec_dev, struct common_buffer 
 			}
 			default:
 			{
-				func_error("Colorspace Not Support.");
+				log_error("Colorspace Not Support.");
 				return -1;
 			}
 		}

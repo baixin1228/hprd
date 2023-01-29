@@ -2,7 +2,12 @@ subdir('libs')
 subdir('output_dev/sdl_output')
 subdir('input_dev/xcb_input')
 
-src = ['server.c', 'output_dev.c', 'input_dev.c', 'dl_help.c']
+src = []
+src += 'server.c'
+src += 'output_dev.c'
+src += 'input_dev.c'
+src += 'dl_help.c'
+src += 'util.c'
 
 hprd_server = executable('server', src,
 	include_directories : include_directories('include'),

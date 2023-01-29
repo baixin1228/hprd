@@ -15,18 +15,10 @@
 #define MIN(a, b) ((a)>(b)?(b):(a))
 #define MAX(a, b) ((a)>(b)?(a):(b))
 
-enum ENGINE_LOG_LEVEL
-{
-	ENGINE_LOG_DEBUG,
-	ENGINE_LOG_INFO,
-	ENGINE_LOG_WARNING,
-	ENGINE_LOG_ERROR
-};
-
 static inline void log_info(const char *fmt, ...)
 {
 	char fmt_buffer[1024];
-	sprintf(fmt_buffer, "\033[0m\033[1;34mInfo:%s\033[0m\n", fmt);
+	sprintf(fmt_buffer, "[\033[0m\033[1;34mInfo\033[0m] %s\n", fmt);
 	va_list va;
 	#pragma GCC diagnostic ignored "-Wvarargs"
 	va_start(va, fmt_buffer);
@@ -37,7 +29,7 @@ static inline void log_info(const char *fmt, ...)
 static inline void log_warning(const char *fmt, ...)
 {
 	char fmt_buffer[1024];
-	sprintf(fmt_buffer, "\033[0m\033[1;33mWarning:%s\033[0m\n", fmt);
+	sprintf(fmt_buffer, "[\033[0m\033[1;33mWarn\033[0m] %s\n", fmt);
 	va_list va;
 	#pragma GCC diagnostic ignored "-Wvarargs"
 	va_start(va, fmt_buffer);
@@ -48,7 +40,7 @@ static inline void log_warning(const char *fmt, ...)
 static inline void log_error(const char *fmt, ...)
 {
 	char fmt_buffer[1024];
-	sprintf(fmt_buffer, "\033[0m\033[1;31mError:%s\033[0m\n", fmt);
+	sprintf(fmt_buffer, "[\033[0m\033[1;31mError\033[0m] %s\n", fmt);
 	va_list va;
 	#pragma GCC diagnostic ignored "-Wvarargs"
 	va_start(va, fmt_buffer);
@@ -56,48 +48,4 @@ static inline void log_error(const char *fmt, ...)
 	va_end(va);
 }
 
-static inline void _func_info(const char *fmt, char *file, char *func, uint32_t line, ...)
-{
-	char fmt_buffer[1024];
-	char str_buffer[1024];
-	sprintf(fmt_buffer, "%s\n%s:%d <%s>", fmt, file, line, func);
-	va_list va;
-	#pragma GCC diagnostic ignored "-Wvarargs"
-	va_start(va, fmt_buffer);
-	vsprintf(str_buffer, fmt_buffer, va);
-	va_end(va);
-	log_info(str_buffer);
-}
-
-static inline void _func_warning(const char *fmt, char *file, char *func, uint32_t line, ...)
-{
-	char fmt_buffer[1024];
-	char str_buffer[1024];
-	sprintf(fmt_buffer, "%s\n%s:%d <%s>", fmt, file, line, func);
-	va_list va;
-	#pragma GCC diagnostic ignored "-Wvarargs"
-	va_start(va, fmt_buffer);
-	vsprintf(str_buffer, fmt_buffer, va);
-	va_end(va);
-	log_warning(str_buffer);
-}
-
-static inline void _func_error(const char *fmt, char *file, const char *func, uint32_t line, ...)
-{
-	char fmt_buffer[1024];
-	char str_buffer[1024];
-	sprintf(fmt_buffer, "%s\n%s:%d <%s>", fmt, file, line, func);
-	va_list va;
-	#pragma GCC diagnostic ignored "-Wvarargs"
-	va_start(va, fmt_buffer);
-	vsprintf(str_buffer, fmt_buffer, va);
-	va_end(va);
-	log_error(str_buffer);
-}
-
-#define func_info(fmt, arg...) _func_info((fmt), __FILE__, __func__, __LINE__, ##arg)
-#define func_warning(fmt, arg...) _func_warning((fmt), __FILE__, __func__, __LINE__, ##arg)
-#define func_error(fmt, arg...) _func_error((fmt), __FILE__, __func__, __LINE__, ##arg)
-
-int smp_frame_copy(uint8_t *to, size_t to_h_stride, uint8_t *from, size_t from_h_stride, size_t width, size_t height);
 #endif

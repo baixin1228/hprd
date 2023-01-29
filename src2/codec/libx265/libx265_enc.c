@@ -45,7 +45,7 @@ static int x265_enc_init(struct module_data *encodec_dev, struct encodec_info en
     enc_data = calloc(1, sizeof(*enc_data));
     if(!enc_data)
     {
-        func_error("calloc fail, check free memery.");
+        log_error("calloc fail, check free memery.");
         goto FAIL1;
     }
  
@@ -57,7 +57,7 @@ static int x265_enc_init(struct module_data *encodec_dev, struct encodec_info en
 	enc_data->x265_params = x265_param_alloc();
 	if(enc_data->x265_params == NULL)
 	{
-		func_error("x265_param_alloc fail.");
+		log_error("x265_param_alloc fail.");
 		goto FAIL2;
 	}
 
@@ -76,7 +76,7 @@ static int x265_enc_init(struct module_data *encodec_dev, struct encodec_info en
 
 	enc_data->x265_enc_ctx = x265_encoder_open(enc_data->x265_params);
 	if(enc_data->x265_enc_ctx == NULL){
-		func_error("x265_encoder_open err.");
+		log_error("x265_encoder_open err.");
 		goto FAIL3;
 	}
 
@@ -108,7 +108,7 @@ static int x265_enc_init(struct module_data *encodec_dev, struct encodec_info en
 		}
 		default:
 		{
-			func_error("Colorspace Not Support.");
+			log_error("Colorspace Not Support.");
 			goto FAIL4;
 		}
 	}
@@ -157,7 +157,7 @@ static int x265_frame_enc(struct module_data *encodec_dev, struct common_buffer 
 			}
 			default:
 			{
-				func_error("Colorspace Not Support.");
+				log_error("Colorspace Not Support.");
 				return -1;
 			}
 		}

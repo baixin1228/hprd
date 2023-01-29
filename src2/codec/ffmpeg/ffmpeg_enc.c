@@ -48,20 +48,20 @@ static int ffmpeg_enc_init(struct module_data *encodec_dev, struct encodec_info 
     enc_data = calloc(1, sizeof(*enc_data));
     if(!enc_data)
     {
-        func_error("calloc fail, check free memery.");
+        log_error("calloc fail, check free memery.");
         goto FAIL1;
     }
 
     format = com_fmt_to_av_fmt(enc_info.stream_fmt);
     enc_data->av_codec = avcodec_find_encoder(format);
     if (!enc_data->av_codec) {
-        func_error("ffmpeg enc avcodec not found.");
+        log_error("ffmpeg enc avcodec not found.");
         goto FAIL2;
     }
 
     enc_data->av_codec_ctx = avcodec_alloc_context3(enc_data->av_codec);
     if (!enc_data->av_codec_ctx) {
-        func_error("ffmpeg Could not allocate video codec context");
+        log_error("ffmpeg Could not allocate video codec context");
         goto FAIL2;
     }
     av_codec_ctx = enc_data->av_codec_ctx;
@@ -93,13 +93,13 @@ static int ffmpeg_enc_init(struct module_data *encodec_dev, struct encodec_info 
     }
 
     if (avcodec_open2(av_codec_ctx, enc_data->av_codec, &param) < 0) {
-        func_error("ffmpeg Could not open codec");
+        log_error("ffmpeg Could not open codec");
         goto FAIL3;
     }
     
     enc_data->av_frame = av_frame_alloc();
     if (!enc_data->av_frame) {
-        func_error("Could not allocate video frame");
+        log_error("Could not allocate video frame");
         goto FAIL3;
     }
     enc_data->av_frame->format = av_codec_ctx->pix_fmt;
@@ -115,7 +115,7 @@ static int ffmpeg_enc_init(struct module_data *encodec_dev, struct encodec_info 
     enc_data->av_packet = av_packet_alloc();
     if (!enc_data->av_packet)
     {
-        func_error("ffmpeg enc alloc pkg fail.");
+        log_error("ffmpeg enc alloc pkg fail.");
         goto FAIL4;
     }
 
@@ -157,13 +157,13 @@ static int ffmpeg_frame_enc(struct module_data *encodec_dev, struct common_buffe
             frame->data[2] = (uint8_t *)0;
         break;
         default:
-            func_error("unsupport frame format.");
+            log_error("unsupport frame format.");
         break;
     }
 
     enc_data->enc_status = avcodec_send_frame(enc_data->av_codec_ctx, enc_data->av_frame);
     if (enc_data->enc_status < 0) {
-        func_error("Error sending a frame for encoding");
+        log_error("Error sending a frame for encoding");
         return -1;
     }
     return 0;
@@ -188,7 +188,7 @@ static  struct common_buffer *ffmpeg_enc_get_pkt(struct module_data *encodec_dev
             return NULL;
         }
         else if (enc_data->enc_status < 0) {
-            func_error("Error during encoding");
+            log_error("Error during encoding");
             return NULL;
         }
 
@@ -204,7 +204,7 @@ static  struct common_buffer *ffmpeg_enc_get_pkt(struct module_data *encodec_dev
         av_packet_unref(pkt);
         return &enc_data->ret_pkt;
     }
-    func_error("get pkt error.");
+    log_error("get pkt error.");
     return NULL;
 }
 

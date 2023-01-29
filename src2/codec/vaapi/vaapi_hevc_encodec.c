@@ -21,7 +21,7 @@
 
 #define CHECK_VASTATUS(va_status,func)                                  \
     if (va_status != VA_STATUS_SUCCESS) {                               \
-        func_error("failed,exit");                                      \
+        log_error("failed,exit");                                      \
         exit(1);                                                        \
     }
 
@@ -1826,7 +1826,7 @@ static int init_va(struct vaapi_hevc_encodec *data)
     num_entrypoints = vaMaxNumEntrypoints(data->va_dpy);
     entrypoints = malloc(num_entrypoints * sizeof(*entrypoints));
     if (!entrypoints) {
-        func_error("calloc fail, check free memery.");
+        log_error("calloc fail, check free memery.");
         goto FAIL1;
     }
 
@@ -1850,7 +1850,7 @@ static int init_va(struct vaapi_hevc_encodec *data)
     }
 
     if (support_encode == 0) {
-        func_error("Can't find VAEntrypointEncSlice for HEVC profiles.");
+        log_error("Can't find VAEntrypointEncSlice for HEVC profiles.");
         goto FAIL2;
     } else {
         switch (data->hevc_profile) {
@@ -1887,7 +1887,7 @@ static int init_va(struct vaapi_hevc_encodec *data)
     CHECK_VASTATUS(va_status, "vaGetConfigAttributes");
     /* check the interested configattrib */
     if ((attrib[VAConfigAttribRTFormat].value & VA_RT_FORMAT_YUV420) == 0) {
-        func_error("Not find desired YUV420 RT format.");
+        log_error("Not find desired YUV420 RT format.");
         goto FAIL2;
     } else {
         data->config_attrib[data->config_attrib_num].type = VAConfigAttribRTFormat;
@@ -2799,7 +2799,7 @@ static int vaapi_encodec_init(struct module_data *encodec_dev, struct encodec_in
     priv = calloc(1, sizeof(*priv));
     if(!priv)
     {
-        func_error("calloc fail, check free memery.");
+        log_error("calloc fail, check free memery.");
         goto FAIL1;
     }
     

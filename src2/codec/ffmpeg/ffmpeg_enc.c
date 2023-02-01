@@ -169,7 +169,8 @@ static int ffmpeg_frame_enc(struct module_data *encodec_dev, struct common_buffe
     return 0;
 }
 
-static  struct common_buffer *ffmpeg_enc_get_pkt(struct module_data *encodec_dev)
+static  struct common_buffer *ffmpeg_enc_get_pkt(
+    struct module_data *encodec_dev)
 {
     struct ffmpeg_enc_data *enc_data = encodec_dev->priv;
     AVPacket *pkt = enc_data->av_packet;
@@ -220,8 +221,12 @@ struct encodec_ops ffmpeg_encodec_dev =
 {
     .name               = "ffmpeg_encodec_dev",
     .init               = ffmpeg_enc_init,
-    .push_fb            = ffmpeg_frame_enc,
+    .set_info
+    .map_buffer
+    .put_buffer         = ffmpeg_frame_enc,
+    .get_buffer
     .get_package        = ffmpeg_enc_get_pkt,
+    .unmap_buffer
     .release            = ffmpeg_enc_release
 };
 

@@ -5,6 +5,7 @@
 #include "dl_help.h"
 #include "output_dev.h"
 #include "frame_buffer.h"
+#include "dev_templete.h"
 
 struct output_object *output_dev_init(void)
 {
@@ -36,81 +37,12 @@ struct output_object *output_dev_init(void)
 	return output_obj;
 }
 
-int output_set_info(struct output_object *output_obj, struct fb_info *fb_info)
-{
-	struct output_dev_ops *dev_ops;
-	
-	if(!output_obj)
-		return -1;
-
-	dev_ops = (struct output_dev_ops *)output_obj->ops;
-	if(dev_ops)
-	{
-		if(dev_ops->set_info)
-			return dev_ops->set_info(output_obj, fb_info);
-		else
-			printf("output dev not find func:set_info\n");
-	}
-
-	return -1;
-}
-
-int output_map_fb(struct output_object *output_obj, int buf_id)
-{
-	struct output_dev_ops *dev_ops;
-	
-	if(!output_obj)
-		return -1;
-
-	dev_ops = (struct output_dev_ops *)output_obj->ops;
-	if(dev_ops)
-	{
-		if(dev_ops->map_buffer)
-			return dev_ops->map_buffer(output_obj, buf_id);
-		else
-			printf("output dev not find func:map_buffer\n");
-	}
-
-	return -1;
-}
-
-int output_get_fb(struct output_object *output_obj)
-{
-	struct output_dev_ops *dev_ops;
-	
-	if(!output_obj)
-		return -1;
-
-	dev_ops = (struct output_dev_ops *)output_obj->ops;
-	if(dev_ops)
-	{
-		if(dev_ops->get_buffer)
-			return dev_ops->get_buffer(output_obj);
-		else
-			printf("output dev not find func:get_buffer\n");
-	}
-
-	return -1;
-}
-
-int output_put_fb(struct output_object *output_obj, int buf_id)
-{
-	struct output_dev_ops *dev_ops;
-	
-	if(!output_obj)
-		return -1;
-
-	dev_ops = (struct output_dev_ops *)output_obj->ops;
-	if(dev_ops)
-	{
-		if(dev_ops->put_buffer)
-			return dev_ops->put_buffer(output_obj, buf_id);
-		else
-			printf("output dev not find func:put_buffer\n");
-	}
-
-	return -1;
-}
+DEV_SET_INFO(output, output_dev_ops)
+DEV_MAP_FB(output, output_dev_ops)
+DEV_UNMAP_FB(output, output_dev_ops)
+DEV_GET_FB(output, output_dev_ops)
+DEV_PUT_FB(output, output_dev_ops)
+DEV_RELEASE(output, output_dev_ops)
 
 int output_regist_event_callback(struct output_object *output_obj, void (* on_event)(struct output_object *obj))
 {

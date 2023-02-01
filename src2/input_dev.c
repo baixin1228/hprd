@@ -5,6 +5,7 @@
 #include "dl_help.h"
 #include "input_dev.h"
 #include "frame_buffer.h"
+#include "dev_templete.h"
 
 struct input_object *input_dev_init(void)
 {
@@ -36,74 +37,12 @@ struct input_object *input_dev_init(void)
 	return input_obj;
 }
 
-
-int input_get_info(struct input_object *input_obj, struct fb_info *fb_info)
-{
-	struct input_dev_ops *dev_ops;
-
-	if(!input_obj)
-		return -1;
-
-	dev_ops = (struct input_dev_ops *)input_obj->ops;
-	if(dev_ops)
-	{
-		if(dev_ops->get_info)
-			return dev_ops->get_info(input_obj, fb_info);
-	}
-
-	return -1;
-}
-
-int input_map_fb(struct input_object *input_obj, int buf_id)
-{
-	struct input_dev_ops *dev_ops;
-
-	if(!input_obj)
-		return -1;
-
-	dev_ops = (struct input_dev_ops *)input_obj->ops;
-	if(dev_ops)
-	{
-		if(dev_ops->map_buffer)
-			return dev_ops->map_buffer(input_obj, buf_id);
-	}
-
-	return -1;
-}
-
-int input_get_fb(struct input_object *input_obj)
-{
-	struct input_dev_ops *dev_ops;
-
-	if(!input_obj)
-		return -1;
-
-	dev_ops = (struct input_dev_ops *)input_obj->ops;
-	if(dev_ops)
-	{
-		if(dev_ops->get_buffer)
-			return dev_ops->get_buffer(input_obj);
-	}
-
-	return -1;
-}
-
-int input_put_fb(struct input_object *input_obj, int buf_id)
-{
-	struct input_dev_ops *dev_ops;
-
-	if(!input_obj)
-		return -1;
-
-	dev_ops = (struct input_dev_ops *)input_obj->ops;
-	if(dev_ops)
-	{
-		if(dev_ops->put_buffer)
-			return dev_ops->put_buffer(input_obj, buf_id);
-	}
-
-	return -1;
-}
+DEV_GET_INFO(input, input_dev_ops)
+DEV_MAP_FB(input, input_dev_ops)
+DEV_UNMAP_FB(input, input_dev_ops)
+DEV_GET_FB(input, input_dev_ops)
+DEV_PUT_FB(input, input_dev_ops)
+DEV_RELEASE(input, input_dev_ops)
 
 int input_main_loop(struct input_object *input_obj)
 {

@@ -3,7 +3,7 @@ ffmpeg_codec_deps = [ 	dependency('libavformat'),
 						dependency('libavutil')]
 
 ffmpeg_encodec_lib = static_library(
-    'ffmpeg-encodec-lib', 
+    'ffmpegencodec', 
     ['ffmpeg_enc.c', 'ffmpeg_util.c'],
     dependencies: ffmpeg_codec_deps,
     include_directories: [ include_directories('.'),
@@ -11,7 +11,7 @@ ffmpeg_encodec_lib = static_library(
     )
 
 ffmpeg_decodec_lib = static_library(
-    'ffmpeg-decodec-lib', 
+    'ffmpegdecodec',
     ['ffmpeg_dec.c'],
     dependencies: ffmpeg_codec_deps,
     include_directories: [ include_directories('.'),

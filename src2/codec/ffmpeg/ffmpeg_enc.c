@@ -197,10 +197,10 @@ static  struct common_buffer *ffmpeg_enc_get_pkt(
         {
             log_info("-------> ffmpeg enc:find I frame size:%d.", pkt->size);
             //找到I帧，插入SPS和PPS
-            // code_ctx->on_package(av_codec_ctx->extradata, av_codec_ctx->extradata_size);
+            code_ctx->on_package(av_codec_ctx->extradata, av_codec_ctx->extradata_size);
         }else{
             log_info("ffmpeg enc:find P frame size:%d.", pkt->size);
-            // code_ctx->on_package(pkt->data, pkt->size);
+            code_ctx->on_package(pkt->data, pkt->size);
         }
         av_packet_unref(pkt);
         return &enc_data->ret_pkt;

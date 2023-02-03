@@ -7,25 +7,28 @@
 #include <sys/shm.h>
 #include <X11/extensions/XShm.h>
 
+#include <glib.h>
+
 #include "util.h"
 #include "input_dev.h"
 #include "buffer_pool.h"
 #include "frame_buffer.h"
 
-#define BUFFER_FMT ARGB8888
 #define DEFAULT_DISPLAY ":0"
 
 struct x11_extensions
 {
-	Display* display;
-	int screen_num;
+	Display *display;
+	uint32_t screen_num;
 	Window root_win;
 	XWindowAttributes windowattr;
-	Visual* visual;
-	int width;
-	int height;
-	int depth;
-	struct xext_buf{
+	Visual *visual;
+	uint32_t format;
+	uint32_t width;
+	uint32_t height;
+	uint32_t depth;
+	struct xext_buf
+	{
 		bool is_free;
 		int raw_buf_id;
 		XImage *ximg;
@@ -53,7 +56,7 @@ static int xext_dev_init(struct input_object *obj)
 	if(priv->display == NULL)
 	{
 		log_error("XOpenDisplay: cannot displayect to X server %s.",
-			XDisplayName(DEFAULT_DISPLAY));
+				  XDisplayName(DEFAULT_DISPLAY));
 		goto FAIL2;
 	}
 	if(XShmQueryExtension(priv->display) == False)
@@ -65,7 +68,7 @@ static int xext_dev_init(struct input_object *obj)
 	priv->root_win = RootWindow(priv->display, priv->screen_num);
 
 	if(XGetWindowAttributes(priv->display, priv->root_win,
-		&priv->windowattr) == 0)
+							&priv->windowattr) == 0)
 	{
 		log_error("icvVideoRender: failed to get window attributes.");
 		goto FAIL3;
@@ -76,8 +79,10 @@ static int xext_dev_init(struct input_object *obj)
 
 	priv->width = DisplayWidth(priv->display, priv->screen_num);
 	priv->height = DisplayHeight(priv->display, priv->screen_num);
-	log_info("x11 xext informations of screen:%d width:%d height:%d." , priv->screen_num
-		, priv->width , priv->height);
+	log_info("x11 xext informations of screen:%d width:%d height:%d.", priv->screen_num
+			 , priv->width, priv->height);
+
+	priv->format = ARGB8888;
 
 	obj->priv = (void *)priv;
 	return 0;
@@ -90,22 +95,22 @@ FAIL1:
 	return ret;
 }
 
-static int xext_get_fb_info(struct input_object *obj, struct fb_info *fb_info)
+static int xext_get_fb_info(struct input_object *obj, GHashTable *fb_info)
 {
 	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
 
-	fb_info->format = BUFFER_FMT;
-	fb_info->width = priv->width;
-	fb_info->height = priv->height;
-	fb_info->hor_stride = priv->width;
-	fb_info->ver_stride = priv->height;
+	g_hash_table_insert(fb_info, "format", &priv->format);
+	g_hash_table_insert(fb_info, "width", &priv->width);
+	g_hash_table_insert(fb_info, "height", &priv->height);
+	g_hash_table_insert(fb_info, "hor_stride", &priv->width);
+	g_hash_table_insert(fb_info, "ver_stride", &priv->height);
 	return 0;
 }
 
 static int xext_map_buffer(struct input_object *obj, int buf_id)
 {
-	struct raw_buffer* raw_buf;
-	struct xext_buf* xext_buf;
+	struct raw_buffer *raw_buf;
+	struct xext_buf *xext_buf;
 	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
 
 	if(priv->xext_bufs[buf_id].ximg != NULL)
@@ -114,17 +119,19 @@ static int xext_map_buffer(struct input_object *obj, int buf_id)
 	xext_buf = &priv->xext_bufs[buf_id];
 	xext_buf->raw_buf_id = buf_id;
 	xext_buf->ximg = XShmCreateImage(priv->display, priv->visual, priv->depth, ZPixmap, NULL,
-		&xext_buf->shm, priv->width, priv->height);
+									 &xext_buf->shm, priv->width, priv->height);
 
-	if (xext_buf->ximg == NULL) {
+	if (xext_buf->ximg == NULL)
+	{
 		log_error("XShmCreateImage failed.");
 		return -1;
 	}
 
 	xext_buf->shm.shmid = shmget(IPC_PRIVATE,
-		(size_t)xext_buf->ximg->bytes_per_line * xext_buf->ximg->height, IPC_CREAT | 0600);
+								 (size_t)xext_buf->ximg->bytes_per_line * xext_buf->ximg->height, IPC_CREAT | 0600);
 
-	if (xext_buf->shm.shmid == -1) {
+	if (xext_buf->shm.shmid == -1)
+	{
 		log_error("shmget failed.");
 		goto FAIL1;
 	}
@@ -132,12 +139,14 @@ static int xext_map_buffer(struct input_object *obj, int buf_id)
 	xext_buf->shm.readOnly = False;
 	xext_buf->shm.shmaddr = xext_buf->ximg->data = (char *) shmat(xext_buf->shm.shmid, 0, 0);
 
-	if (xext_buf->shm.shmaddr == (char *)-1) {
+	if (xext_buf->shm.shmaddr == (char *) -1)
+	{
 		log_error("shmat failed.");
 		goto FAIL2;
 	}
 
-	if (!XShmAttach(priv->display, &xext_buf->shm)) {
+	if (!XShmAttach(priv->display, &xext_buf->shm))
+	{
 		log_error("XShmAttach failed.");
 		goto FAIL3;
 	}
@@ -150,7 +159,7 @@ static int xext_map_buffer(struct input_object *obj, int buf_id)
 	raw_buf->hor_stride = priv->width;
 	raw_buf->height = priv->height;
 	raw_buf->ver_stride = priv->height;
-	raw_buf->format = BUFFER_FMT;
+	raw_buf->format = priv->format;
 	raw_buf->bpp = 32;
 	raw_buf->size = priv->width * priv->height * 4;
 	raw_buf->ptr = xext_buf->ximg->data;
@@ -169,9 +178,9 @@ FAIL1:
 static int xext_get_frame_buffer(struct input_object *obj)
 {
 	int i = 0;
-	struct xext_buf* xext_buf;
+	struct xext_buf *xext_buf;
 	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
-	
+
 	while(!priv->xext_bufs[priv->head_buf_id].is_free)
 	{
 		i++;
@@ -185,7 +194,7 @@ static int xext_get_frame_buffer(struct input_object *obj)
 	priv->head_buf_id++;
 
 	XShmGetImage(priv->display, priv->root_win, xext_buf->ximg,
-		0, 0, AllPlanes);
+				 0, 0, AllPlanes);
 	XSync(priv->display, False);
 	return xext_buf->raw_buf_id;
 }
@@ -203,8 +212,8 @@ static int xext_put_frame_buffer(struct input_object *obj, int buf_id)
 
 static int xext_unmap_buffer(struct input_object *obj, int buf_id)
 {
-	struct raw_buffer* raw_buf;
-	struct xext_buf* xext_buf;
+	struct raw_buffer *raw_buf;
+	struct xext_buf *xext_buf;
 	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
 
 	if(priv->xext_bufs[buf_id].ximg == NULL)
@@ -240,7 +249,7 @@ static int xext_dev_release(struct input_object *obj)
 	return 0;
 }
 
-struct input_dev_ops dev_ops = 
+struct input_dev_ops dev_ops =
 {
 	.name 				= "x11_extensions_input_dev",
 	.init 				= xext_dev_init,

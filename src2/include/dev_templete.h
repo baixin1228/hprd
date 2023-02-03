@@ -1,9 +1,11 @@
 #ifndef __DEV_TEMPLETE_H__
 #define __DEV_TEMPLETE_H__
+
+#include <glib.h>
 #include "util.h"
 
 #define DEV_GET_INFO(__obj, __obj_ops)				\
-int __obj##_get_info(struct __obj##_object *obj, struct fb_info *fb_info)\
+int __obj##_get_info(struct __obj##_object *obj, GHashTable *fb_info)\
 {													\
 	struct __obj_ops *dev_ops;						\
 													\
@@ -23,7 +25,7 @@ int __obj##_get_info(struct __obj##_object *obj, struct fb_info *fb_info)\
 }
 
 #define DEV_SET_INFO(__obj, __obj_ops)				\
-int __obj##_set_info(struct __obj##_object *obj, struct fb_info *fb_info)\
+int __obj##_set_info(struct __obj##_object *obj, GHashTable *fb_info)\
 {													\
 	struct __obj_ops *dev_ops;						\
 													\
@@ -34,7 +36,7 @@ int __obj##_set_info(struct __obj##_object *obj, struct fb_info *fb_info)\
 	if(dev_ops)										\
 	{												\
 		if(dev_ops->set_info)						\
-			return dev_ops->set_info(obj, fb_info);\
+			return dev_ops->set_info(obj, fb_info); \
 		else 										\
 			log_error(#__obj" dev not find func:set_info\n");\
 	}												\

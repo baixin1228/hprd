@@ -1,6 +1,6 @@
 subdir('libs')
 
-subdir('codec')
+
 subdir('output_dev/sdl_output')
 subdir('input_dev/xcb_input')
 
@@ -14,7 +14,7 @@ src += 'util.c'
 
 hprd_server = executable('server', src,
 	include_directories : include_directories('include'),
-	dependencies: [common_dep],
+	dependencies: [common_dep, dependency('glib-2.0')],
 	link_args : ['-ldl'])
 
 test('hprd_server_test', hprd_server, is_parallel : false, timeout: 1000)

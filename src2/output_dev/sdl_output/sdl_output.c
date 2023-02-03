@@ -1,3 +1,4 @@
+#include <glib.h>
 #include <stdio.h>
 
 #include "SDL2/SDL.h"
@@ -8,9 +9,9 @@
 
 struct sdl_fd_out
 {
-	SDL_Window *screen; 
-	SDL_Renderer* sdlRenderer;
-	SDL_Texture* sdlTexture;
+	SDL_Window *screen;
+	SDL_Renderer *sdlRenderer;
+	SDL_Texture *sdlTexture;
 	SDL_Thread *refresh_thread;
 	SDL_Rect sdlRect;
 	uint32_t fb_width;
@@ -26,10 +27,12 @@ struct sdl_fd_out
 //Refresh Event
 #define REFRESH_EVENT  (SDL_USEREVENT + 1)
 
-int thread_exit=0;
+int thread_exit = 0;
 
-int refresh_video(void *opaque){
-	while (thread_exit==0) {
+int refresh_video(void *opaque)
+{
+	while (thread_exit == 0)
+	{
 		SDL_Event event;
 		event.type = REFRESH_EVENT;
 		SDL_PushEvent(&event);
@@ -48,13 +51,14 @@ static int sdl_dev_init(struct output_object *obj)
 		log_error("calloc fail, check free memery.");
 	}
 
-	if(SDL_Init(SDL_INIT_VIDEO)) {  
-		printf( "Could not initialize SDL - %s\n", SDL_GetError()); 
+	if(SDL_Init(SDL_INIT_VIDEO))
+	{
+		printf( "Could not initialize SDL - %s\n", SDL_GetError());
 		return -1;
 	}
 
 	obj->priv = (void *)priv;
-	
+
 	return 0;
 }
 
@@ -62,54 +66,60 @@ static int _com_fmt_to_sdl_fmt(enum FRAMEBUFFER_FORMAT format)
 {
 	switch(format)
 	{
-		case ARGB8888:
-			return SDL_PIXELFORMAT_ARGB8888;
+	case ARGB8888:
+		return SDL_PIXELFORMAT_ARGB8888;
 		break;
-		case YUV420P:
-			return SDL_PIXELFORMAT_IYUV;
+	case YUV420P:
+		return SDL_PIXELFORMAT_IYUV;
 		break;
-		case NV12:
-			return SDL_PIXELFORMAT_NV12;
+	case NV12:
+		return SDL_PIXELFORMAT_NV12;
 		break;
-		default:
-			return SDL_PIXELFORMAT_ARGB8888;
+	default:
+		return SDL_PIXELFORMAT_ARGB8888;
 		break;
 	}
 }
 
-static int sdl_set_fb_info(struct output_object *obj, struct fb_info *fb_info)
+static int sdl_set_info(struct output_object *obj, GHashTable *fb_info)
 {
 	struct sdl_fd_out *priv = (struct sdl_fd_out *)obj->priv;
 
-	priv->fb_width = fb_info->width;
-	priv->fb_height = fb_info->height;
+	priv->fb_width = *(uint32_t *)g_hash_table_lookup(fb_info, "width");
+	priv->fb_height = *(uint32_t *)g_hash_table_lookup(fb_info, "height");
+	priv->screen_w = *(uint32_t *)g_hash_table_lookup(fb_info, "width") / 2;
+	priv->screen_h = *(uint32_t *)g_hash_table_lookup(fb_info, "height") / 2;
 
-	priv->screen_w = fb_info->width / 2;
-	priv->screen_h = fb_info->height / 2;
 	//SDL 2.0 Support for multiple windows
 	priv->screen = SDL_CreateWindow("Simplest Video Play SDL2", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-		priv->screen_w, priv->screen_h,SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
-	if(!priv->screen) {
-		printf("SDL: could not create window - exiting:%s\n",SDL_GetError());
+									priv->screen_w, priv->screen_h, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+	if(!priv->screen)
+	{
+		printf("SDL: could not create window - exiting:%s\n", SDL_GetError());
 		return -1;
 	}
 	priv->sdlRenderer = SDL_CreateRenderer(priv->screen, -1, 0);
 
-	priv->sdlTexture = SDL_CreateTexture(priv->sdlRenderer, _com_fmt_to_sdl_fmt(fb_info->format), 
-		SDL_TEXTUREACCESS_STREAMING, priv->fb_width, priv->fb_height);
+	priv->sdlTexture = SDL_CreateTexture(priv->sdlRenderer,
+										 _com_fmt_to_sdl_fmt(*(uint32_t *)g_hash_table_lookup(fb_info, "format")),
+										 SDL_TEXTUREACCESS_STREAMING,
+										 priv->fb_width, priv->fb_height);
 
-	priv->refresh_thread = SDL_CreateThread(refresh_video,NULL,NULL);
+	priv->refresh_thread = SDL_CreateThread(refresh_video, NULL, NULL);
 
 	priv->sdlRect.x = 0;
 	priv->sdlRect.y = 0;
 	priv->sdlRect.w = priv->screen_w;
 	priv->sdlRect.h = priv->screen_h;
-	priv->fb_format = fb_info->format;
+	priv->fb_format = *(uint32_t *)g_hash_table_lookup(fb_info, "format");
 	priv->cur_buf_id = -1;
 	return 0;
 }
 
-static int sdl_map_buffer(struct output_object *obj, int buf_id) { return 0; }
+static int sdl_map_buffer(struct output_object *obj, int buf_id)
+{
+	return 0;
+}
 
 static int sdl_get_buffer(struct output_object *obj)
 {
@@ -117,8 +127,8 @@ static int sdl_get_buffer(struct output_object *obj)
 	return priv->cur_buf_id;
 }
 
-static int sdl_put_buffer(struct output_object *obj, 
-	int buf_id)
+static int sdl_put_buffer(struct output_object *obj,
+						  int buf_id)
 {
 	struct raw_buffer *buffer;
 	struct sdl_fd_out *priv = (struct sdl_fd_out *)obj->priv;
@@ -138,23 +148,23 @@ static int sdl_put_buffer(struct output_object *obj,
 
 	switch(priv->fb_format)
 	{
-		case ARGB8888:
-			SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptr, priv->fb_width * 4);
+	case ARGB8888:
+		SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptr, priv->fb_width * 4);
 		break;
-		case YUV420P:
-			// SDL_UpdateYUVTexture(priv->sdlTexture, NULL,
-			// 	     buffer->ptr, priv->fb_width,
-			// 	     buffer->ptr + priv->fb_width * priv->fb_height, priv->fb_width / 2,
-			// 	     buffer->ptr + priv->fb_width * priv->fb_height * 5 / 4
-			// 	     , priv->fb_width / 2);
+	case YUV420P:
+		// SDL_UpdateYUVTexture(priv->sdlTexture, NULL,
+		// 	     buffer->ptr, priv->fb_width,
+		// 	     buffer->ptr + priv->fb_width * priv->fb_height, priv->fb_width / 2,
+		// 	     buffer->ptr + priv->fb_width * priv->fb_height * 5 / 4
+		// 	     , priv->fb_width / 2);
 
-			SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptr, priv->fb_width);
+		SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptr, priv->fb_width);
 		break;
-		case NV12:
-			SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptr, priv->fb_width);
+	case NV12:
+		SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptr, priv->fb_width);
 		break;
-		default:
-			SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptr, priv->fb_width * 4);
+	default:
+		SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptr, priv->fb_width * 4);
 		break;
 	}
 
@@ -170,7 +180,7 @@ static int sdl_main_loop(struct output_object *obj)
 {
 	SDL_Event event;
 	struct sdl_fd_out *priv = (struct sdl_fd_out *)obj->priv;
-	
+
 	log_info("sdl_main_loop");
 
 	while(1)
@@ -179,10 +189,14 @@ static int sdl_main_loop(struct output_object *obj)
 		if(event.type == REFRESH_EVENT)
 		{
 			obj->on_event(obj);
-		}else if(event.type == SDL_WINDOWEVENT){
+		}
+		else if(event.type == SDL_WINDOWEVENT)
+		{
 			/* If Resize */
-			SDL_GetWindowSize(priv->screen,&priv->screen_w,&priv->screen_h);
-		}else if(event.type == SDL_QUIT){
+			SDL_GetWindowSize(priv->screen, &priv->screen_w, &priv->screen_h);
+		}
+		else if(event.type == SDL_QUIT)
+		{
 			exit(0);
 		}
 	}
@@ -190,11 +204,11 @@ static int sdl_main_loop(struct output_object *obj)
 	return 0;
 }
 
-struct output_dev_ops dev_ops = 
+struct output_dev_ops dev_ops =
 {
 	.name				= "sdl_fb_out",
 	.init				= sdl_dev_init,
-	.set_info			= sdl_set_fb_info,
+	.set_info			= sdl_set_info,
 	.map_buffer			= sdl_map_buffer,
 	.get_buffer			= sdl_get_buffer,
 	.put_buffer			= sdl_put_buffer,

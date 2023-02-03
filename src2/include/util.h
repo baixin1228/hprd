@@ -12,9 +12,6 @@
 #define ALIGN64(x)	((x+63)&~63)
 #define ALIGN128(x)	((x+127)&~127)
 
-#define MIN(a, b) ((a)>(b)?(b):(a))
-#define MAX(a, b) ((a)>(b)?(a):(b))
-
 static inline void log_info(const char *fmt, ...)
 {
 	char fmt_buffer[1024];

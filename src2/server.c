@@ -5,11 +5,10 @@
 #include "output_dev.h"
 #include "buffer_pool.h"
 
-struct output_object * out_obj;
-struct input_object * in_obj;
-struct fb_info fb_info;
+struct output_object *out_obj = NULL;
+struct input_object *in_obj = NULL;
 
-void on_event(struct output_object * obj)
+void on_event(struct output_object *obj)
 {
 	int ret;
 	int buf_id;
@@ -45,11 +44,18 @@ int main()
 {
 	int ret;
 	int buf_id;
+	GHashTable *fb_info;
+
+	fb_info = g_hash_table_new(g_str_hash, g_str_equal);
+
 	out_obj = output_dev_init();
 	in_obj = input_dev_init();
 	output_regist_event_callback(out_obj, on_event);
-	input_get_info(in_obj, &fb_info);
-	output_set_info(out_obj, &fb_info);
+	input_get_info(in_obj, fb_info);
+	output_set_info(out_obj, fb_info);
+
+	g_hash_table_destroy(fb_info);
+
 	for (int i = 0; i < 5; ++i)
 	{
 		buf_id = alloc_buffer();

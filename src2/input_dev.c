@@ -15,7 +15,7 @@ struct input_object *input_dev_init(void)
 
 	input_obj = calloc(1, sizeof(struct input_object));
 
-	dev_ops = (struct input_dev_ops *)load_lib_data("src2/input_dev/xcb_input/libxcb_input.so", "dev_ops");
+	dev_ops = (struct input_dev_ops *)load_lib_data("src2/input_dev/xcb_input/libxcbinput.so", "dev_ops");
 
 	if(!dev_ops)
 	{

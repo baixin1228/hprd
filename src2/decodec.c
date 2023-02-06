@@ -38,6 +38,23 @@ struct decodec_object *decodec_init(void)
 	return obj;
 }
 
+int decodec_put_pkt(struct decodec_object *obj, char *buf, size_t len)
+{
+	struct decodec_ops *dev_ops;
+
+	if(!obj)
+		return -1;
+
+	dev_ops = (struct decodec_ops *)obj->ops;
+	if(dev_ops)
+	{
+		if(dev_ops->put_pkt)
+			return dev_ops->put_pkt(obj, buf, len);
+	}
+
+	return -1;
+}
+
 DEV_GET_INFO(decodec, decodec_ops)
 DEV_MAP_FB(decodec, decodec_ops)
 DEV_UNMAP_FB(decodec, decodec_ops)

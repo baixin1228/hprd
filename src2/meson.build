@@ -1,6 +1,7 @@
 subdir('libs')
 
 
+subdir('codec')
 subdir('output_dev/sdl_output')
 subdir('input_dev/xcb_input')
 

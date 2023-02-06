@@ -1,5 +1,5 @@
 common_libs = shared_library('common_libs',
-	'buffer_pool.c',
+	['buffer_pool.c', 'queue.c'],
 	include_directories : include_directories('../include')
   )
 

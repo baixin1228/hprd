@@ -21,23 +21,6 @@ struct ffmpeg_enc_data {
     struct int_queue id_queue;
 };
 
-static int _com_fb_fmt_to_av_fmt(enum FRAMEBUFFER_FORMAT format) {
-    switch(format) {
-    case ARGB8888:
-        return AV_PIX_FMT_RGB24;
-        break;
-    case YUV420P:
-        return AV_PIX_FMT_YUV420P;
-        break;
-    case NV12:
-        return AV_PIX_FMT_NV12;
-        break;
-    default:
-        return AV_PIX_FMT_RGB24;
-        break;
-    }
-}
-
 static int ffmpeg_enc_init(struct encodec_object *obj) {
     struct ffmpeg_enc_data *enc_data;
 
@@ -58,7 +41,7 @@ static int ffmpeg_enc_set_info(
     AVCodecContext *av_codec_ctx = NULL;
     struct ffmpeg_enc_data *enc_data = obj->priv;
 
-    format = com_fmt_to_av_fmt(
+    format = stream_fmt_to_av_fmt(
                  *(uint32_t *)g_hash_table_lookup(enc_info, "stream_fmt"));
     enc_data->av_codec = avcodec_find_encoder(format);
     if (!enc_data->av_codec) {
@@ -84,7 +67,7 @@ static int ffmpeg_enc_set_info(
     av_codec_ctx->framerate = (AVRational) {
         25, 1
     };
-    av_codec_ctx->pix_fmt = _com_fb_fmt_to_av_fmt(
+    av_codec_ctx->pix_fmt = fb_fmt_to_av_fmt(
                                 *(uint32_t *)g_hash_table_lookup(enc_info, "format"));
     av_codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
     av_codec_ctx->gop_size = 10;

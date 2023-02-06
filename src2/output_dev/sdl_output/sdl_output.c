@@ -197,7 +197,7 @@ static int sdl_main_loop(struct output_object *obj)
 		}
 		else if(event.type == SDL_QUIT)
 		{
-			exit(0);
+			break;
 		}
 	}
 

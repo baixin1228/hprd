@@ -69,6 +69,7 @@ int main()
 	int ret;
 	int buf_id;
 	uint32_t stream_ftm = STREAM_H264;
+	uint32_t bit_rate = 1 * 1024 * 1024;
 	GHashTable *fb_info;
 
 	fb_info = g_hash_table_new(g_str_hash, g_str_equal);
@@ -83,6 +84,8 @@ int main()
 	output_set_info(out_obj, fb_info);
 	
 	g_hash_table_insert(fb_info, "stream_fmt", &stream_ftm);
+	g_hash_table_insert(fb_info, "bit_rate", &bit_rate);
+	
 	encodec_set_info(enc_obj, fb_info);
 
 	g_hash_table_destroy(fb_info);

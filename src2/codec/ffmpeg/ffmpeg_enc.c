@@ -74,7 +74,8 @@ static int ffmpeg_enc_set_info(
     av_codec_ctx = enc_data->av_codec_ctx;
 
     av_codec_ctx->codec_id = format;
-    av_codec_ctx->bit_rate = 30 * 1204 * 1204;
+    av_codec_ctx->bit_rate = *(uint32_t *)g_hash_table_lookup(
+        enc_info, "bit_rate");
     av_codec_ctx->width = *(uint32_t *)g_hash_table_lookup(enc_info, "width");
     av_codec_ctx->height = *(uint32_t *)g_hash_table_lookup(enc_info, "width");
     av_codec_ctx->time_base = (AVRational) {

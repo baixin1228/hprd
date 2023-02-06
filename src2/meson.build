@@ -16,6 +16,7 @@ src += 'util.c'
 hprd_server = executable('server', src,
 	include_directories : include_directories('include'),
 	dependencies: [common_dep, dependency('glib-2.0')],
-	link_args : ['-ldl'])
+	link_args : ['-ldl'],
+    install : true)
 
 test('hprd_server_test', hprd_server, is_parallel : false, timeout: 1000)

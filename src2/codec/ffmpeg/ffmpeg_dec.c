@@ -490,13 +490,15 @@ static int ffmepg_dec_release(struct module_data *dev)
 	return 0;
 }
 
-struct decodec_ops ffmpeg_decoder_dev = 
+struct decodec_ops dev_ops = 
 {
     .name               = "ffmpeg_decoder_dev",
     .init               = ffmpeg_dec_init,
-    .push_pkt           = ffmepg_put_packet,
-    .get_fb 	        = ffmepg_get_frame,
+    .put_pkt            = ffmepg_put_packet,
+    .get_info 			= ,
+    .map_buffer 		= ,
+    .get_buffer 		= ffmepg_get_frame,
+    .put_buffer	        = ,
+    .unmap_buffer 		= ,
     .release            = ffmepg_dec_release
 };
-
-REGISTE_DECODEC_DEV(ffmpeg_decoder_dev, DEVICE_PRIO_LOW);

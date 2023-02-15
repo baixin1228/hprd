@@ -151,3 +151,5 @@ int __obj##_release(struct __obj##_object *obj)		\
 	return -1;										\
 }
 #endif
+
+// #define REGIST_DEV(ops)

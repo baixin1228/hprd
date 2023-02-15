@@ -2,8 +2,8 @@ inc = 'include'
 server_src = []
 server_dep = []
 
-subdir('libs')
 subdir('codec')
+subdir('common')
 subdir('output_dev')
 subdir('input_dev')
 
@@ -15,7 +15,6 @@ server_src += 'input_dev.c'
 server_src += 'encodec.c'
 server_src += 'dl_help.c'
 server_src += 'util.c'
-
 
 hprd_server = executable('server', server_src,
 	include_directories : inc,

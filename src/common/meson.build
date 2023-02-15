@@ -1,4 +1,4 @@
-common_source = files('queue.cc', 'buffer_pool.c')
+common_source = files('queue.c', 'buffer_pool.c')
 
 common_lib = static_library('common',
                         common_source,

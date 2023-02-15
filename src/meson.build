@@ -1,20 +1,25 @@
+inc = 'include'
+server_src = []
+server_dep = []
+
 subdir('libs')
-
 subdir('codec')
-subdir('output_dev/sdl_output')
-subdir('input_dev/xcb_input')
+subdir('output_dev')
+subdir('input_dev')
 
-src = []
-src += 'server.c'
-src += 'output_dev.c'
-src += 'input_dev.c'
-src += 'encodec.c'
-src += 'dl_help.c'
-src += 'util.c'
+server_dep += dependency('glib-2.0')
 
-hprd_server = executable('server', src,
-	include_directories : include_directories('include'),
-	dependencies: [common_dep, dependency('glib-2.0')],
+server_src += 'server.c'
+server_src += 'output_dev.c'
+server_src += 'input_dev.c'
+server_src += 'encodec.c'
+server_src += 'dl_help.c'
+server_src += 'util.c'
+
+
+hprd_server = executable('server', server_src,
+	include_directories : inc,
+	dependencies: server_dep,
 	link_args : ['-ldl'],
     install : true)
 

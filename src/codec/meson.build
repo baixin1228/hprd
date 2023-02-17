@@ -1,7 +1,5 @@
-codecs_source = files('ffmpeg_enc.c', 'ffmpeg_util.c')
-
-codecs_lib = static_library('common',
-                        codecs_source,
+ffmpeg_enc_lib = static_library('common',
+                        ['ffmpeg_enc.c', 'ffmpeg_util.c'],
                         dependencies: [common_deps,
                         dependency('libavcodec'),
                         dependency('libavformat'),
@@ -9,4 +7,4 @@ codecs_lib = static_library('common',
                         dependency('libavutil')],
                         include_directories : '../include')
 
-server_libs += codecs_lib
+server_libs += ffmpeg_enc_lib

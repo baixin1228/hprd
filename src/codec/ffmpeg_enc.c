@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdatomic.h>
 #include <libavcodec/avcodec.h>
+#include <libswscale/swscale.h>
 #include <libavformat/avformat.h>
+
 #include "util.h"
 #include "queue.h"
 #include "encodec.h"
@@ -9,6 +11,8 @@
 #include "ffmpeg_util.h"
 
 struct ffmpeg_enc_data {
+    int input_fb_fmt;
+
     AVFormatContext *av_ctx;
     AVCodecContext  *av_codec_ctx;
     AVCodec         *av_codec;
@@ -16,6 +20,8 @@ struct ffmpeg_enc_data {
     /* input and output */
     AVPacket        *av_packet;
     AVFrame         *av_frame;
+
+    struct SwsContext *sws_ctx;
 
     int enc_status;
     struct int_queue id_queue;
@@ -42,7 +48,7 @@ static int ffmpeg_enc_set_info(
     struct ffmpeg_enc_data *enc_data = obj->priv;
 
     stream_format = stream_fmt_to_av_fmt(
-                 *(uint32_t *)g_hash_table_lookup(enc_info, "stream_fmt"));
+                        *(uint32_t *)g_hash_table_lookup(enc_info, "stream_fmt"));
     enc_data->av_codec = avcodec_find_encoder(stream_format);
     if (!enc_data->av_codec) {
         log_error("ffmpeg enc avcodec not found.");
@@ -58,18 +64,33 @@ static int ffmpeg_enc_set_info(
 
     av_codec_ctx->codec_id = stream_format;
     av_codec_ctx->bit_rate = *(uint32_t *)g_hash_table_lookup(
-        enc_info, "bit_rate");
+                                 enc_info, "bit_rate");
     av_codec_ctx->width = *(uint32_t *)g_hash_table_lookup(enc_info, "width");
-    av_codec_ctx->height = *(uint32_t *)g_hash_table_lookup(enc_info, "width");
+    av_codec_ctx->height = *(uint32_t *)g_hash_table_lookup(enc_info, "height");
     av_codec_ctx->time_base = (AVRational) {
         1, 25
     };
     av_codec_ctx->framerate = (AVRational) {
         25, 1
     };
-    av_codec_ctx->pix_fmt = fb_fmt_to_av_fmt(
-                                *(uint32_t *)g_hash_table_lookup(enc_info, "format"));
-    // av_codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
+    enc_data->input_fb_fmt = fb_fmt_to_av_fmt(
+                                 *(uint32_t *)g_hash_table_lookup(enc_info, "format"));
+
+    if(enc_data->input_fb_fmt == AV_PIX_FMT_RGB32) {
+        av_codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
+
+        enc_data->sws_ctx = sws_getContext(
+                                    av_codec_ctx->width,
+                                    av_codec_ctx->height,
+                                    enc_data->input_fb_fmt,
+                                    av_codec_ctx->width,
+                                    av_codec_ctx->height,
+                                    av_codec_ctx->pix_fmt,
+                                    SWS_POINT, NULL, NULL, NULL);
+    } else {
+        av_codec_ctx->pix_fmt = enc_data->input_fb_fmt;
+    }
+
     av_codec_ctx->gop_size = 10;
     av_codec_ctx->max_b_frames = 0;
     av_codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
@@ -102,10 +123,12 @@ static int ffmpeg_enc_set_info(
     enc_data->av_frame->width  = av_codec_ctx->width;
     enc_data->av_frame->height = av_codec_ctx->height;
 
-    ret = av_frame_get_buffer(enc_data->av_frame, 0);
-    if (ret < 0) {
-        log_error("Could not allocate the video frame data");
-        goto FAIL3;
+    if(av_codec_ctx->pix_fmt != enc_data->input_fb_fmt) {
+        ret = av_frame_get_buffer(enc_data->av_frame, 0);
+        if (ret < 0) {
+            log_error("Could not allocate the video frame data");
+            goto FAIL3;
+        }
     }
 
     enc_data->av_packet = av_packet_alloc();
@@ -147,7 +170,7 @@ static void _ffmpeg_enc_get_pkt(struct encodec_object *obj) {
             //找到I帧，插入SPS和PPS
             obj->pkt_callback((char *)av_codec_ctx->extradata, av_codec_ctx->extradata_size);
         } else {
-            log_info("ffmpeg enc:find P frame size:%d.", pkt->size);
+            log_info("-------> ffmpeg enc:find P frame size:%d.", pkt->size);
             obj->pkt_callback((char *)pkt->data, pkt->size);
         }
         av_packet_unref(pkt);
@@ -163,30 +186,34 @@ static int ffmpeg_frame_enc(struct encodec_object *obj, int buf_id) {
     AVFrame *frame = enc_data->av_frame;
     buffer = get_raw_buffer(buf_id);
 
-    switch(frame->format) {
-    case AV_PIX_FMT_RGB444:
-    case AV_PIX_FMT_RGB24:
-        frame->data[0] = (uint8_t *)buffer->ptrs[0];
-        frame->data[1] = (uint8_t *)0;
-        frame->data[2] = (uint8_t *)0;
-        break;
-    case AV_PIX_FMT_YUV420P:
-        frame->data[0] = (uint8_t *)buffer->ptrs[0];
-        frame->data[1] = (uint8_t *)buffer->ptrs[0] + buffer->width * buffer->height;
-        frame->data[2] = (uint8_t *)buffer->ptrs[0] + buffer->width * buffer->height +
-                         buffer->width * buffer->height / 4;
-        break;
-    case AV_PIX_FMT_NV12:
-        frame->data[0] = (uint8_t *)buffer->ptrs[0];
-        frame->data[1] = (uint8_t *)buffer->ptrs[0] + buffer->width * buffer->height;
-        frame->data[2] = (uint8_t *)0;
-        break;
-    default:
-        log_error("unsupport frame format.");
-        break;
+    int linesizes[4] = {
+        buffer->size / buffer->height, 0, 0, 0
+    };
+    if(enc_data->av_codec_ctx->pix_fmt != enc_data->input_fb_fmt) {
+        /* convert */
+        sws_scale(enc_data->sws_ctx, (const uint8_t *const *)buffer->ptrs, linesizes, 0, buffer->height, frame->data, frame->linesize);
+    } else {
+        /* zero copy */
+        switch(frame->format) {
+        case AV_PIX_FMT_YUV420P:
+            frame->data[0] = (uint8_t *)buffer->ptrs[0];
+            frame->data[1] = (uint8_t *)buffer->ptrs[0] + buffer->width * buffer->height;
+            frame->data[2] = (uint8_t *)buffer->ptrs[0] + buffer->width * buffer->height +
+                             buffer->width * buffer->height / 4;
+            break;
+        case AV_PIX_FMT_NV12:
+            frame->data[0] = (uint8_t *)buffer->ptrs[0];
+            frame->data[1] = (uint8_t *)buffer->ptrs[0] + buffer->width * buffer->height;
+            frame->data[2] = (uint8_t *)0;
+            break;
+        default:
+            log_error("unsupport frame format.");
+            break;
+        }
     }
 
-    enc_data->enc_status = avcodec_send_frame(enc_data->av_codec_ctx, enc_data->av_frame);
+    enc_data->enc_status = avcodec_send_frame(enc_data->av_codec_ctx,
+                           frame);
     if (enc_data->enc_status < 0) {
         log_error("Error sending a frame for encoding");
         return -1;
@@ -214,6 +241,10 @@ static int ffmpeg_enc_release(struct encodec_object *obj) {
     struct ffmpeg_enc_data *enc_data = obj->priv;
     avcodec_close(enc_data->av_codec_ctx);
     av_packet_free(&enc_data->av_packet);
+    if(enc_data->sws_ctx) {
+        sws_freeContext(enc_data->sws_ctx);
+        enc_data->sws_ctx = NULL;
+    }
     return 0;
 }
 

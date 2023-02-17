@@ -19,7 +19,8 @@ struct raw_buffer
 	uint32_t format;
 	uint16_t bpp;
 	uint32_t size;
-	char *ptrs[3];
+	char *ptrs[4];
+	bool is_free;
 };
 
 #endif

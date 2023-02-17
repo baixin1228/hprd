@@ -217,7 +217,7 @@ static int ffmpeg_enc_release(struct encodec_object *obj) {
     return 0;
 }
 
-struct encodec_ops dev_ops = {
+struct encodec_ops ffmpeg_enc_ops = {
     .name               = "ffmpeg_encodec_dev",
     .init               = ffmpeg_enc_init,
     .set_info           = ffmpeg_enc_set_info,

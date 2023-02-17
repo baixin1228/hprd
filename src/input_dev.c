@@ -7,6 +7,8 @@
 #include "frame_buffer.h"
 #include "dev_templete.h"
 
+extern struct input_dev_ops xcb_dev_ops;
+
 struct input_object *input_dev_init(void)
 {
 	int ret;
@@ -15,7 +17,7 @@ struct input_object *input_dev_init(void)
 
 	input_obj = calloc(1, sizeof(struct input_object));
 
-	dev_ops = (struct input_dev_ops *)load_lib_data("src/input_dev/xcb_input/libxcbinput.so", "dev_ops");
+	dev_ops = &xcb_dev_ops;
 
 	if(!dev_ops)
 	{

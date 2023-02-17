@@ -249,7 +249,7 @@ static int xext_dev_release(struct input_object *obj)
 	return 0;
 }
 
-struct input_dev_ops dev_ops =
+struct input_dev_ops xcb_dev_ops =
 {
 	.name 				= "x11_extensions_input_dev",
 	.init 				= xext_dev_init,

@@ -7,6 +7,8 @@
 #include "frame_buffer.h"
 #include "dev_templete.h"
 
+extern struct output_dev_ops sdl_ops;
+
 struct output_object *output_dev_init(void)
 {
 	int ret;
@@ -15,7 +17,7 @@ struct output_object *output_dev_init(void)
 
 	output_obj = calloc(1, sizeof(struct output_object));
 
-	dev_ops = (struct output_dev_ops *)load_lib_data("src/output_dev/sdl_output/libsdloutput.so", "dev_ops");
+	dev_ops = &sdl_ops;
 
 	if(!dev_ops)
 	{

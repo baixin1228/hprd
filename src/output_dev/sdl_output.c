@@ -204,7 +204,7 @@ static int sdl_main_loop(struct output_object *obj)
 	return 0;
 }
 
-struct output_dev_ops dev_ops =
+struct output_dev_ops sdl_ops =
 {
 	.name				= "sdl_fb_out",
 	.init				= sdl_dev_init,

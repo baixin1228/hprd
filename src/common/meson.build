@@ -2,6 +2,6 @@ common_source = files('queue.c', 'buffer_pool.c')
 
 common_lib = static_library('common',
                         common_source,
-                        include_directories : inc)
+                        include_directories : '../include')
 
-server_dep += common_lib
+server_libs += common_lib

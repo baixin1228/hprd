@@ -7,6 +7,8 @@
 #include "frame_buffer.h"
 #include "dev_templete.h"
 
+extern struct encodec_ops ffmpeg_enc_ops;
+
 struct encodec_object *encodec_init(void)
 {
 	int ret;
@@ -15,8 +17,7 @@ struct encodec_object *encodec_init(void)
 
 	obj = calloc(1, sizeof(struct encodec_object));
 
-	dev_ops = (struct encodec_ops *)load_lib_data(
-		"src/codec/ffmpeg/libffmpegenc.so", "dev_ops");
+	dev_ops = &ffmpeg_enc_ops;
 
 	if(!dev_ops)
 	{

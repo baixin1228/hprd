@@ -16,6 +16,7 @@ server_srcs += 'server.c'
 server_srcs += 'output_dev.c'
 server_srcs += 'input_dev.c'
 server_srcs += 'encodec.c'
+server_srcs += 'decodec.c'
 server_srcs += 'dl_help.c'
 server_srcs += 'util.c'
 

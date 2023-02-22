@@ -7,6 +7,7 @@
 #include "codec.h"
 #include "decodec.h"
 #include "buffer_pool.h"
+#include "buffer_util.h"
 
 #define SVC_MAX_BUFFER_COUNT 24
 
@@ -21,28 +22,21 @@ struct svc_dec_data
     uint32_t format;
     uint32_t width;
     uint32_t height;
-    struct svc_buf
-    {
-        bool is_free;
-        int raw_buf_id;
-    } svc_bufs[SVC_MAX_BUFFER_COUNT];
-    uint16_t head_buf_id;
-    uint16_t tail_buf_id;
+    struct dev_id_queue buf_q;
 };
 
 void _libopenh264_trace_callback(void *ctx, int level, const char *msg)
 {
-    log_info("[%p] %s", ctx, msg);
+    log_info("openh264: [%p] %s", ctx, msg);
 }
 
 static int svc_decode_init(struct decodec_object *obj)
 {
-    struct svc_dec_data *svc_data;
-    SDecodingParam param = { 0 };
     int log_level;
+    SDecodingParam param = { 0 };
+    struct svc_dec_data *svc_data;
     WelsTraceCallback callback_function;
-
-
+    
     svc_data = calloc(1, sizeof(*svc_data));
     if(!svc_data)
     {
@@ -51,18 +45,17 @@ static int svc_decode_init(struct decodec_object *obj)
     }
 
     // OpenH264Version libver = WelsGetCodecVersion();
-
-    if (WelsCreateDecoder(&svc_data->decoder))
-    {
-        log_error("Unable to create decoder");
+    if (WelsCreateDecoder (&svc_data->decoder)  ||
+        (NULL == svc_data->decoder)) {
+        printf ("Create Decoder failed.\n");
         goto FAIL1;
     }
 
     // Pass all libopenh264 messages to our callback, to allow ourselves to filter them.
     log_level = WELS_LOG_DETAIL;
-    callback_function = _libopenh264_trace_callback;
     (*svc_data->decoder)->SetOption(svc_data->decoder,
                                     DECODER_OPTION_TRACE_LEVEL, &log_level);
+    callback_function = _libopenh264_trace_callback;
     (*svc_data->decoder)->SetOption(svc_data->decoder,
                                     DECODER_OPTION_TRACE_CALLBACK, (void *)&callback_function);
     (*svc_data->decoder)->SetOption(svc_data->decoder,
@@ -79,9 +72,9 @@ static int svc_decode_init(struct decodec_object *obj)
         log_error("openh264 Initialize failed\n");
         goto FAIL2;
     }
-    svc_data->head_buf_id = 0;
-    svc_data->tail_buf_id = 0;
     svc_data->format = YUV420P;
+
+    obj->priv = svc_data;
 
     return 0;
 FAIL2:
@@ -101,19 +94,15 @@ FAIL1:
 
 static int svc_map_buffer(struct decodec_object *obj, int buf_id)
 {
-    struct svc_buf *svc_buf;
     struct raw_buffer *raw_buf;
     struct svc_dec_data *svc_data = (struct svc_dec_data *)obj->priv;
 
-    svc_buf = &svc_data->svc_bufs[buf_id];
-    svc_buf->raw_buf_id = buf_id;
-    svc_buf->is_free = true;
+    dev_id_queue_set_status(&svc_data->buf_q, buf_id, true);
 
     raw_buf = get_raw_buffer(buf_id);
 
     raw_buf->format = YUV420P;
     raw_buf->bpp = 8;
-    raw_buf->size = svc_data->width * svc_data->height * 3 / 2;
 
     return 0;
 }
@@ -121,19 +110,15 @@ static int svc_map_buffer(struct decodec_object *obj, int buf_id)
 static int svc_push_pkt(struct decodec_object *obj, char *buf, size_t len)
 {
     DECODING_STATE state;
-    struct svc_buf *svc_buf;
+    int buf_id;
     struct raw_buffer *raw_buf;
     struct svc_dec_data *svc_data = obj->priv;
 
-    if(!svc_data->svc_bufs[svc_data->head_buf_id].is_free)
+    buf_id = dev_id_queue_get_id(&svc_data->buf_q);
+    if(buf_id == -1)
         return -1;
-
-    svc_buf = &svc_data->svc_bufs[svc_data->head_buf_id];
-
-    svc_data->head_buf_id++;
-    svc_data->head_buf_id %= SVC_MAX_BUFFER_COUNT;
-
-    raw_buf = get_raw_buffer(svc_buf->raw_buf_id);
+    
+    raw_buf = get_raw_buffer(buf_id);
 
     if (!buf)
     {
@@ -164,7 +149,7 @@ static int svc_push_pkt(struct decodec_object *obj, char *buf, size_t len)
     }
     if (state != dsErrorFree)
     {
-        log_error("DecodeFrame failed");
+        log_error("DecodeFrame failed:%p", state);
         return -1;
     }
     if (svc_data->info.iBufferStatus != 1)
@@ -176,7 +161,13 @@ static int svc_push_pkt(struct decodec_object *obj, char *buf, size_t len)
     svc_data->width = svc_data->info.UsrData.sSystemBuffer.iWidth;
     svc_data->height = svc_data->info.UsrData.sSystemBuffer.iHeight;
 
-    svc_buf->is_free = false;
+    raw_buf->width = svc_data->width;
+    raw_buf->hor_stride = svc_data->width;
+    raw_buf->height = svc_data->height;
+    raw_buf->ver_stride = svc_data->height;
+    raw_buf->size = svc_data->width * svc_data->height * 3 / 2;
+
+    dev_id_queue_sub_id(&svc_data->buf_q);
     return 0;
 }
 
@@ -197,45 +188,29 @@ static int svc_get_info(struct decodec_object *obj, GHashTable *fb_info)
 
 static int svc_get_fb(struct decodec_object *obj)
 {
-    struct svc_buf *svc_buf;
-    struct raw_buffer *raw_buf;
+    int buf_id;
     struct svc_dec_data *svc_data = obj->priv;
 
-    if(!svc_data->svc_bufs[svc_data->tail_buf_id].is_free)
-        return -1;
+    buf_id = dev_id_queue_get_buf(&svc_data->buf_q);
 
-    svc_buf = &svc_data->svc_bufs[svc_data->tail_buf_id];
-
-    svc_data->tail_buf_id++;
-    svc_data->tail_buf_id %= SVC_MAX_BUFFER_COUNT;
-
-    raw_buf = get_raw_buffer(svc_buf->raw_buf_id);
-
-    raw_buf->width = svc_data->info.UsrData.sSystemBuffer.iWidth;
-    raw_buf->hor_stride = svc_data->info.UsrData.sSystemBuffer.iWidth;
-    raw_buf->height = svc_data->info.UsrData.sSystemBuffer.iHeight;
-    raw_buf->ver_stride = svc_data->info.UsrData.sSystemBuffer.iHeight;
-
-    return svc_buf->raw_buf_id;
+    return buf_id;
 }
 
 static int svc_put_fb(struct decodec_object *obj, int buf_id)
 {
-    struct svc_buf *svc_buf;
     struct svc_dec_data *svc_data = obj->priv;
 
-    if(buf_id > SVC_MAX_BUFFER_COUNT || buf_id < 0)
-        return -1;
-
-    svc_buf = &svc_data->svc_bufs[buf_id];
-
-    svc_buf->is_free = true;
+    dev_id_queue_put_buf(&svc_data->buf_q, buf_id);
 
     return 0;
 }
 
 static int svc_unmap_buffer(struct decodec_object *obj, int buf_id)
 {
+    struct svc_dec_data *svc_data = obj->priv;
+
+    dev_id_queue_set_status(&svc_data->buf_q, buf_id, false);
+
     return 0;
 }
 
@@ -249,7 +224,7 @@ static int svc_decode_release(struct decodec_object *obj)
     return 0;
 }
 
-struct decodec_ops dev_ops =
+struct decodec_ops openh264_dec_ops =
 {
     .name               = "libopenh264",
     .init               = svc_decode_init,

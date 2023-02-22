@@ -7,6 +7,8 @@
 #include "frame_buffer.h"
 #include "dev_templete.h"
 
+extern struct decodec_ops openh264_dec_ops;
+
 struct decodec_object *decodec_init(void)
 {
 	int ret;
@@ -15,8 +17,7 @@ struct decodec_object *decodec_init(void)
 
 	obj = calloc(1, sizeof(struct decodec_object));
 
-	dev_ops = (struct decodec_ops *)load_lib_data(
-		"src/codec/ffmpeg/libffmpeg_dec.so", "dev_ops");
+	dev_ops = &openh264_dec_ops;
 
 	if(!dev_ops)
 	{

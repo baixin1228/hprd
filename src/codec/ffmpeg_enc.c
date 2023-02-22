@@ -166,13 +166,15 @@ static void _ffmpeg_enc_get_pkt(struct encodec_object *obj) {
         }
 
         if (pkt->flags & AV_PKT_FLAG_KEY) { //找到带I帧的AVPacket
-            log_info("-------> ffmpeg enc:find I frame size:%d.", pkt->size);
+            // log_info("-------> ffmpeg enc:find I frame size:%d.", pkt->size);
             //找到I帧，插入SPS和PPS
             obj->pkt_callback((char *)av_codec_ctx->extradata, av_codec_ctx->extradata_size);
         } else {
-            log_info("-------> ffmpeg enc:find P frame size:%d.", pkt->size);
-            obj->pkt_callback((char *)pkt->data, pkt->size);
+            // log_info("-------> ffmpeg enc:find P frame size:%d.", pkt->size);
         }
+        
+        obj->pkt_callback((char *)pkt->data, pkt->size);
+
         av_packet_unref(pkt);
     } else {
         log_error("get pkt error.");

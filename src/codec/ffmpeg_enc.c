@@ -43,10 +43,16 @@ static int ffmpeg_enc_init(struct encodec_object *obj) {
 static int ffmpeg_enc_set_info(
     struct encodec_object *obj, GHashTable *enc_info) {
     int ret;
+    uint32_t frame_rate;
     int stream_format;
     AVCodecContext *av_codec_ctx = NULL;
     struct ffmpeg_enc_data *enc_data = obj->priv;
 
+    if(g_hash_table_contains(enc_info, "frame_rate"))
+        frame_rate = *(uint32_t *)g_hash_table_lookup(enc_info, "frame_rate");
+    else
+        frame_rate = 30;
+    
     stream_format = stream_fmt_to_av_fmt(
                         *(uint32_t *)g_hash_table_lookup(enc_info, "stream_fmt"));
     enc_data->av_codec = avcodec_find_encoder(stream_format);
@@ -68,10 +74,10 @@ static int ffmpeg_enc_set_info(
     av_codec_ctx->width = *(uint32_t *)g_hash_table_lookup(enc_info, "width");
     av_codec_ctx->height = *(uint32_t *)g_hash_table_lookup(enc_info, "height");
     av_codec_ctx->time_base = (AVRational) {
-        1, 25
+        1, frame_rate
     };
     av_codec_ctx->framerate = (AVRational) {
-        25, 1
+        frame_rate, 1
     };
     enc_data->input_fb_fmt = fb_fmt_to_av_fmt(
                                  *(uint32_t *)g_hash_table_lookup(enc_info, "format"));
@@ -80,13 +86,13 @@ static int ffmpeg_enc_set_info(
         av_codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
 
         enc_data->sws_ctx = sws_getContext(
-                                    av_codec_ctx->width,
-                                    av_codec_ctx->height,
-                                    enc_data->input_fb_fmt,
-                                    av_codec_ctx->width,
-                                    av_codec_ctx->height,
-                                    av_codec_ctx->pix_fmt,
-                                    SWS_POINT, NULL, NULL, NULL);
+                                av_codec_ctx->width,
+                                av_codec_ctx->height,
+                                enc_data->input_fb_fmt,
+                                av_codec_ctx->width,
+                                av_codec_ctx->height,
+                                av_codec_ctx->pix_fmt,
+                                SWS_POINT, NULL, NULL, NULL);
     } else {
         av_codec_ctx->pix_fmt = enc_data->input_fb_fmt;
     }
@@ -172,13 +178,17 @@ static void _ffmpeg_enc_get_pkt(struct encodec_object *obj) {
         } else {
             // log_info("-------> ffmpeg enc:find P frame size:%d.", pkt->size);
         }
-        
+
         obj->pkt_callback((char *)pkt->data, pkt->size);
 
         av_packet_unref(pkt);
     } else {
         log_error("get pkt error.");
     }
+}
+
+static int ffmpeg_enc_map_buf(struct encodec_object *obj, int buf_id) {
+    return 0;
 }
 
 static int ffmpeg_frame_enc(struct encodec_object *obj, int buf_id) {
@@ -254,6 +264,7 @@ struct encodec_ops ffmpeg_enc_ops = {
     .name               = "ffmpeg_encodec_dev",
     .init               = ffmpeg_enc_init,
     .set_info           = ffmpeg_enc_set_info,
+    .map_buffer         = ffmpeg_enc_map_buf,
     .put_buffer         = ffmpeg_frame_enc,
     .get_buffer         = ffmpeg_enc_getbuf,
     .release            = ffmpeg_enc_release

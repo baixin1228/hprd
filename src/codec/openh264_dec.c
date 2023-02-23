@@ -21,13 +21,15 @@ struct svc_dec_data
     SBufferInfo info;
     uint32_t format;
     uint32_t width;
+    uint32_t hor_stride;
     uint32_t height;
+    uint32_t ver_stride;
     struct dev_id_queue buf_q;
 };
 
 void _libopenh264_trace_callback(void *ctx, int level, const char *msg)
 {
-    log_info("openh264: [%p] %s", ctx, msg);
+    log_info("[%p] %s", ctx, msg);
 }
 
 static int svc_decode_init(struct decodec_object *obj)
@@ -69,10 +71,9 @@ static int svc_decode_init(struct decodec_object *obj)
 
     if ((*svc_data->decoder)->Initialize(svc_data->decoder, &param) != cmResultSuccess)
     {
-        log_error("openh264 Initialize failed\n");
+        log_error("OpenH264 Initialize failed\n");
         goto FAIL2;
     }
-    svc_data->format = YUV420P;
 
     obj->priv = svc_data;
 
@@ -105,6 +106,85 @@ static int svc_map_buffer(struct decodec_object *obj, int buf_id)
     raw_buf->bpp = 8;
 
     return 0;
+}
+
+uint32_t svc_fmt_to_com(uint32_t format)
+{
+    switch(format)
+    {
+        case videoFormatRGB:
+        {
+            // log_info("svc format videoFormatRGB.");
+            return RGB888;
+        }
+        case videoFormatRGBA:
+        {
+            // log_info("svc format videoFormatRGBA.");
+            return RGBA8888;
+        }
+        case videoFormatRGB555:
+        {
+            // log_info("svc format videoFormatRGB555.");
+            return RGB555;
+        }
+        case videoFormatRGB565:
+        {
+            // log_info("svc format videoFormatRGB565.");
+            return RGB565;
+        }
+        case videoFormatBGR:
+        {
+            // log_info("svc format videoFormatBGR.");
+            return BGR888;
+        }
+        case videoFormatBGRA:
+        {
+            // log_info("svc format videoFormatBGRA.");
+            return BGRA8888;
+        }
+        case videoFormatABGR:
+        {
+            // log_info("svc format videoFormatABGR.");
+            return ABGR8888;
+        }
+        case videoFormatARGB:
+        {
+            // log_info("svc format videoFormatARGB.");
+            return ARGB8888;
+        }
+        case videoFormatYUY2:
+        {
+            // log_info("svc format videoFormatYUY2.");
+            break;
+        }
+        case videoFormatYVYU:
+        {
+            // log_info("svc format videoFormatYVYU.");
+            break;
+        }
+        case videoFormatUYVY:
+        {
+            // log_info("svc format videoFormatUYVY.");
+            break;
+        }
+        case videoFormatI420:
+        {
+            // log_info("svc format videoFormatI420.");
+            return YUV420P;
+        }
+        case videoFormatYV12:
+        {
+            // log_info("svc format videoFormatYV12.");
+            break;
+        }
+        case videoFormatNV12:
+        {
+            // log_info("svc format videoFormatNV12.");
+            return NV12;
+        }
+    }
+
+    return RGB888;
 }
 
 static int svc_push_pkt(struct decodec_object *obj, char *buf, size_t len)
@@ -149,23 +229,28 @@ static int svc_push_pkt(struct decodec_object *obj, char *buf, size_t len)
     }
     if (state != dsErrorFree)
     {
-        log_error("DecodeFrame failed:%p", state);
+        log_error("OpenH264: DecodeFrame failed:%p", state);
         return -1;
     }
     if (svc_data->info.iBufferStatus != 1)
     {
-        log_error("No frame produced");
+        log_warning("OpenH264: No frame produced");
         return -1;
     }
 
     svc_data->width = svc_data->info.UsrData.sSystemBuffer.iWidth;
     svc_data->height = svc_data->info.UsrData.sSystemBuffer.iHeight;
+    svc_data->hor_stride = svc_data->info.UsrData.sSystemBuffer.iStride[0];
+    svc_data->ver_stride = svc_data->info.UsrData.sSystemBuffer.iStride[1];
+    svc_data->format = 
+    svc_fmt_to_com(svc_data->info.UsrData.sSystemBuffer.iFormat);
 
     raw_buf->width = svc_data->width;
-    raw_buf->hor_stride = svc_data->width;
+    raw_buf->hor_stride = svc_data->hor_stride;
     raw_buf->height = svc_data->height;
-    raw_buf->ver_stride = svc_data->height;
+    raw_buf->ver_stride = svc_data->ver_stride;
     raw_buf->size = svc_data->width * svc_data->height * 3 / 2;
+    raw_buf->format = svc_data->format;
 
     dev_id_queue_sub_id(&svc_data->buf_q);
     return 0;
@@ -175,9 +260,10 @@ static int svc_get_info(struct decodec_object *obj, GHashTable *fb_info)
 {
     struct svc_dec_data *svc_data = obj->priv;
 
-    if(svc_data->width == 0 || svc_data->height == 0)
+    if(svc_data->width == 0 || svc_data->height == 0 || svc_data->format == 0)
         return -1;
 
+    log_info("openh264, width:%d height:%d", svc_data->width, svc_data->height);
     g_hash_table_insert(fb_info, "format", &svc_data->format);
     g_hash_table_insert(fb_info, "width", &svc_data->width);
     g_hash_table_insert(fb_info, "height", &svc_data->height);

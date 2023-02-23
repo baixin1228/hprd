@@ -17,6 +17,7 @@ struct sdl_fd_out
 	uint32_t fb_width;
 	uint32_t fb_height;
 	uint32_t linesize;
+	uint32_t frame_rate;
 	int screen_w;
 	int screen_h;
 	int fb_format;
@@ -31,12 +32,14 @@ int thread_exit = 0;
 
 int refresh_video(void *opaque)
 {
+	uint32_t frame_rate = *(uint32_t *)opaque;
+
 	while (thread_exit == 0)
 	{
 		SDL_Event event;
 		event.type = REFRESH_EVENT;
 		SDL_PushEvent(&event);
-		SDL_Delay(25);
+		SDL_Delay(1000 / frame_rate);
 	}
 	return 0;
 }
@@ -56,6 +59,7 @@ static int sdl_dev_init(struct output_object *obj)
 		printf( "Could not initialize SDL - %s\n", SDL_GetError());
 		return -1;
 	}
+	priv->frame_rate = 33;
 
 	obj->priv = (void *)priv;
 
@@ -89,23 +93,32 @@ static int sdl_set_info(struct output_object *obj, GHashTable *fb_info)
 	priv->fb_height = *(uint32_t *)g_hash_table_lookup(fb_info, "height");
 	priv->screen_w = *(uint32_t *)g_hash_table_lookup(fb_info, "width") / 2;
 	priv->screen_h = *(uint32_t *)g_hash_table_lookup(fb_info, "height") / 2;
+	if(g_hash_table_contains(fb_info, "frame_rate"))
+		priv->frame_rate = *(uint32_t *)g_hash_table_lookup(fb_info, "frame_rate");
 
 	//SDL 2.0 Support for multiple windows
-	priv->screen = SDL_CreateWindow("Simplest Video Play SDL2", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-									priv->screen_w, priv->screen_h, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+	priv->screen = SDL_CreateWindow("Simplest Video Play SDL2",
+		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+		priv->screen_w, priv->screen_h,
+		SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 	if(!priv->screen)
 	{
 		printf("SDL: could not create window - exiting:%s\n", SDL_GetError());
 		return -1;
 	}
-	priv->sdlRenderer = SDL_CreateRenderer(priv->screen, -1, 0);
+	priv->sdlRenderer = SDL_CreateRenderer(priv->screen, -1,
+		SDL_RENDERER_ACCELERATED);
 
 	priv->sdlTexture = SDL_CreateTexture(priv->sdlRenderer,
-										 _com_fmt_to_sdl_fmt(*(uint32_t *)g_hash_table_lookup(fb_info, "format")),
-										 SDL_TEXTUREACCESS_STREAMING,
-										 priv->fb_width, priv->fb_height);
+		_com_fmt_to_sdl_fmt(
+			*(uint32_t *)g_hash_table_lookup(fb_info, "format")
+			),
+		SDL_TEXTUREACCESS_STREAMING,
+		priv->fb_width, priv->fb_height);
 
-	priv->refresh_thread = SDL_CreateThread(refresh_video, NULL, NULL);
+	priv->refresh_thread = SDL_CreateThread(refresh_video,
+		"SDL_refresh_thread", 
+		&priv->frame_rate);
 
 	priv->sdlRect.x = 0;
 	priv->sdlRect.y = 0;
@@ -152,13 +165,12 @@ static int sdl_put_buffer(struct output_object *obj,
 		SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptrs[0], priv->fb_width * 4);
 		break;
 	case YUV420P:
-		// SDL_UpdateYUVTexture(priv->sdlTexture, NULL,
-		// 	     buffer->ptrs[0], priv->fb_width,
-		// 	     buffer->ptrs[0] + priv->fb_width * priv->fb_height, priv->fb_width / 2,
-		// 	     buffer->ptrs[0] + priv->fb_width * priv->fb_height * 5 / 4
-		// 	     , priv->fb_width / 2);
+		SDL_UpdateYUVTexture(priv->sdlTexture, NULL,
+			     (uint8_t *)buffer->ptrs[0], buffer->hor_stride,
+			     (uint8_t *)buffer->ptrs[1], buffer->hor_stride / 2,
+			     (uint8_t *)buffer->ptrs[2], buffer->hor_stride / 2);
 
-		SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptrs[0], priv->fb_width);
+		// SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptrs[0], priv->fb_width);
 		break;
 	case NV12:
 		SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptrs[0], priv->fb_width);

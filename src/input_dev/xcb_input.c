@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <X11/Xlib.h>
@@ -22,6 +23,7 @@ struct x11_extensions {
 	Window root_win;
 	XWindowAttributes windowattr;
 	Visual *visual;
+	uint32_t frame_rate;
 	uint32_t format;
 	uint32_t width;
 	uint32_t height;
@@ -73,6 +75,7 @@ static int xext_dev_init(struct input_object *obj) {
 			 , priv->width, priv->height);
 
 	priv->format = ARGB8888;
+	priv->frame_rate = 33;
 
 	obj->priv = (void *)priv;
 	return 0;
@@ -83,6 +86,16 @@ FAIL2:
 	free(priv);
 FAIL1:
 	return ret;
+}
+
+static int xext_set_info(struct input_object *obj, GHashTable *fb_info)
+{
+	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
+
+	if(g_hash_table_contains(fb_info, "frame_rate"))
+		priv->frame_rate = *(uint32_t *)g_hash_table_lookup(fb_info, "frame_rate");
+
+	return 0;
 }
 
 static int xext_get_fb_info(struct input_object *obj, GHashTable *fb_info) {
@@ -231,13 +244,28 @@ static int xext_dev_release(struct input_object *obj) {
 	return 0;
 }
 
+static int xcb_main_loop(struct input_object *obj)
+{
+	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
+
+	while(1)
+	{
+		obj->on_event(obj);
+		usleep(1000000 / priv->frame_rate);
+	}
+
+	return 0;
+}
+
 struct input_dev_ops xcb_dev_ops = {
 	.name 				= "x11_extensions_input_dev",
 	.init 				= xext_dev_init,
+	.set_info			= xext_set_info,
 	.get_info			= xext_get_fb_info,
 	.map_buffer 		= xext_map_buffer,
 	.get_buffer 		= xext_get_frame_buffer,
 	.put_buffer 		= xext_put_frame_buffer,
 	.unmap_buffer 		= xext_unmap_buffer,
-	.release 			= xext_dev_release
+	.release 			= xext_dev_release,
+	.event_loop			= xcb_main_loop
 };

@@ -41,12 +41,23 @@ struct input_object *input_dev_init(struct mem_pool *pool)
 	return input_obj;
 }
 
+DEV_SET_INFO(input, input_dev_ops)
 DEV_GET_INFO(input, input_dev_ops)
 DEV_MAP_FB(input, input_dev_ops)
 DEV_UNMAP_FB(input, input_dev_ops)
 DEV_GET_FB(input, input_dev_ops)
 DEV_PUT_FB(input, input_dev_ops)
 DEV_RELEASE(input, input_dev_ops)
+
+int input_regist_event_callback(struct input_object *input_obj, void (* on_event)(struct input_object *obj))
+{
+	if(!input_obj)
+		return -1;
+
+	input_obj->on_event = on_event;
+
+	return 0;
+}
 
 int input_main_loop(struct input_object *input_obj)
 {

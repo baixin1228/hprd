@@ -9,6 +9,7 @@ struct decodec_ops;
 struct decodec_object
 {
 	void *priv;
+	struct mem_pool *buf_pool;
 	struct decodec_ops *ops;
 };
 
@@ -25,7 +26,7 @@ struct decodec_ops
 	int (* release)(struct decodec_object *obj);
 };
 
-struct decodec_object *decodec_init(void);
+struct decodec_object *decodec_init(struct mem_pool *pool);
 int decodec_get_info(struct decodec_object *decodec_obj,
 	GHashTable *fb_info);
 int decodec_map_fb(struct decodec_object *decodec_obj, int buf_id);

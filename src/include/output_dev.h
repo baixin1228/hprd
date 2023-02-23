@@ -9,6 +9,7 @@ struct output_dev_ops;
 struct output_object
 {
 	void *priv;
+	struct mem_pool *buf_pool;
 	void (* on_event)(struct output_object *obj);
 	struct output_dev_ops *ops;
 };
@@ -26,7 +27,7 @@ struct output_dev_ops
 	int (* release)(struct output_object *obj);
 };
 
-struct output_object *output_dev_init(void);
+struct output_object *output_dev_init(struct mem_pool *pool);
 int output_set_info(struct output_object *output_obj, GHashTable *fb_info);
 int output_map_fb(struct output_object *output_obj, int buf_id);
 int output_get_fb(struct output_object *output_obj);

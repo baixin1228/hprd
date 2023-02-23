@@ -136,7 +136,7 @@ static int xext_map_buffer(struct input_object *obj, int buf_id) {
 	}
 	XSync(priv->display, False);
 
-	raw_buf = get_raw_buffer(buf_id);
+	raw_buf = get_raw_buffer(obj->buf_pool, buf_id);
 
 	raw_buf->width = priv->width;
 	raw_buf->hor_stride = priv->width;
@@ -166,7 +166,7 @@ static int xext_get_frame_buffer(struct input_object *obj) {
 	struct xext_buf *xext_buf;
 	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
 
-	buf_id = get_buffer();
+	buf_id = get_buffer(obj->buf_pool);
 	if(buf_id < 0) {
 		log_error("get_buffer fail.");
 		exit(-1);
@@ -186,7 +186,7 @@ static int xext_put_frame_buffer(struct input_object *obj, int buf_id) {
 	if(priv->xext_bufs[buf_id].ximg == NULL)
 		return -1;
 
-	if(put_buffer(buf_id) != 0) {
+	if(put_buffer(obj->buf_pool, buf_id) != 0) {
 		log_error("put_buffer fail.");
 		exit(-1);
 	}
@@ -207,7 +207,7 @@ static int xext_unmap_buffer(struct input_object *obj, int buf_id) {
 	shmctl(xext_buf->shm.shmid, IPC_RMID, 0);
 	XDestroyImage(xext_buf->ximg);
 
-	raw_buf = get_raw_buffer(buf_id);
+	raw_buf = get_raw_buffer(obj->buf_pool, buf_id);
 	raw_buf->width = 0;
 	raw_buf->hor_stride = 0;
 	raw_buf->height = 0;

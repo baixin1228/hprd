@@ -9,13 +9,15 @@
 
 extern struct input_dev_ops xcb_dev_ops;
 
-struct input_object *input_dev_init(void)
+struct input_object *input_dev_init(struct mem_pool *pool)
 {
 	int ret;
 	struct input_dev_ops *dev_ops;
 	struct input_object *input_obj;
 
 	input_obj = calloc(1, sizeof(struct input_object));
+
+	input_obj->buf_pool = pool;
 
 	dev_ops = &xcb_dev_ops;
 

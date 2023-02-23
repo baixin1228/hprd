@@ -9,6 +9,7 @@ struct encodec_ops;
 struct encodec_object
 {
 	void *priv;
+	struct mem_pool *buf_pool;
 	void ( *pkt_callback)(char *buf, size_t len);
 	struct encodec_ops *ops;
 };
@@ -25,7 +26,7 @@ struct encodec_ops
 	int (* release)(struct encodec_object *obj);
 };
 
-struct encodec_object *encodec_init(void);
+struct encodec_object *encodec_init(struct mem_pool *pool);
 int encodec_set_info(struct encodec_object *output_obj, GHashTable *fb_info);
 int encodec_map_fb(struct encodec_object *encodec_obj, int buf_id);
 int encodec_get_fb(struct encodec_object *encodec_obj);

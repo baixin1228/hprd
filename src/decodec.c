@@ -9,13 +9,15 @@
 
 extern struct decodec_ops openh264_dec_ops;
 
-struct decodec_object *decodec_init(void)
+struct decodec_object *decodec_init(struct mem_pool *pool)
 {
 	int ret;
 	struct decodec_ops *dev_ops;
-	struct decodec_object *obj;
+	struct decodec_object *dec_obj;
 
-	obj = calloc(1, sizeof(struct decodec_object));
+	dec_obj = calloc(1, sizeof(struct decodec_object));
+
+	dec_obj->buf_pool = pool;
 
 	dev_ops = &openh264_dec_ops;
 
@@ -27,30 +29,30 @@ struct decodec_object *decodec_init(void)
 		exit(-1);
 	}
 
-	ret = dev_ops->init(obj);
+	ret = dev_ops->init(dec_obj);
 	if(ret == 0)
 	{
-		obj->ops = dev_ops;
+		dec_obj->ops = dev_ops;
 	}else{
 		log_error("libffmpeg_dec.so init fail.");
 		exit(-1);
 	}
 	
-	return obj;
+	return dec_obj;
 }
 
-int decodec_put_pkt(struct decodec_object *obj, char *buf, size_t len)
+int decodec_put_pkt(struct decodec_object *dec_obj, char *buf, size_t len)
 {
 	struct decodec_ops *dev_ops;
 
-	if(!obj)
+	if(!dec_obj)
 		return -1;
 
-	dev_ops = (struct decodec_ops *)obj->ops;
+	dev_ops = (struct decodec_ops *)dec_obj->ops;
 	if(dev_ops)
 	{
 		if(dev_ops->put_pkt)
-			return dev_ops->put_pkt(obj, buf, len);
+			return dev_ops->put_pkt(dec_obj, buf, len);
 	}
 
 	return -1;

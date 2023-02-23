@@ -4,18 +4,21 @@
 #include "util.h"
 #include "dl_help.h"
 #include "output_dev.h"
+#include "buffer_pool.h"
 #include "frame_buffer.h"
 #include "dev_templete.h"
 
 extern struct output_dev_ops sdl_ops;
 
-struct output_object *output_dev_init(void)
+struct output_object *output_dev_init(struct mem_pool *pool)
 {
 	int ret;
 	struct output_dev_ops *dev_ops;
 	struct output_object *output_obj;
 
 	output_obj = calloc(1, sizeof(struct output_object));
+
+	output_obj->buf_pool = pool;
 
 	dev_ops = &sdl_ops;
 

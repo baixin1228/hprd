@@ -186,7 +186,7 @@ static int ffmpeg_frame_enc(struct encodec_object *obj, int buf_id) {
     struct ffmpeg_enc_data *enc_data = obj->priv;
 
     AVFrame *frame = enc_data->av_frame;
-    buffer = get_raw_buffer(buf_id);
+    buffer = get_raw_buffer(obj->buf_pool, buf_id);
 
     int linesizes[4] = {
         buffer->size / buffer->height, 0, 0, 0

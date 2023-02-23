@@ -133,7 +133,7 @@ static int sdl_put_buffer(struct output_object *obj,
 	struct raw_buffer *buffer;
 	struct sdl_fd_out *priv = (struct sdl_fd_out *)obj->priv;
 
-	buffer = get_raw_buffer(buf_id);
+	buffer = get_raw_buffer(obj->buf_pool, buf_id);
 	if(buffer == NULL)
 	{
 		log_error("sdl get buffer fail! buf_id:%d", buf_id);

@@ -9,6 +9,8 @@
 #include "output_dev.h"
 #include "buffer_pool.h"
 
+struct mem_pool server_pool = {0};
+
 struct output_object *out_obj = NULL;
 struct encodec_object *enc_obj = NULL;
 struct decodec_object *dec_obj = NULL;
@@ -82,10 +84,11 @@ int main()
 	fd = open("./out.h264", O_WRONLY | O_CREAT | O_TRUNC, 0755);
 	fb_info = g_hash_table_new(g_str_hash, g_str_equal);
 
-	out_obj = output_dev_init();
-	in_obj = input_dev_init();
-	enc_obj = encodec_init();
-	dec_obj = decodec_init();
+	out_obj = output_dev_init(&server_pool);
+	in_obj = input_dev_init(&server_pool);
+	enc_obj = encodec_init(&server_pool);
+	dec_obj = decodec_init(&server_pool);
+	
 	output_regist_event_callback(out_obj, on_event);
 	encodec_regist_event_callback(enc_obj, on_package);
 
@@ -101,7 +104,7 @@ int main()
 
 	for (int i = 0; i < 5; ++i)
 	{
-		buf_id = alloc_buffer();
+		buf_id = alloc_buffer(&server_pool);
 		if(buf_id == -1)
 		{
 			log_error("alloc_buffer fail.");

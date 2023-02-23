@@ -99,7 +99,7 @@ static int svc_map_buffer(struct decodec_object *obj, int buf_id)
 
     dev_id_queue_set_status(&svc_data->buf_q, buf_id, true);
 
-    raw_buf = get_raw_buffer(buf_id);
+    raw_buf = get_raw_buffer(obj->buf_pool, buf_id);
 
     raw_buf->format = YUV420P;
     raw_buf->bpp = 8;
@@ -118,7 +118,7 @@ static int svc_push_pkt(struct decodec_object *obj, char *buf, size_t len)
     if(buf_id == -1)
         return -1;
     
-    raw_buf = get_raw_buffer(buf_id);
+    raw_buf = get_raw_buffer(obj->buf_pool, buf_id);
 
     if (!buf)
     {

@@ -9,13 +9,15 @@
 
 extern struct encodec_ops ffmpeg_enc_ops;
 
-struct encodec_object *encodec_init(void)
+struct encodec_object *encodec_init(struct mem_pool *pool)
 {
 	int ret;
 	struct encodec_ops *dev_ops;
-	struct encodec_object *obj;
+	struct encodec_object *enc_obj;
 
-	obj = calloc(1, sizeof(struct encodec_object));
+	enc_obj = calloc(1, sizeof(struct encodec_object));
+
+	enc_obj->buf_pool = pool;
 
 	dev_ops = &ffmpeg_enc_ops;
 
@@ -27,25 +29,25 @@ struct encodec_object *encodec_init(void)
 		exit(-1);
 	}
 
-	ret = dev_ops->init(obj);
+	ret = dev_ops->init(enc_obj);
 	if(ret == 0)
 	{
-		obj->ops = dev_ops;
+		enc_obj->ops = dev_ops;
 	}else{
 		log_error("libffmpegenc.so init fail.");
 		exit(-1);
 	}
 	
-	return obj;
+	return enc_obj;
 }
 
-int encodec_regist_event_callback(struct encodec_object *obj,
+int encodec_regist_event_callback(struct encodec_object *enc_obj,
 	void ( *callback)(char *buf, size_t len))
 {
-	if(!obj)
+	if(!enc_obj)
 		return -1;
 
-	obj->pkt_callback = callback;
+	enc_obj->pkt_callback = callback;
 
 	return 0;
 }

@@ -110,9 +110,6 @@ void *server_thread(void *opaque)
 	return NULL;
 }
 
-struct mem_pool client_pool = {0};
-struct output_object *out_obj = NULL;
-
 void output_on_event(struct output_object *obj)
 {
 	int ret;
@@ -145,11 +142,13 @@ void output_on_event(struct output_object *obj)
 	}
 }
 
+struct mem_pool client_pool = {0};
+struct output_object *out_obj = NULL;
 void *client_thread(void *opaque)
 {
 	int ret;
 	int buf_id;
-	uint32_t frame_rate = 60;
+	uint32_t frame_rate = 61;
 	GHashTable *fb_info = g_hash_table_new(g_str_hash, g_str_equal);
 
 	dec_obj = decodec_init(&client_pool);

@@ -55,11 +55,12 @@ extern pthread_spinlock_t video_pkt_lock;
 
 void on_package(char *buf, size_t len)
 {
-	pthread_spin_lock(&video_pkt_lock);
-	memcpy(video_pkt, buf, len);
-	video_pkt_len = len;
+	bradcast_data2(buf, len);
+	// pthread_spin_lock(&video_pkt_lock);
+	// memcpy(video_pkt, buf, len);
+	// video_pkt_len = len;
 	// log_info("buf:%dkb", len / 1024);
-	pthread_spin_unlock(&video_pkt_lock);
+	// pthread_spin_unlock(&video_pkt_lock);
 }
 
 void *server_thread(void *opaque)

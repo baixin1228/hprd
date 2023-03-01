@@ -38,7 +38,7 @@ typedef struct my_event_st {
 	void (*callback_fn)(int epfd, void *ev);
 	int status;
 	char buf[BUFLEN];
-	int len;
+	uint32_t len;
 	time_t last_active;
 } my_event_st;
 
@@ -127,21 +127,34 @@ void callback_recvdata(int epfd, my_event_st *ev) {
 }
 
 void callback_senddata(int epfd, my_event_st *ev) {
+	uint32_t net_len;
+		pthread_spin_lock(&video_pkt_lock);
 	if (ev->len <= 0) {
 		close(ev->fd);
 	}
-	int n = send(ev->fd, ev->buf, ev->len, 0);
+	net_len = htonl(ev->len);
+	int n = send(ev->fd, &net_len, 4, 0);
 	if (n == -1) {
 		// Bad file descriptor , socket被client关闭
 		remove_event(epfd, ev);
 		return;
 	}
-	printf("[发回] len=%dkb\n", n / 1024);
-	// printf("[发回] len=%d , data=%s\n", n, ev->buf);
+
+	printf("[发回] len=%dkb\n", ev->len / 1024);
+	while(ev->len > 0)
+	{
+		n = send(ev->fd, ev->buf, ev->len, 0);
+		if (n == -1) {
+			// Bad file descriptor , socket被client关闭
+			remove_event(epfd, ev);
+			return;
+		}
+		ev->len -= n;
+	}
+		pthread_spin_unlock(&video_pkt_lock);
 
 	ev->callback_fn = (void (*)(int, void *))callback_recvdata;
 	memset(ev->buf, 0, BUFLEN);
-	ev->len = 0;
 	ev->events = EPOLLIN;
 	register_event(epfd, ev);
 }
@@ -170,6 +183,37 @@ void check_active(int epfd, int n) {
 			//1.取消注册 2.从全局my_events删除
 			// 这里简单处理,只取消注册,否则删数组元素要集体迁移,用链表好一点
 			remove_event(epfd, &my_events[i]);
+		}
+	}
+}
+
+void bradcast_data2(char *buf, uint32_t len)
+{
+	uint32_t net_len;
+	uint32_t sended_pos = 0;
+	my_event_st *ev;
+	for (int i = 1; i < my_events_len; ++i)
+	{
+		ev = &my_events[i];
+		net_len = htonl(len);
+		int n = send(ev->fd, &net_len, 4, 0);
+		if (n == -1) {
+			// Bad file descriptor , socket被client关闭
+			return;
+		}
+
+		printf("[发回] len=%dkb\n", len / 1024);
+		while(len > 0)
+		{
+			if(sended_pos > 0)
+			printf("resend\n");
+			n = send(ev->fd, buf + sended_pos, len, 0);
+			if (n == -1) {
+				// Bad file descriptor , socket被client关闭
+				return;
+			}
+			sended_pos += n;
+			len -= n;
 		}
 	}
 }

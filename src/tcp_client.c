@@ -13,7 +13,10 @@ char buf[BUFLEN] = {0};
 
 void *tcp_client_thread(void *opaque)
 {
-	int recv_len;
+	int need_recv_len;
+	int let_len;
+	int sg_len;
+	int sum_len;
 	int fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd < 0) {
 		perror("\n");
@@ -32,32 +35,31 @@ void *tcp_client_thread(void *opaque)
 		exit(-1);
 	}
 
-	// printf("等待发送:%s\n", buf);
-	// time_t start = time(0);
-	// for (int i = 0; i < 2; ++i) {
-	// 	memset(buf, 0, strlen(buf));
-	// 	sprintf(buf, "Hello world_%ld", time(0));
-	// 	int n = send(fd, buf, strlen(buf), 0);
-	// 	if (n == -1) {
-	// 		perror("\n");
-	// 		exit(-1);
-	// 	}
-	// 	printf("[发送] len=%d data=%s\n", n, buf);
-	// 	memset(buf, 0, BUFLEN);
-	// 	recv(fd, buf, BUFLEN, 0);
-	// 	printf("[收到] len=%ld data=%s\n", strlen(buf), buf);
-	// }
 	while(1)
 	{
-		recv_len = recv(fd, buf, BUFLEN, 0);
-		if(recv_len < 0)
+		sg_len = recv(fd, buf, 4, 0);
+		if(sg_len < 4)
 			exit(0);
 
-		if(recv_len > 0)
-			on_package(buf, recv_len);
+		need_recv_len = ntohl(*(uint32_t *)buf);
+		if(need_recv_len > 0)
+		{
+			sum_len = 0;
+			let_len = need_recv_len;
+			while(let_len > 0)
+			{
+				sg_len = recv(fd, buf + sum_len, let_len, 0);
+				if(sg_len < 0)
+					exit(0);
+
+				sum_len += sg_len;
+				let_len -= sg_len;
+			}
+
+			on_package(buf, need_recv_len);
+		}
+
 	}
 	close(fd);
-	// time_t end = time(0);
-	// printf("duration:%ld\n", end - start);
 	return NULL;
 }

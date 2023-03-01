@@ -6,4 +6,4 @@ output_dev_lib = static_library('outputdev',
 						dependency('glib-2.0')],
                         include_directories : '../include')
 
-server_libs += output_dev_lib
+client_libs += output_dev_lib

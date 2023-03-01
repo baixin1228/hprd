@@ -15,4 +15,4 @@ openh264_dec_lib = static_library('openh264_dec',
                         dependency('openh264')],
                         include_directories : '../include')
 
-server_libs += openh264_dec_lib
+client_libs += openh264_dec_lib

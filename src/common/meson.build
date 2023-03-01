@@ -5,3 +5,4 @@ common_lib = static_library('common',
                         include_directories : '../include')
 
 server_libs += common_lib
+client_libs += common_lib

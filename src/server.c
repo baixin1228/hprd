@@ -14,17 +14,17 @@
 struct mem_pool server_pool = {0};
 
 struct encodec_object *enc_obj = NULL;
-struct input_object *in_obj = NULL;
+struct capture_object *in_obj = NULL;
 
-void input_on_event(struct input_object *obj)
+void capture_on_event(struct capture_object *obj)
 {
 	int ret;
 	int buf_id;
 
-	buf_id = input_get_fb(in_obj);
+	buf_id = capture_get_fb(in_obj);
 	if(buf_id == -1)
 	{
-		log_error("input_get_fb fail.");
+		log_error("capture_get_fb fail.");
 		exit(-1);
 	}
 
@@ -41,10 +41,10 @@ void input_on_event(struct input_object *obj)
 		exit(-1);
 	}
 
-	ret = input_put_fb(in_obj, buf_id);
+	ret = capture_put_fb(in_obj, buf_id);
 	if(ret != 0)
 	{
-		log_error("input_put_fb fail.");
+		log_error("capture_put_fb fail.");
 		exit(-1);
 	}
 }
@@ -84,10 +84,10 @@ void *server_thread(void *opaque)
 			log_error("alloc_buffer fail.");
 			exit(-1);
 		}
-		ret = input_map_fb(in_obj, buf_id);
+		ret = capture_map_fb(in_obj, buf_id);
 		if(ret != 0)
 		{
-			log_error("input_map_fb fail.");
+			log_error("capture_map_fb fail.");
 			exit(-1);
 		}
 		ret = encodec_map_fb(enc_obj, buf_id);
@@ -99,9 +99,9 @@ void *server_thread(void *opaque)
 	}
 
 	g_hash_table_insert(fb_info, "frame_rate", &frame_rate);
-	input_set_info(in_obj, fb_info);
-	input_regist_event_callback(in_obj, input_on_event);
-	input_get_info(in_obj, fb_info);
+	capture_set_info(in_obj, fb_info);
+	capture_regist_event_callback(in_obj, capture_on_event);
+	capture_get_info(in_obj, fb_info);
 
 	encodec_regist_event_callback(enc_obj, on_package);
 	g_hash_table_insert(fb_info, "stream_fmt", &stream_ftm);
@@ -110,7 +110,7 @@ void *server_thread(void *opaque)
 
 	g_hash_table_destroy(fb_info);
 
-	input_main_loop(in_obj);
+	capture_main_loop(in_obj);
 	return NULL;
 }
 

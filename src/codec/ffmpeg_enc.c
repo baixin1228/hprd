@@ -11,13 +11,13 @@
 #include "ffmpeg_util.h"
 
 struct ffmpeg_enc_data {
-    int input_fb_fmt;
+    int capture_fb_fmt;
 
     AVFormatContext *av_ctx;
     AVCodecContext  *av_codec_ctx;
     AVCodec         *av_codec;
 
-    /* input and output */
+    /* capture and output */
     AVPacket        *av_packet;
     AVFrame         *av_frame;
 
@@ -79,22 +79,22 @@ static int ffmpeg_enc_set_info(
     av_codec_ctx->framerate = (AVRational) {
         frame_rate, 1
     };
-    enc_data->input_fb_fmt = fb_fmt_to_av_fmt(
+    enc_data->capture_fb_fmt = fb_fmt_to_av_fmt(
                                  *(uint32_t *)g_hash_table_lookup(enc_info, "format"));
 
-    if(enc_data->input_fb_fmt == AV_PIX_FMT_RGB32) {
+    if(enc_data->capture_fb_fmt == AV_PIX_FMT_RGB32) {
         av_codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
 
         enc_data->sws_ctx = sws_getContext(
                                 av_codec_ctx->width,
                                 av_codec_ctx->height,
-                                enc_data->input_fb_fmt,
+                                enc_data->capture_fb_fmt,
                                 av_codec_ctx->width,
                                 av_codec_ctx->height,
                                 av_codec_ctx->pix_fmt,
                                 SWS_POINT, NULL, NULL, NULL);
     } else {
-        av_codec_ctx->pix_fmt = enc_data->input_fb_fmt;
+        av_codec_ctx->pix_fmt = enc_data->capture_fb_fmt;
     }
 
     av_codec_ctx->gop_size = 10;
@@ -129,7 +129,7 @@ static int ffmpeg_enc_set_info(
     enc_data->av_frame->width  = av_codec_ctx->width;
     enc_data->av_frame->height = av_codec_ctx->height;
 
-    if(av_codec_ctx->pix_fmt != enc_data->input_fb_fmt) {
+    if(av_codec_ctx->pix_fmt != enc_data->capture_fb_fmt) {
         ret = av_frame_get_buffer(enc_data->av_frame, 0);
         if (ret < 0) {
             log_error("Could not allocate the video frame data");
@@ -201,7 +201,7 @@ static int ffmpeg_frame_enc(struct encodec_object *obj, int buf_id) {
     int linesizes[4] = {
         buffer->size / buffer->height, 0, 0, 0
     };
-    if(enc_data->av_codec_ctx->pix_fmt != enc_data->input_fb_fmt) {
+    if(enc_data->av_codec_ctx->pix_fmt != enc_data->capture_fb_fmt) {
         /* convert */
         sws_scale(enc_data->sws_ctx, (const uint8_t *const *)buffer->ptrs, linesizes, 0, buffer->height, frame->data, frame->linesize);
     } else {

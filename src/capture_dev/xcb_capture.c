@@ -36,7 +36,7 @@ struct x11_extensions {
 	struct raw_buffer buffer;
 };
 
-static int xext_dev_init(struct input_object *obj) {
+static int xext_dev_init(struct capture_object *obj) {
 	int ret = -1;
 	struct x11_extensions *priv;
 
@@ -88,7 +88,7 @@ FAIL1:
 	return ret;
 }
 
-static int xext_set_info(struct input_object *obj, GHashTable *fb_info)
+static int xext_set_info(struct capture_object *obj, GHashTable *fb_info)
 {
 	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
 
@@ -98,7 +98,7 @@ static int xext_set_info(struct input_object *obj, GHashTable *fb_info)
 	return 0;
 }
 
-static int xext_get_fb_info(struct input_object *obj, GHashTable *fb_info) {
+static int xext_get_fb_info(struct capture_object *obj, GHashTable *fb_info) {
 	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
 
 	g_hash_table_insert(fb_info, "format", &priv->format);
@@ -109,7 +109,7 @@ static int xext_get_fb_info(struct input_object *obj, GHashTable *fb_info) {
 	return 0;
 }
 
-static int xext_map_buffer(struct input_object *obj, int buf_id) {
+static int xext_map_buffer(struct capture_object *obj, int buf_id) {
 	struct raw_buffer *raw_buf;
 	struct xext_buf *xext_buf;
 	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
@@ -174,7 +174,7 @@ FAIL1:
 	return -1;
 }
 
-static int xext_get_frame_buffer(struct input_object *obj) {
+static int xext_get_frame_buffer(struct capture_object *obj) {
 	int buf_id;
 	struct xext_buf *xext_buf;
 	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
@@ -193,7 +193,7 @@ static int xext_get_frame_buffer(struct input_object *obj) {
 	return xext_buf->raw_buf_id;
 }
 
-static int xext_put_frame_buffer(struct input_object *obj, int buf_id) {
+static int xext_put_frame_buffer(struct capture_object *obj, int buf_id) {
 	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
 
 	if(priv->xext_bufs[buf_id].ximg == NULL)
@@ -206,7 +206,7 @@ static int xext_put_frame_buffer(struct input_object *obj, int buf_id) {
 	return 0;
 }
 
-static int xext_unmap_buffer(struct input_object *obj, int buf_id) {
+static int xext_unmap_buffer(struct capture_object *obj, int buf_id) {
 	struct raw_buffer *raw_buf;
 	struct xext_buf *xext_buf;
 	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
@@ -233,7 +233,7 @@ static int xext_unmap_buffer(struct input_object *obj, int buf_id) {
 	return 0;
 }
 
-static int xext_dev_release(struct input_object *obj) {
+static int xext_dev_release(struct capture_object *obj) {
 	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
 
 	for (int i = 0; i < MAX_BUFFER_COUNT; ++i) {
@@ -244,7 +244,7 @@ static int xext_dev_release(struct input_object *obj) {
 	return 0;
 }
 
-static int xcb_main_loop(struct input_object *obj)
+static int xcb_main_loop(struct capture_object *obj)
 {
 	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
 

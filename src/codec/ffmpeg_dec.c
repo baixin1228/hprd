@@ -20,7 +20,7 @@ struct ffmpeg_dec_data{
     AVCodecContext  *av_codec_ctx;
     AVCodec         *av_codec;
 
-    /* input and output */
+    /* capture and output */
     AVPacket        *av_packet;
     AVFrame         *av_frame;
 
@@ -251,7 +251,7 @@ void *_ffmpeg_dec_thread(void *opaque)
 					log_error("codec not open.");
 					break;
 				}
-				case AVERROR_INPUT_CHANGED:
+				case AVERROR_capture_CHANGED:
 				{
 					break;
 				}
@@ -376,8 +376,8 @@ static struct common_buffer *ffmepg_get_frame(struct module_data *dev)
 
 	if(data->stream_idx == -1)
 	{
-		if(avformat_open_input(&data->av_ctx, NULL, NULL, NULL) != 0){
-			log_error("ffmpeg couldn't open input stream.");
+		if(avformat_open_capture(&data->av_ctx, NULL, NULL, NULL) != 0){
+			log_error("ffmpeg couldn't open capture stream.");
 			return NULL;
 		}
 

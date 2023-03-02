@@ -6,35 +6,35 @@
 
 struct capture_dev_ops;
 
-struct input_object
+struct capture_object
 {
 	void *priv;
 	struct mem_pool *buf_pool;
-	void (* on_event)(struct input_object *obj);
+	void (* on_event)(struct capture_object *obj);
 	struct capture_dev_ops *ops;
 };
 
 struct capture_dev_ops
 {
 	char * name;
-	int (* init)(struct input_object *obj);
-	int (* set_info)(struct input_object *obj, GHashTable *info);
-	int (* get_info)(struct input_object *obj, GHashTable *info);
-	int (* map_buffer)(struct input_object *obj, int buf_id);
-	int (* put_buffer)(struct input_object *obj, int buf_id);
-	int (* get_buffer)(struct input_object *obj);
-	int (* unmap_buffer)(struct input_object *obj, int buf_id);
-	int (* event_loop)(struct input_object *obj);
-	int (* release)(struct input_object *obj);
+	int (* init)(struct capture_object *obj);
+	int (* set_info)(struct capture_object *obj, GHashTable *info);
+	int (* get_info)(struct capture_object *obj, GHashTable *info);
+	int (* map_buffer)(struct capture_object *obj, int buf_id);
+	int (* put_buffer)(struct capture_object *obj, int buf_id);
+	int (* get_buffer)(struct capture_object *obj);
+	int (* unmap_buffer)(struct capture_object *obj, int buf_id);
+	int (* event_loop)(struct capture_object *obj);
+	int (* release)(struct capture_object *obj);
 };
 
-struct input_object *capture_dev_init(struct mem_pool *pool);
-int input_get_info(struct input_object *input_obj, GHashTable *fb_info);
-int input_set_info(struct input_object *input_obj, GHashTable *fb_info);
-int input_map_fb(struct input_object *input_obj, int buf_id);
-int input_get_fb(struct input_object *input_obj);
-int input_put_fb(struct input_object *input_obj, int buf_id);
-int input_regist_event_callback(struct input_object *input_obj, void (* on_event)(struct input_object *obj));
-int input_main_loop(struct input_object *input_obj);
+struct capture_object *capture_dev_init(struct mem_pool *pool);
+int capture_get_info(struct capture_object *capture_obj, GHashTable *fb_info);
+int capture_set_info(struct capture_object *capture_obj, GHashTable *fb_info);
+int capture_map_fb(struct capture_object *capture_obj, int buf_id);
+int capture_get_fb(struct capture_object *capture_obj);
+int capture_put_fb(struct capture_object *capture_obj, int buf_id);
+int capture_regist_event_callback(struct capture_object *capture_obj, void (* on_event)(struct capture_object *obj));
+int capture_main_loop(struct capture_object *capture_obj);
 
 #endif

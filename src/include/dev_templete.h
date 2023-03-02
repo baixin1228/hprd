@@ -16,7 +16,7 @@ int __obj##_get_info(struct __obj##_object *obj, GHashTable *fb_info)\
 	if(dev_ops)										\
 	{												\
 		if(dev_ops->get_info)						\
-			return dev_ops->get_info(obj, fb_info);\
+			return dev_ops->get_info(obj, fb_info); \
 		else 										\
 			log_error(#__obj" dev not find func:get_info\n");\
 	}												\

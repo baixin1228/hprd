@@ -21,6 +21,9 @@ void capture_on_event(struct capture_object *obj)
 	int ret;
 	int buf_id;
 
+	if(get_client_count() == 0)
+		return;
+
 	buf_id = capture_get_fb(in_obj);
 	if(buf_id == -1)
 	{
@@ -49,18 +52,11 @@ void capture_on_event(struct capture_object *obj)
 	}
 }
 
-extern char video_pkt[1024 * 1024 * 10];
-extern uint32_t video_pkt_len;
-extern pthread_spinlock_t video_pkt_lock;
-
+int epfd = -1;
 void on_package(char *buf, size_t len)
 {
-	bradcast_data2(buf, len);
-	// pthread_spin_lock(&video_pkt_lock);
-	// memcpy(video_pkt, buf, len);
-	// video_pkt_len = len;
-	// log_info("buf:%dkb", len / 1024);
-	// pthread_spin_unlock(&video_pkt_lock);
+	if(epfd != -1)
+		server_bradcast_data(epfd, buf, len);
 }
 
 void *server_thread(void *opaque)
@@ -117,12 +113,8 @@ void *server_thread(void *opaque)
 int main()
 {
 	pthread_t p1;
-	pthread_t p2;
-
-	pthread_spin_init(&video_pkt_lock, 0);
 
 	pthread_create(&p1, NULL, server_thread, NULL);
-	pthread_create(&p2, NULL, tcp_server_thread, NULL);
+	epfd = tcp_server_init("0.0.0.0", 9999);
 	pthread_join(p1, NULL);
-	pthread_join(p2, NULL);
 }

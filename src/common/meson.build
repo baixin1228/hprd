@@ -1,4 +1,8 @@
-common_source = files('queue.c', 'buffer_pool.c', 'buffer_util.c')
+common_source = ['queue.c']
+common_source += 'net_help.c'
+common_source += 'buffer_pool.c'
+common_source += 'buffer_util.c'
+common_source += 'input_event.c'
 
 common_lib = static_library('common',
                         common_source,

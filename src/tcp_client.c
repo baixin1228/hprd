@@ -6,18 +6,30 @@
 #include <string.h>
 #include <time.h>
 
+#include "protocol.h"
+#include "net_help.h"
+
 void on_package(char *buf, size_t len);
 
-#define BUFLEN 1024 * 1024 * 10
-char buf[BUFLEN] = {0};
+static void _on_client_pkt(char *buf, size_t len)
+{
+	struct data_pkt *pkt = (struct data_pkt *)buf;
+	switch(pkt->cmd)
+	{
+		case VIDEO_DATA:
+		{
+			on_package(pkt->data, pkt->data_len);
+			break;
+		}
+	}
+}
 
+static int fd;
+#define BUFLEN 1024 * 1024 * 10
+static char _recv_buf[BUFLEN];
 void *tcp_client_thread(void *opaque)
 {
-	int need_recv_len;
-	int let_len;
-	int sg_len;
-	int sum_len;
-	int fd = socket(AF_INET, SOCK_STREAM, 0);
+	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd < 0) {
 		perror("\n");
 		exit(-1);
@@ -37,29 +49,13 @@ void *tcp_client_thread(void *opaque)
 
 	while(1)
 	{
-		sg_len = recv(fd, buf, 4, 0);
-		if(sg_len < 4)
-			exit(0);
-
-		need_recv_len = ntohl(*(uint32_t *)buf);
-		if(need_recv_len > 0)
-		{
-			sum_len = 0;
-			let_len = need_recv_len;
-			while(let_len > 0)
-			{
-				sg_len = recv(fd, buf + sum_len, let_len, 0);
-				if(sg_len < 0)
-					exit(0);
-
-				sum_len += sg_len;
-				let_len -= sg_len;
-			}
-
-			on_package(buf, need_recv_len);
-		}
-
+		tcp_recv_pkt(fd, _recv_buf, _on_client_pkt);
 	}
 	close(fd);
 	return NULL;
+}
+
+int client_send_pkt(char *buf, size_t len)
+{
+	return tcp_send_pkt(fd, buf, len);
 }

@@ -1,0 +1,103 @@
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <X11/extensions/XTest.h>
+#include <X11/keysym.h>
+
+#include <glib.h>
+
+#include "util.h"
+#include "input_dev.h"
+#include "input_event.h"
+
+#define DEFAULT_DISPLAY ":0"
+
+struct xlib_input {
+	Display *display;
+	uint32_t screen_num;
+	Window root_win;
+};
+
+static int xlib_dev_init(struct input_object *obj) {
+	int ret = -1;
+	struct xlib_input *priv;
+
+	priv = calloc(1, sizeof(*priv));
+	if(!priv) {
+		log_error("calloc fail, check free memery.");
+		goto FAIL1;
+	}
+
+	priv->display = XOpenDisplay(DEFAULT_DISPLAY);
+
+	obj->priv = (void *)priv;
+	return 0;
+FAIL1:
+	return ret;
+}
+
+static int xlib_set_info(struct input_object *obj, GHashTable *fb_info)
+{
+	return 0;
+}
+
+static int xlib_push_key(struct input_object *obj, struct input_event *event)
+{
+	struct xlib_input *priv = (struct xlib_input *)obj->priv;
+
+    switch (event->type) {
+	    case MOUSE_MOVE:
+	    {
+	        XTestFakeRelativeMotionEvent(priv->display, event->x, event->y, 0);
+	        break;
+	    }
+	    case KEY_UP:
+	    {
+	        if (event->key_code == 0) return -1;
+	        XTestFakeKeyEvent(priv->display, event->key_code, false, 0);
+	        break;
+	    }
+	    case KEY_DOWN:
+	    {
+	        if (event->key_code == 0) return -1;
+	        XTestFakeKeyEvent(priv->display, event->key_code, true, 0);
+	        break;
+	    }
+	    case MOUSE_UP:
+	    {
+	        if (event->key_code == 0) return -1;
+	        XTestFakeButtonEvent(priv->display, event->key_code, false, 0);
+	        break;
+	    }
+	    case MOUSE_DOWN:
+	    {
+	        if (event->key_code == 0) return -1;
+	        XTestFakeButtonEvent(priv->display, event->key_code, true, 0);
+	        break;
+	    }
+	    default:
+	    {
+	    	return -1;
+	    }
+    }
+
+    XFlush(priv->display);
+	return 0;
+}
+
+static int xlib_dev_release(struct input_object *obj) {
+	struct xlib_input *priv = (struct xlib_input *)obj->priv;
+
+	XCloseDisplay(priv->display);
+	free(priv);
+	return 0;
+}
+
+struct input_dev_ops xlib_input_dev_ops = {
+	.name 				= "xlib_input_dev",
+	.init 				= xlib_dev_init,
+	.set_info			= xlib_set_info,
+	.push_key			= xlib_push_key,
+	.release 			= xlib_dev_release,
+};

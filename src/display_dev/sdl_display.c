@@ -6,6 +6,7 @@
 #include "util.h"
 #include "display_dev.h"
 #include "buffer_pool.h"
+#include "input_event.h"
 
 struct sdl_fd_out
 {
@@ -22,6 +23,8 @@ struct sdl_fd_out
 	int screen_h;
 	int fb_format;
 	int cur_buf_id;
+	int mouse_pos_x;
+	int mouse_pos_y;
 };
 
 static int sdl_dev_init(struct display_object *obj)
@@ -194,9 +197,8 @@ bool _poll_event(struct sdl_fd_out *priv)
 			}
 			case SDL_MOUSEMOTION:
 			{
-				int px = event.motion.x;
-				int py = event.motion.y;
-				printf("x, y %d %d\n", px, py);
+				priv->mouse_pos_x = event.motion.x;
+				priv->mouse_pos_y = event.motion.y;
 				break;
 			}
 			default:
@@ -210,13 +212,20 @@ bool _poll_event(struct sdl_fd_out *priv)
 static int sdl_main_loop(struct display_object *obj)
 {
 	struct sdl_fd_out *priv = (struct sdl_fd_out *)obj->priv;
-
+	struct input_event event;
+	
 	log_info("sdl_main_loop");
 
 	while(true)
 	{
 		if(_poll_event(priv))
 			break;
+
+		memset(&event, 0, sizeof(struct input_event));
+		event.type = MOUSE_MOVE;
+		event.x = priv->mouse_pos_x;
+		event.y = priv->mouse_pos_y;
+		send_event(&event);
 
 		obj->on_event(obj);
 		SDL_Delay(1000 / priv->frame_rate);

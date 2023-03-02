@@ -10,7 +10,7 @@ common_deps += dependency('glib-2.0')
 
 subdir('codec')
 subdir('common')
-subdir('output_dev')
+subdir('display_dev')
 subdir('capture_dev')
 
 server_deps += common_deps
@@ -36,7 +36,7 @@ client_deps += common_deps
 
 client_srcs += 'client.c'
 client_srcs += 'tcp_client.c'
-client_srcs += 'output_dev.c'
+client_srcs += 'display_dev.c'
 client_srcs += 'decodec.c'
 client_srcs += 'dl_help.c'
 client_srcs += 'util.c'

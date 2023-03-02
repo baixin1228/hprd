@@ -6,7 +6,7 @@
 #include "codec.h"
 #include "decodec.h"
 #include "tcp_client.h"
-#include "output_dev.h"
+#include "display_dev.h"
 #include "buffer_pool.h"
 
 struct decodec_object *dec_obj = NULL;
@@ -20,7 +20,7 @@ void on_package(char *buf, size_t len)
 	}
 }
 
-void output_on_event(struct output_object *obj)
+void display_on_event(struct display_object *obj)
 {
 	int ret;
 	int buf_id;
@@ -31,16 +31,16 @@ void output_on_event(struct output_object *obj)
 		return;
 	}
 
-	ret = output_put_fb(obj, buf_id);
+	ret = display_put_fb(obj, buf_id);
 	if(ret != 0)
 	{
-		log_error("output_put_fb fail.");
+		log_error("display_put_fb fail.");
 		exit(-1);
 	}
-	buf_id = output_get_fb(obj);
+	buf_id = display_get_fb(obj);
 	if(buf_id == -1)
 	{
-		log_error("output_get_fb fail.");
+		log_error("display_get_fb fail.");
 		exit(-1);
 	}
 
@@ -53,7 +53,7 @@ void output_on_event(struct output_object *obj)
 }
 
 struct mem_pool client_pool = {0};
-struct output_object *out_obj = NULL;
+struct display_object *out_obj = NULL;
 void *client_thread(void *opaque)
 {
 	int ret;
@@ -62,7 +62,7 @@ void *client_thread(void *opaque)
 	GHashTable *fb_info = g_hash_table_new(g_str_hash, g_str_equal);
 
 	dec_obj = decodec_init(&client_pool);
-	out_obj = output_dev_init(&client_pool);
+	out_obj = display_dev_init(&client_pool);
 
 	for (int i = 0; i < 5; ++i)
 	{
@@ -78,10 +78,10 @@ void *client_thread(void *opaque)
 			log_error("decodec_map_fb fail.");
 			exit(-1);
 		}
-		ret = output_map_fb(out_obj, buf_id);
+		ret = display_map_fb(out_obj, buf_id);
 		if(ret != 0)
 		{
-			log_error("output_map_fb fail.");
+			log_error("display_map_fb fail.");
 			exit(-1);
 		}
 	}
@@ -92,13 +92,13 @@ void *client_thread(void *opaque)
 		sleep(1);
 	}
 
-	output_regist_event_callback(out_obj, output_on_event);
+	display_regist_event_callback(out_obj, display_on_event);
 	g_hash_table_insert(fb_info, "frame_rate", &frame_rate);
-	output_set_info(out_obj, fb_info);
+	display_set_info(out_obj, fb_info);
 	
 	g_hash_table_destroy(fb_info);
 
-	output_main_loop(out_obj);
+	display_main_loop(out_obj);
 	return NULL;
 }
 

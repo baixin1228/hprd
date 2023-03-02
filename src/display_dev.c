@@ -4,18 +4,21 @@
 #include "util.h"
 #include "dl_help.h"
 #include "display_dev.h"
+#include "buffer_pool.h"
 #include "frame_buffer.h"
 #include "dev_templete.h"
 
 extern struct display_dev_ops sdl_ops;
 
-struct display_object *display_dev_init(void)
+struct display_object *display_dev_init(struct mem_pool *pool)
 {
 	int ret;
 	struct display_dev_ops *dev_ops;
 	struct display_object *display_obj;
 
 	display_obj = calloc(1, sizeof(struct display_object));
+
+	display_obj->buf_pool = pool;
 
 	dev_ops = &sdl_ops;
 

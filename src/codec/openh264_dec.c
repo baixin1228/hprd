@@ -64,7 +64,7 @@ static int svc_decode_init(struct decodec_object *obj)
                                     DECODER_OPTION_TRACE_CALLBACK_CONTEXT, (void *)&obj);
 
 #if !OPENH264_VER_AT_LEAST(1, 6)
-    param.eOutputColorFormat = videoFormatI420;
+    param.edisplayColorFormat = videoFormatI420;
 #endif
     param.eEcActiveIdc       = ERROR_CON_DISABLE;
     param.sVideoProperty.eVideoBsType = VIDEO_BITSTREAM_DEFAULT;

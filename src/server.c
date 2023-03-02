@@ -93,7 +93,7 @@ void *server_thread(void *opaque)
 		ret = encodec_map_fb(enc_obj, buf_id);
 		if(ret != 0)
 		{
-			log_error("output_map_fb fail.");
+			log_error("display_map_fb fail.");
 			exit(-1);
 		}
 	}

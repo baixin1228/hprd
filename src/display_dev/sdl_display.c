@@ -4,7 +4,7 @@
 #include "SDL2/SDL.h"
 
 #include "util.h"
-#include "output_dev.h"
+#include "display_dev.h"
 #include "buffer_pool.h"
 
 struct sdl_fd_out
@@ -44,7 +44,7 @@ int refresh_video(void *opaque)
 	return 0;
 }
 
-static int sdl_dev_init(struct output_object *obj)
+static int sdl_dev_init(struct display_object *obj)
 {
 	struct sdl_fd_out *priv;
 
@@ -85,7 +85,7 @@ static int _com_fmt_to_sdl_fmt(enum FRAMEBUFFER_FORMAT format)
 	}
 }
 
-static int sdl_set_info(struct output_object *obj, GHashTable *fb_info)
+static int sdl_set_info(struct display_object *obj, GHashTable *fb_info)
 {
 	struct sdl_fd_out *priv = (struct sdl_fd_out *)obj->priv;
 
@@ -129,18 +129,18 @@ static int sdl_set_info(struct output_object *obj, GHashTable *fb_info)
 	return 0;
 }
 
-static int sdl_map_buffer(struct output_object *obj, int buf_id)
+static int sdl_map_buffer(struct display_object *obj, int buf_id)
 {
 	return 0;
 }
 
-static int sdl_get_buffer(struct output_object *obj)
+static int sdl_get_buffer(struct display_object *obj)
 {
 	struct sdl_fd_out *priv = (struct sdl_fd_out *)obj->priv;
 	return priv->cur_buf_id;
 }
 
-static int sdl_put_buffer(struct output_object *obj,
+static int sdl_put_buffer(struct display_object *obj,
 						  int buf_id)
 {
 	struct raw_buffer *buffer;
@@ -188,7 +188,7 @@ static int sdl_put_buffer(struct output_object *obj,
 	return 0;
 }
 
-static int sdl_main_loop(struct output_object *obj)
+static int sdl_main_loop(struct display_object *obj)
 {
 	SDL_Event event;
 	struct sdl_fd_out *priv = (struct sdl_fd_out *)obj->priv;
@@ -216,7 +216,7 @@ static int sdl_main_loop(struct output_object *obj)
 	return 0;
 }
 
-struct output_dev_ops sdl_ops =
+struct display_dev_ops sdl_ops =
 {
 	.name				= "sdl_fb_out",
 	.init				= sdl_dev_init,

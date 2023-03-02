@@ -221,7 +221,7 @@ struct PicParamSet {
     uint32_t    pps_pic_parameter_set_id;                                       //ue(v)
     uint32_t    pps_seq_parameter_set_id;                                       //ue(v)
     int         dependent_slice_segments_enabled_flag;                          //u(1)
-    int         output_flag_present_flag;                                       //u(1)
+    int         display_flag_present_flag;                                       //u(1)
     uint8_t     num_extra_slice_header_bits;                                    //u(3)
     int         sign_data_hiding_enabled_flag;                                  //u(1)
     int         cabac_init_present_flag;                                        //u(1)
@@ -274,7 +274,7 @@ struct PicParamSet {
 };
 struct SliceHeader {
     int         first_slice_segment_in_pic_flag;                                //u(1)
-    int         no_output_of_prior_pics_flag;                                   //u(1)
+    int         no_display_of_prior_pics_flag;                                   //u(1)
     uint32_t    slice_pic_parameter_set_id;                                     //ue(v)
     int         dependent_slice_segment_flag;                                   //u(1)
     uint32_t    picture_width_in_ctus;
@@ -282,7 +282,7 @@ struct SliceHeader {
     uint32_t    slice_segment_address;                                          //u(v)
     int         slice_reserved_undetermined_flag[NUM_OF_EXTRA_SLICEHEADER_BITS];               //u(1)
     uint32_t    slice_type;                                                     //ue(v)
-    int         pic_output_flag;                                                //u(1)
+    int         pic_display_flag;                                                //u(1)
     uint8_t     colour_plane_id;                                                //u(2)
     uint32_t    pic_order_cnt_lsb;
     uint32_t    num_negative_pics;
@@ -790,7 +790,7 @@ static void fill_pps_header(
     pps->pps_pic_parameter_set_id = pps_id;
     pps->pps_seq_parameter_set_id = sps_id;
     pps->dependent_slice_segments_enabled_flag = 0;
-    pps->output_flag_present_flag = 0;
+    pps->display_flag_present_flag = 0;
     pps->num_extra_slice_header_bits = 0;
     pps->sign_data_hiding_enabled_flag = 0;
     pps->cabac_init_present_flag = 1;
@@ -830,9 +830,9 @@ static void fill_pps_header(
 static void fill_slice_header(struct vaapi_hevc_encodec *data)
 {
     memset(&data->ssh, 0, sizeof(struct SliceHeader));
-    data->ssh.pic_output_flag = 1;
+    data->ssh.pic_display_flag = 1;
     data->ssh.colour_plane_id = 0;
-    data->ssh.no_output_of_prior_pics_flag = 0;
+    data->ssh.no_display_of_prior_pics_flag = 0;
     data->ssh.pic_order_cnt_lsb = calc_poc(data, (data->current_pkt_idx - data->current_IDR_display) % MaxPicOrderCntLsb);
 
     //slice_segment_address (u(v))
@@ -1082,7 +1082,7 @@ static void pps_rbsp(struct vaapi_hevc_encodec *data, bitstream *bs)
     put_ue(bs, data->pps.pps_pic_parameter_set_id);
     put_ue(bs, data->pps.pps_seq_parameter_set_id);
     put_ui(bs, data->pps.dependent_slice_segments_enabled_flag, 1);
-    put_ui(bs, data->pps.output_flag_present_flag, 1);
+    put_ui(bs, data->pps.display_flag_present_flag, 1);
     put_ui(bs, data->pps.num_extra_slice_header_bits, 3);
     put_ui(bs, data->pps.sign_data_hiding_enabled_flag, 1);
     put_ui(bs, data->pps.cabac_init_present_flag, 1);
@@ -1194,7 +1194,7 @@ static void sliceHeader_rbsp(
         nal_unit_type = NALU_IDR_W_DLP;
 
     if (nal_unit_type >= 16 && nal_unit_type <= 23)
-        put_ui(bs, slice_header->no_output_of_prior_pics_flag, 1);
+        put_ui(bs, slice_header->no_display_of_prior_pics_flag, 1);
 
     put_ue(bs, slice_header->slice_pic_parameter_set_id);
 
@@ -1211,8 +1211,8 @@ static void sliceHeader_rbsp(
             put_ui(bs, slice_header->slice_reserved_undetermined_flag[i], 1);
         }
         put_ue(bs, slice_header->slice_type);
-        if (pps->output_flag_present_flag) {
-            put_ui(bs, slice_header->pic_output_flag, 1);
+        if (pps->display_flag_present_flag) {
+            put_ui(bs, slice_header->pic_display_flag, 1);
         }
         if (sps->separate_colour_plane_flag == 1) {
             put_ui(bs, slice_header->colour_plane_id, 2);

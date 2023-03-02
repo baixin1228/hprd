@@ -17,7 +17,7 @@ struct ffmpeg_enc_data {
     AVCodecContext  *av_codec_ctx;
     AVCodec         *av_codec;
 
-    /* capture and output */
+    /* capture and display */
     AVPacket        *av_packet;
     AVFrame         *av_frame;
 

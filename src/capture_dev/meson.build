@@ -1,7 +1,7 @@
-input_dev_source = files('xcb_input.c')
+capture_dev_source = files('xcb_capture.c')
 
-input_dev_lib = static_library('inputdev',
-                        input_dev_source,
+capture_dev_lib = static_library('capturedev',
+                        capture_dev_source,
                         dependencies: [
                             common_deps,
                             dependency('x11'),
@@ -10,4 +10,4 @@ input_dev_lib = static_library('inputdev',
                         ],
                         include_directories : '../include')
 
-server_libs += input_dev_lib
+server_libs += capture_dev_lib

@@ -66,7 +66,7 @@ int main(int argc, const char *argv[])
             if(numBytes<0)
             {
                     printf("error in send the data");
-            }	
+            }
 
             numBytes=0;
             numBytes = recvfrom(sockfd, buf, MAXBUF+1,0,(struct sockaddr *)&fromaddr,&fromaddrlen);
@@ -84,10 +84,10 @@ int main(int argc, const char *argv[])
 	numBytes=0;
 	buf[0] = 3;
 	numBytes = sendto(sockfd,buf,2,0,servinfo->ai_addr,servinfo->ai_addrlen);
-    if(numBytes<0)
+    if(numBytes < 0)
     {
         printf("error in send the data");
-    }	
+    }
  
     freeaddrinfo(servinfo);
  

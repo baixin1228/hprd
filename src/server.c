@@ -7,7 +7,7 @@
 #include "util.h"
 #include "codec.h"
 #include "encodec.h"
-#include "input_dev.h"
+#include "capture_dev.h"
 #include "tcp_server.h"
 #include "buffer_pool.h"
 
@@ -73,7 +73,7 @@ void *server_thread(void *opaque)
 
 	GHashTable *fb_info = g_hash_table_new(g_str_hash, g_str_equal);
 
-	in_obj = input_dev_init(&server_pool);
+	in_obj = capture_dev_init(&server_pool);
 	enc_obj = encodec_init(&server_pool);
 
 	for (int i = 0; i < 5; ++i)

@@ -11,7 +11,7 @@
 #include <glib.h>
 
 #include "util.h"
-#include "input_dev.h"
+#include "capture_dev.h"
 #include "buffer_pool.h"
 #include "frame_buffer.h"
 
@@ -257,8 +257,8 @@ static int xcb_main_loop(struct input_object *obj)
 	return 0;
 }
 
-struct input_dev_ops xcb_dev_ops = {
-	.name 				= "x11_extensions_input_dev",
+struct capture_dev_ops xcb_dev_ops = {
+	.name 				= "x11_extensions_capture_dev",
 	.init 				= xext_dev_init,
 	.set_info			= xext_set_info,
 	.get_info			= xext_get_fb_info,

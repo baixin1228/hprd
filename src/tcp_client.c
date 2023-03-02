@@ -22,13 +22,13 @@ void *tcp_client_thread(void *opaque)
 		perror("\n");
 		exit(-1);
 	}
-	// fcntl(fd, F_SETFL, O_NONBLOCK);
+
 	struct sockaddr_in addr = {
 		.sin_family = PF_INET,
 		.sin_addr.s_addr = inet_addr("127.0.0.1"),
 		.sin_port = htons(9999)
 	};
-	// inet_pton(AF_INET, servInetAddr, &servaddr.sin_addr);
+
 	int err = connect(fd, (struct sockaddr *)&addr, sizeof(addr));
 	if (err < 0) {
 		perror("\n connect");

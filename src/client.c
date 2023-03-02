@@ -16,7 +16,6 @@ void on_package(char *buf, size_t len)
 	if(dec_obj)
 	{
 		decodec_put_pkt(dec_obj, buf, len);
-		log_info("buf:%dkb", len / 1024);
 	}
 }
 

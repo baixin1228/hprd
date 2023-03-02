@@ -24,26 +24,6 @@ struct sdl_fd_out
 	int cur_buf_id;
 };
 
-
-//Refresh Event
-#define REFRESH_EVENT  (SDL_USEREVENT + 1)
-
-int thread_exit = 0;
-
-int refresh_video(void *opaque)
-{
-	uint32_t frame_rate = *(uint32_t *)opaque;
-
-	while (thread_exit == 0)
-	{
-		SDL_Event event;
-		event.type = REFRESH_EVENT;
-		SDL_PushEvent(&event);
-		SDL_Delay(1000 / frame_rate);
-	}
-	return 0;
-}
-
 static int sdl_dev_init(struct display_object *obj)
 {
 	struct sdl_fd_out *priv;
@@ -87,12 +67,17 @@ static int _com_fmt_to_sdl_fmt(enum FRAMEBUFFER_FORMAT format)
 
 static int sdl_set_info(struct display_object *obj, GHashTable *fb_info)
 {
+	int fmt;
+	int sdl_fmt;
 	struct sdl_fd_out *priv = (struct sdl_fd_out *)obj->priv;
 
 	priv->fb_width = *(uint32_t *)g_hash_table_lookup(fb_info, "width");
 	priv->fb_height = *(uint32_t *)g_hash_table_lookup(fb_info, "height");
 	priv->screen_w = *(uint32_t *)g_hash_table_lookup(fb_info, "width") / 2;
 	priv->screen_h = *(uint32_t *)g_hash_table_lookup(fb_info, "height") / 2;
+	fmt = *(uint32_t *)g_hash_table_lookup(fb_info, "format");
+	sdl_fmt = _com_fmt_to_sdl_fmt(fmt);
+
 	if(g_hash_table_contains(fb_info, "frame_rate"))
 		priv->frame_rate = *(uint32_t *)g_hash_table_lookup(fb_info, "frame_rate");
 
@@ -109,16 +94,13 @@ static int sdl_set_info(struct display_object *obj, GHashTable *fb_info)
 	priv->sdlRenderer = SDL_CreateRenderer(priv->screen, -1,
 		SDL_RENDERER_ACCELERATED);
 
-	priv->sdlTexture = SDL_CreateTexture(priv->sdlRenderer,
-		_com_fmt_to_sdl_fmt(
-			*(uint32_t *)g_hash_table_lookup(fb_info, "format")
-			),
+	priv->sdlTexture = SDL_CreateTexture(priv->sdlRenderer, sdl_fmt,
 		SDL_TEXTUREACCESS_STREAMING,
 		priv->fb_width, priv->fb_height);
 
-	priv->refresh_thread = SDL_CreateThread(refresh_video,
-		"SDL_refresh_thread", 
-		&priv->frame_rate);
+	// priv->refresh_thread = SDL_CreateThread(refresh_video,
+	// 	"SDL_refresh_thread", 
+	// 	&priv->frame_rate);
 
 	priv->sdlRect.x = 0;
 	priv->sdlRect.y = 0;
@@ -169,8 +151,6 @@ static int sdl_put_buffer(struct display_object *obj,
 			     (uint8_t *)buffer->ptrs[0], buffer->hor_stride,
 			     (uint8_t *)buffer->ptrs[1], buffer->hor_stride / 2,
 			     (uint8_t *)buffer->ptrs[2], buffer->hor_stride / 2);
-
-		// SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptrs[0], priv->fb_width);
 		break;
 	case NV12:
 		SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptrs[0], priv->fb_width);
@@ -188,29 +168,58 @@ static int sdl_put_buffer(struct display_object *obj,
 	return 0;
 }
 
-static int sdl_main_loop(struct display_object *obj)
+bool _poll_event(struct sdl_fd_out *priv)
 {
 	SDL_Event event;
+
+	/* One-time consumption of all events */
+	while(true)
+	{
+		memset(&event, 0, sizeof(SDL_Event));
+		SDL_PollEvent(&event);
+		switch(event.type)
+		{
+			case SDL_WINDOWEVENT_NONE:
+			{
+				return false;
+			}
+			case SDL_WINDOWEVENT:
+			{
+				SDL_GetWindowSize(priv->screen, &priv->screen_w, &priv->screen_h);
+				break;
+			}
+			case SDL_QUIT:
+			{
+				return true;
+			}
+			case SDL_MOUSEMOTION:
+			{
+				int px = event.motion.x;
+				int py = event.motion.y;
+				printf("x, y %d %d\n", px, py);
+				break;
+			}
+			default:
+			{
+				break;
+			}
+		}
+	}
+}
+
+static int sdl_main_loop(struct display_object *obj)
+{
 	struct sdl_fd_out *priv = (struct sdl_fd_out *)obj->priv;
 
 	log_info("sdl_main_loop");
 
-	while(1)
+	while(true)
 	{
-		SDL_WaitEvent(&event);
-		if(event.type == REFRESH_EVENT)
-		{
-			obj->on_event(obj);
-		}
-		else if(event.type == SDL_WINDOWEVENT)
-		{
-			/* If Resize */
-			SDL_GetWindowSize(priv->screen, &priv->screen_w, &priv->screen_h);
-		}
-		else if(event.type == SDL_QUIT)
-		{
+		if(_poll_event(priv))
 			break;
-		}
+
+		obj->on_event(obj);
+		SDL_Delay(1000 / priv->frame_rate);
 	}
 
 	return 0;

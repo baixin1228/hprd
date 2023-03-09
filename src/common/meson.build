@@ -1,5 +1,5 @@
-common_source = ['queue.c']
-common_source += 'net_help.c'
+common_source = []
+common_source += 'queue.c'
 common_source += 'buffer_pool.c'
 common_source += 'buffer_util.c'
 common_source += 'input_event.c'

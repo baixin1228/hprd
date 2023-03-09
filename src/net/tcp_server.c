@@ -179,7 +179,7 @@ void callback_accept(int epfd, struct ep_event *ev) {
 	socklen_t len = sizeof(addr);
 	int new_fd = accept(ev->fd, (struct sockaddr *)&addr, &len);
 	perr(new_fd == -1, __func__);
-	fcntl(new_fd, F_SETFL, O_NONBLOCK);
+	// fcntl(new_fd, F_SETFL, O_NONBLOCK);
 	ev = new_client_ep_event(epfd, new_fd, EPOLLIN, (void *)callback_recvdata);
 	ev->addr = addr.sin_addr;
 	ev->port = addr.sin_port;
@@ -205,6 +205,7 @@ static void _on_server_pkt(char *buf, size_t len) {
 
 void callback_recvdata(int epfd, struct ep_event *ev) {
 	if(tcp_recv_pkt(ev->fd, ev->recv_buf, _on_server_pkt) == -1) {
+		log_error("recv error.");
 		remove_client(epfd, ev);
 		return;
 	}
@@ -246,7 +247,7 @@ EXIT:
 
 int create_ls_socket(char *ip, uint16_t port) {
 	int ls_fd = socket(AF_INET, SOCK_STREAM, 0);
-	fcntl(ls_fd, F_SETFL, O_NONBLOCK);
+	// fcntl(ls_fd, F_SETFL, O_NONBLOCK);
 	struct sockaddr_in ls_addr = {
 		.sin_family = AF_INET,
 		.sin_addr.s_addr = inet_addr(ip),
@@ -260,10 +261,12 @@ int create_ls_socket(char *ip, uint16_t port) {
 void check_active(int epfd) {
 	struct ep_event *tmp;
 	time_t now = time(0);
+	time_t duration;
 
 	tmp = client_event_head;
 	while(tmp != NULL) {
-		time_t duration = now - tmp->last_active;
+		duration = now - tmp->last_active;
+		printf("check_active:%ld\n", duration);
 		if (duration >= 5) {
 			remove_client(epfd, tmp);
 		}
@@ -308,10 +311,45 @@ static struct server_info {
 } ser_info;
 static struct ep_event *accept_ep_event;
 
+int server_fd = -1;
+void process_event(struct epoll_event *event)
+{
+	struct ep_event *ev = event->data.ptr;
+
+	switch(event->events)
+	{
+		case EPOLLIN:
+		{
+			if(ev->fd == server_fd)
+			{
+				callback_accept(ser_info.epfd, ev);
+			}else{
+				callback_recvdata(ser_info.epfd, ev);
+			}
+			break;
+		}
+		case EPOLLOUT:
+		{
+			if(ev->fd != server_fd)
+			{
+				callback_senddata(ser_info.epfd, ev);
+			}else{
+				log_warning("unknow EPLLOUT event, fd:%d", ev->fd);
+			}
+			break;
+		}
+		default:
+		{
+			log_warning("unknow EPOLL event:%d", event->events);
+			break;
+		}
+	}
+}
+
 void *tcp_server_thread(void *opaque) {
 	int nfd;
-	int ls_fd = create_ls_socket(ser_info.ip, ser_info.port);
-	accept_ep_event = create_ep_event(ls_fd, EPOLLIN,
+	server_fd = create_ls_socket(ser_info.ip, ser_info.port);
+	accept_ep_event = create_ep_event(server_fd, EPOLLIN,
 									  (void *)callback_accept);
 
 	add_event(ser_info.epfd, accept_ep_event);
@@ -322,8 +360,7 @@ void *tcp_server_thread(void *opaque) {
 		nfd = epoll_wait(ser_info.epfd, events, MAX_EVENTS + 1, 10);
 		perr(nfd < 0, "epoll_wait");
 		for (int i = 0; i < nfd; i++) {
-			struct ep_event *ev = events[i].data.ptr;
-			ev->callback_fn(ser_info.epfd, ev);
+			process_event(&events[i]);
 		}
 		check_bradcast_data(ser_info.epfd);
 	}

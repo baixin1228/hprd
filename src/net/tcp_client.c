@@ -61,6 +61,5 @@ void *tcp_client_thread(void *opaque)
 
 int client_send_pkt(char *buf, size_t len)
 {
-	// return tcp_send_pkt(fd, buf, len);
-	return 0;
+	return tcp_send_pkt(fd, buf, len);
 }

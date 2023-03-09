@@ -11,8 +11,11 @@ static inline int _tcp_recv_all(int fd, char *_recv_buf, size_t len)
 	while(len > 0)
 	{
 		recv_len = recv(fd, _recv_buf + sum_len, len, 0);
-		if(recv_len < 0)
+		if(recv_len <= 0)
+		{
+			log_info("recv: close.");
 			return -1;
+		}
 
 		sum_len += recv_len;
 		len -= recv_len;
@@ -47,14 +50,8 @@ static inline int _tcp_send_all(int fd, char *buf, size_t len)
 	while(len > 0)
 	{
 		send_count = send(fd, buf + sum_count, len, 0);
-		if(send_count < 0)
+		if(send_count <= 0)
 		{
-            if(errno == EAGAIN)
-            {   
-                usleep(1000);
-                send_count = 0;
-                continue;
-            }
 			log_perr("send error fd:%d buf:%p buf_len:%d", fd, buf, len);
 			return -1;
 		}

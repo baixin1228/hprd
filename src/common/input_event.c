@@ -1,5 +1,6 @@
 #include <malloc.h>
 #include <string.h>
+#include <netinet/in.h>
 
 #include "util.h"
 #include "tcp_client.h"
@@ -13,7 +14,7 @@ int hsend_event(struct input_event *event)
 
 	pkt->cmd = INPUT_EVENT;
 	memcpy(pkt->data, event, sizeof(struct input_event));
-	pkt->data_len = sizeof(struct input_event);
+	pkt->data_len = htonl(sizeof(struct input_event));
 
 	if(client_send_pkt((char *)pkt, sizeof(struct data_pkt) +
 		sizeof(struct input_event)) == -1)

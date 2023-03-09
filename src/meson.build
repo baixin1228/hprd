@@ -8,6 +8,7 @@ server_libs = []
 client_libs = []
 common_deps += dependency('glib-2.0')
 
+subdir('net')
 subdir('codec')
 subdir('common')
 subdir('capture_dev')
@@ -17,11 +18,9 @@ server_deps += common_deps
 
 server_srcs += 'server.c'
 server_srcs += 'input_dev.c'
-server_srcs += 'tcp_server.c'
 server_srcs += 'capture_dev.c'
 server_srcs += 'encodec.c'
 server_srcs += 'dl_help.c'
-server_srcs += 'util.c'
 
 hprd_server = executable('server', server_srcs,
 	include_directories : inc,
@@ -43,11 +42,9 @@ client_deps += common_deps
 subdir('display_dev')
 
 client_srcs += 'client.c'
-client_srcs += 'tcp_client.c'
 client_srcs += 'display_dev.c'
 client_srcs += 'decodec.c'
 client_srcs += 'dl_help.c'
-client_srcs += 'util.c'
 
 hprd_client = executable('client', client_srcs,
 	include_directories : inc,

@@ -196,10 +196,10 @@ void callback_accept(int epfd, struct ep_event *ev) {
 static void _on_server_pkt(char *buf, size_t len) {
 	struct data_pkt *pkt = (struct data_pkt *)buf;
 	switch(pkt->cmd) {
-	case INPUT_EVENT: {
-		log_info("input event\n");
-		break;
-	}
+		case INPUT_EVENT: {
+			log_info("input event");
+			break;
+		}
 	}
 }
 
@@ -211,10 +211,6 @@ void callback_recvdata(int epfd, struct ep_event *ev) {
 	}
 
 	ev->last_active = time(0);
-
-	// ev->callback_fn = (void (*)(int, void *))callback_senddata;
-	// ev->events = EPOLLOUT;
-	// register_event(epfd, ev);
 }
 
 void callback_senddata(int epfd, struct ep_event *ev) {
@@ -229,7 +225,6 @@ void callback_senddata(int epfd, struct ep_event *ev) {
 
 	if(ev->bradcast_idx < bradcast_data.bradcast_idx)
 	{
-		log_info("bradcast");
 		ev->bradcast_idx++;
 	}
 
@@ -266,7 +261,7 @@ void check_active(int epfd) {
 	tmp = client_event_head;
 	while(tmp != NULL) {
 		duration = now - tmp->last_active;
-		printf("check_active:%ld\n", duration);
+		// printf("check_active:%ld\n", duration);
 		if (duration >= 5) {
 			remove_client(epfd, tmp);
 		}
@@ -388,7 +383,7 @@ int get_client_count(void)
 
 void server_bradcast_data_safe(int epfd, char *buf, uint32_t len) {
 	struct data_pkt *video_pkt;
-	log_info("bradcast data:%d %d", sizeof(struct data_pkt), len);
+	// log_info("bradcast data:%d %d", sizeof(struct data_pkt), len);
 
 	while(!bradcast_data.send_over);
 

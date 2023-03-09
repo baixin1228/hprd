@@ -6,6 +6,7 @@
 #include <string.h>
 #include <time.h>
 
+#include "util.h"
 #include "protocol.h"
 #include "net_help.h"
 
@@ -14,10 +15,13 @@ void on_package(char *buf, size_t len);
 static void _on_client_pkt(char *buf, size_t len)
 {
 	struct data_pkt *pkt = (struct data_pkt *)buf;
+	pkt->data_len = ntohl(pkt->data_len);
+
 	switch(pkt->cmd)
 	{
 		case VIDEO_DATA:
 		{
+			printf("read data:%u\n", pkt->data_len);
 			on_package(pkt->data, pkt->data_len);
 			break;
 		}
@@ -57,5 +61,6 @@ void *tcp_client_thread(void *opaque)
 
 int client_send_pkt(char *buf, size_t len)
 {
-	return tcp_send_pkt(fd, buf, len);
+	// return tcp_send_pkt(fd, buf, len);
+	return 0;
 }

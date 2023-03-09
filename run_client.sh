@@ -4,4 +4,8 @@ if [ ! -d build ]; then
 fi
 
 ninja -C build
-meson test -C build -v hprd_client_test
+if [ $? != 0 ]; then 
+	exit 
+fi
+# meson test -C build -v hprd_client_test
+./build/src/client

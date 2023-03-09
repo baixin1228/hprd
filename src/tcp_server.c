@@ -1,4 +1,3 @@
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/socket.h>
@@ -19,12 +18,8 @@
 #define MAX_EVENTS 1024
 #define BUFLEN 1024 * 1024 * 10
 
-#define ONE_MINUTE 60 * 1000
-
 #define ONLISTEN 1
 #define NOT_ACTIVE 0
-
-char video_data[BUFLEN];
 
 static inline void perr(int status, const char *func_info) {
 	if (status) {
@@ -52,10 +47,16 @@ void callback_recvdata(int epfd, struct ep_event *ev);
 void callback_accept(int epfd, struct ep_event *ev);
 void callback_senddata(int epfd, struct ep_event *ev);
 
+struct video_bradcast_data {
+	char video_data[BUFLEN];
+	size_t video_data_len;
+	uint32_t bradcast_idx;
+	bool need_send;
+	bool send_over;
+} bradcast_data = {0};
+
 static struct ep_event *client_event_head = NULL;
 static int client_events_len = 0;
-static uint32_t bradcast_idx = 0;
-static pthread_spinlock_t g_lock;
 
 /* create and add to my_events */
 struct ep_event *create_ep_event(int fd, int events, void *callback_fn) {
@@ -67,26 +68,50 @@ struct ep_event *create_ep_event(int fd, int events, void *callback_fn) {
 	ev->status = NOT_ACTIVE;
 	ev->send_buf = NULL;
 	ev->send_len = 0;
-	ev->bradcast_idx = bradcast_idx;
+	ev->bradcast_idx = bradcast_data.bradcast_idx;
 	ev->last_active = time(0);
 	ev->next = NULL;
 
 	return ev;
 }
 
-void register_event(int epfd, struct ep_event *ev) {
-	int op = 0;
-	if (ev->status == ONLISTEN) {
-		op = EPOLL_CTL_MOD;
-	} else {
-		ev->status = ONLISTEN;
-		op = EPOLL_CTL_ADD;
-	}
+void add_event(int epfd, struct ep_event *ev) {
+	int err;
 	struct epoll_event event = {
 		.events = ev->events,
 		.data.ptr = ev
 	};
-	epoll_ctl(epfd, op, ev->fd, &event);
+	err = epoll_ctl(epfd, EPOLL_CTL_ADD, ev->fd, &event);
+	if(err == -1) {
+		log_error("epoll_ctl EPOLL_CTL_ADD fail.");
+		exit(-1);
+	}
+}
+
+void mod_event(int epfd, struct ep_event *ev) {
+	int err;
+	struct epoll_event event = {
+		.events = ev->events,
+		.data.ptr = ev
+	};
+	err = epoll_ctl(epfd, EPOLL_CTL_MOD, ev->fd, &event);
+	if(err == -1) {
+		log_error("epoll_ctl EPOLL_CTL_MOD fail.");
+		exit(-1);
+	}
+}
+
+void remove_event(int epfd, struct ep_event *ev) {
+	int err;
+	struct epoll_event event = {
+		.events = ev->events,
+		.data.ptr = ev
+	};
+	err = epoll_ctl(epfd, EPOLL_CTL_DEL, ev->fd, &event);
+	if(err == -1) {
+		log_error("epoll_ctl EPOLL_CTL_DEL fail.");
+		exit(-1);
+	}
 }
 
 struct ep_event *new_client_ep_event(int epfd,
@@ -103,7 +128,7 @@ struct ep_event *new_client_ep_event(int epfd,
 	}
 
 	ev = create_ep_event(new_fd, events, (void *)callback_recvdata);
-	register_event(epfd, ev);
+	add_event(epfd, ev);
 
 	if(client_event_head == NULL)
 		client_event_head = ev;
@@ -118,24 +143,15 @@ struct ep_event *new_client_ep_event(int epfd,
 	return ev;
 }
 
-int remove_event(int epfd, struct ep_event *ev) {
+int remove_client(int epfd, struct ep_event *ev) {
 	struct ep_event *tmp1 = NULL;
 	struct ep_event *tmp2 = NULL;
 
-	struct epoll_event event = {
-		.events = ev->events,
-		.data.ptr = ev
-	};
-	int err = epoll_ctl(epfd, EPOLL_CTL_DEL, ev->fd, &event);
-	if(err == -1) {
-		log_error("epoll_ctl EPOLL_CTL_DEL fail.");
-		exit(-1);
-	}
+
 	log_info("remove event.");
 
 	close(ev->fd);
 	client_events_len--;
-	ev->status = NOT_ACTIVE;
 
 	tmp1 = client_event_head;
 	while(tmp1 != NULL) {
@@ -160,7 +176,6 @@ int remove_event(int epfd, struct ep_event *ev) {
 void callback_accept(int epfd, struct ep_event *ev) {
 	struct sockaddr_in addr;
 
-	pthread_spin_lock(&g_lock);
 	socklen_t len = sizeof(addr);
 	int new_fd = accept(ev->fd, (struct sockaddr *)&addr, &len);
 	perr(new_fd == -1, __func__);
@@ -168,14 +183,14 @@ void callback_accept(int epfd, struct ep_event *ev) {
 	ev = new_client_ep_event(epfd, new_fd, EPOLLIN, (void *)callback_recvdata);
 	ev->addr = addr.sin_addr;
 	ev->port = addr.sin_port;
+
 	if(ev == NULL) {
 		log_info("[建立错误] addr:%s:%d\n", inet_ntoa(addr.sin_addr),
 				 ntohs(addr.sin_port));
 	} else {
-		log_info("[建立连接] addr:%s:%d\n", inet_ntoa(addr.sin_addr),
-				 ntohs(addr.sin_port));
+		log_info("[建立连接] addr:%s:%d new_fd:%d\n", inet_ntoa(addr.sin_addr),
+				 ntohs(addr.sin_port), new_fd);
 	}
-	pthread_spin_unlock(&g_lock);
 }
 
 static void _on_server_pkt(char *buf, size_t len) {
@@ -189,9 +204,9 @@ static void _on_server_pkt(char *buf, size_t len) {
 }
 
 void callback_recvdata(int epfd, struct ep_event *ev) {
-	pthread_spin_lock(&g_lock);
 	if(tcp_recv_pkt(ev->fd, ev->recv_buf, _on_server_pkt) == -1) {
-		remove_event(epfd, ev);
+		remove_client(epfd, ev);
+		return;
 	}
 
 	ev->last_active = time(0);
@@ -199,22 +214,23 @@ void callback_recvdata(int epfd, struct ep_event *ev) {
 	// ev->callback_fn = (void (*)(int, void *))callback_senddata;
 	// ev->events = EPOLLOUT;
 	// register_event(epfd, ev);
-	pthread_spin_unlock(&g_lock);
 }
 
 void callback_senddata(int epfd, struct ep_event *ev) {
-	pthread_spin_lock(&g_lock);
 	if(ev->send_buf == NULL || ev->send_len == 0)
 		goto EXIT2;
 
 	if(tcp_send_pkt(ev->fd, ev->send_buf, ev->send_len) == -1) {
-		remove_event(epfd, ev);
+		log_error("send error.");
+		remove_client(epfd, ev);
 		goto EXIT;
 	}
-	log_info("send data.");
 
-	if(ev->bradcast_idx < bradcast_idx)
+	if(ev->bradcast_idx < bradcast_data.bradcast_idx)
+	{
+		log_info("bradcast");
 		ev->bradcast_idx++;
+	}
 
 	ev->send_buf = NULL;
 	ev->send_len = 0;
@@ -222,10 +238,10 @@ void callback_senddata(int epfd, struct ep_event *ev) {
 EXIT2:
 	ev->callback_fn = (void (*)(int, void *))callback_recvdata;
 	ev->events = EPOLLIN;
-	register_event(epfd, ev);
+	mod_event(epfd, ev);
 
 EXIT:
-	pthread_spin_unlock(&g_lock);
+	return;
 }
 
 int create_ls_socket(char *ip, uint16_t port) {
@@ -245,16 +261,44 @@ void check_active(int epfd) {
 	struct ep_event *tmp;
 	time_t now = time(0);
 
-	pthread_spin_lock(&g_lock);
 	tmp = client_event_head;
 	while(tmp != NULL) {
 		time_t duration = now - tmp->last_active;
-		if (duration >= 60) {
-			remove_event(epfd, tmp);
+		if (duration >= 5) {
+			remove_client(epfd, tmp);
 		}
 		tmp = tmp->next;
 	}
-	pthread_spin_unlock(&g_lock);
+}
+
+void check_bradcast_data(int epfd) {
+	struct ep_event *tmp;
+	bool bradcast_over = true;
+
+	if(bradcast_data.need_send)
+	{
+		tmp = client_event_head;
+		while(tmp != NULL) {
+			tmp->callback_fn = (void (*)(int, void *))callback_senddata;
+			tmp->send_buf = bradcast_data.video_data;
+			tmp->send_len = bradcast_data.video_data_len;
+			tmp->events = EPOLLOUT;
+			mod_event(epfd, tmp);
+
+			tmp = tmp->next;
+		}
+
+		bradcast_data.need_send = false;
+	}
+
+	tmp = client_event_head;
+	while(tmp != NULL) {
+		if(tmp->bradcast_idx < bradcast_data.bradcast_idx)
+			bradcast_over = false;
+
+		tmp = tmp->next;
+	}
+	bradcast_data.send_over = bradcast_over;
 }
 
 static struct server_info {
@@ -265,68 +309,58 @@ static struct server_info {
 static struct ep_event *accept_ep_event;
 
 void *tcp_server_thread(void *opaque) {
+	int nfd;
 	int ls_fd = create_ls_socket(ser_info.ip, ser_info.port);
 	accept_ep_event = create_ep_event(ls_fd, EPOLLIN,
 									  (void *)callback_accept);
 
-	register_event(ser_info.epfd, accept_ep_event);
+	add_event(ser_info.epfd, accept_ep_event);
 
 	struct epoll_event events[MAX_EVENTS + 1];
 	while (1) {
 		check_active(ser_info.epfd);
-		int nfd = epoll_wait(ser_info.epfd, events, MAX_EVENTS + 1, ONE_MINUTE);
-		perr(nfd <= 0, "epoll_wait");
+		nfd = epoll_wait(ser_info.epfd, events, MAX_EVENTS + 1, 10);
+		perr(nfd < 0, "epoll_wait");
 		for (int i = 0; i < nfd; i++) {
 			struct ep_event *ev = events[i].data.ptr;
 			ev->callback_fn(ser_info.epfd, ev);
 		}
+		check_bradcast_data(ser_info.epfd);
 	}
 }
 
 int tcp_server_init(char *ip, uint16_t port) {
 	pthread_t p1;
 	int epfd = epoll_create(MAX_EVENTS + 1);
+
 	ser_info.epfd = epfd;
 	strcpy(ser_info.ip, ip);
 	ser_info.port = port;
 
-	pthread_spin_init(&g_lock, 0);
+	bradcast_data.send_over = true;
+
 	pthread_create(&p1, NULL, tcp_server_thread, NULL);
 	pthread_detach(p1);
 	return epfd;
 }
 
-void server_bradcast_data(int epfd, char *buf, uint32_t len) {
-	struct ep_event *tmp;
-
-	pthread_spin_lock(&g_lock);
-	log_info("bradcast data.");
-
-	tmp = client_event_head;
-	while(tmp != NULL) {
-		while(tmp->bradcast_idx < bradcast_idx)
-			usleep(5000);
-
-		tmp = tmp->next;
-	}
-
-	memcpy(video_data, buf, len);
-	bradcast_idx++;
-
-	tmp = client_event_head;
-	while(tmp != NULL) {
-		tmp->callback_fn = (void (*)(int, void *))callback_senddata;
-		tmp->send_buf = video_data;
-		tmp->send_len = len;
-		tmp->events = EPOLLOUT;
-		register_event(epfd, tmp);
-
-		tmp = tmp->next;
-	}
-	pthread_spin_unlock(&g_lock);
-}
-
 int get_client_count(void)
 {
 	return client_events_len;
+}
+
+void server_bradcast_data_safe(int epfd, char *buf, uint32_t len) {
+	struct data_pkt *video_pkt;
+	log_info("bradcast data:%d %d", sizeof(struct data_pkt), len);
+
+	while(!bradcast_data.send_over);
+
+	video_pkt = (struct data_pkt *)bradcast_data.video_data;
+	video_pkt->cmd = VIDEO_DATA;
+	video_pkt->data_len = htonl(len);
+	memcpy(video_pkt->data, buf, len);
+	bradcast_data.video_data_len = sizeof(struct data_pkt) + len;
+	bradcast_data.bradcast_idx++;
+	bradcast_data.send_over = false;
+	bradcast_data.need_send = true;
 }

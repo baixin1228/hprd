@@ -56,7 +56,7 @@ int epfd = -1;
 void on_package(char *buf, size_t len)
 {
 	if(epfd != -1)
-		server_bradcast_data(epfd, buf, len);
+		server_bradcast_data_safe(epfd, buf, len);
 }
 
 void *server_thread(void *opaque)

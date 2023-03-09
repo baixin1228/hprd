@@ -1,4 +1,6 @@
+#include <unistd.h>
 #include <arpa/inet.h>
+#include "util.h"
 #include "net_help.h"
 
 static inline int _tcp_recv_all(int fd, char *_recv_buf, size_t len)
@@ -40,13 +42,22 @@ int tcp_recv_pkt(int fd, char *_recv_buf, void (*callback)(char *buf, size_t len
 static inline int _tcp_send_all(int fd, char *buf, size_t len)
 {
 	int send_count;
-	int sum_count;
+	int sum_count = 0;
 
 	while(len > 0)
 	{
 		send_count = send(fd, buf + sum_count, len, 0);
 		if(send_count < 0)
+		{
+            if(errno == EAGAIN)
+            {   
+                usleep(1000);
+                send_count = 0;
+                continue;
+            }
+			log_perr("send error fd:%d buf:%p buf_len:%d", fd, buf, len);
 			return -1;
+		}
 
 		sum_count += send_count;
 		len -= send_count;

@@ -27,9 +27,61 @@ struct sdl_fd_out
 	int mouse_pos_y;
 };
 
+void _poll_event(struct sdl_fd_out *priv)
+{
+	SDL_Event event;
+
+	/* One-time consumption of all events */
+	while(true)
+	{
+		memset(&event, 0, sizeof(SDL_Event));
+		SDL_PollEvent(&event);
+
+		switch(event.type)
+		{
+			case SDL_WINDOWEVENT:
+			{
+				if(priv->screen)
+					SDL_GetWindowSize(priv->screen, &priv->screen_w,
+						&priv->screen_h);
+				break;
+			}
+			case SDL_QUIT:
+			{
+				exit(0);
+				break;
+			}
+			case SDL_MOUSEMOTION:
+			{
+				priv->mouse_pos_x = event.motion.x;
+				priv->mouse_pos_y = event.motion.y;
+				break;
+			}
+			case SDL_WINDOWEVENT_NONE:
+			default:
+			{
+				return;
+			}
+		}
+	}
+}
+
+static void* _poll_event_thread(void *oqu)
+{
+	struct sdl_fd_out *priv = oqu;
+
+	while(true)
+	{
+		_poll_event(priv);
+		SDL_Delay(1000 / priv->frame_rate);
+	}
+	return NULL;
+}
+
 static int sdl_dev_init(struct display_object *obj)
 {
 	struct sdl_fd_out *priv;
+	pthread_t p1;
 
 	priv = calloc(1, sizeof(*priv));
 	if(!priv)
@@ -42,7 +94,11 @@ static int sdl_dev_init(struct display_object *obj)
 		printf( "Could not initialize SDL - %s\n", SDL_GetError());
 		return -1;
 	}
+
 	priv->frame_rate = 33;
+
+	pthread_create(&p1, NULL, _poll_event_thread, priv);
+	pthread_detach(p1);
 
 	obj->priv = (void *)priv;
 
@@ -171,44 +227,6 @@ static int sdl_put_buffer(struct display_object *obj,
 	return 0;
 }
 
-bool _poll_event(struct sdl_fd_out *priv)
-{
-	SDL_Event event;
-
-	/* One-time consumption of all events */
-	while(true)
-	{
-		memset(&event, 0, sizeof(SDL_Event));
-		SDL_PollEvent(&event);
-		switch(event.type)
-		{
-			case SDL_WINDOWEVENT_NONE:
-			{
-				return false;
-			}
-			case SDL_WINDOWEVENT:
-			{
-				SDL_GetWindowSize(priv->screen, &priv->screen_w, &priv->screen_h);
-				break;
-			}
-			case SDL_QUIT:
-			{
-				return true;
-			}
-			case SDL_MOUSEMOTION:
-			{
-				priv->mouse_pos_x = event.motion.x;
-				priv->mouse_pos_y = event.motion.y;
-				break;
-			}
-			default:
-			{
-				break;
-			}
-		}
-	}
-}
-
 static int sdl_main_loop(struct display_object *obj)
 {
 	struct sdl_fd_out *priv = (struct sdl_fd_out *)obj->priv;
@@ -218,14 +236,11 @@ static int sdl_main_loop(struct display_object *obj)
 
 	while(true)
 	{
-		if(_poll_event(priv))
-			break;
-
 		memset(&event, 0, sizeof(struct input_event));
 		event.type = MOUSE_MOVE;
 		event.x = priv->mouse_pos_x;
 		event.y = priv->mouse_pos_y;
-		send_event(&event);
+		hsend_event(&event);
 
 		obj->on_event(obj);
 		SDL_Delay(1000 / priv->frame_rate);

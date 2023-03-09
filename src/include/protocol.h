@@ -11,10 +11,12 @@ enum CMD
 	USB_DATA,
 };
 
+#pragma pack(push, 1)
 struct data_pkt{
   uint8_t cmd;
-  size_t data_len;
+  uint32_t data_len;
   char data[0];
 };
+#pragma pack(pop)
 
 #endif

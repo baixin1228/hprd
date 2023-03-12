@@ -21,7 +21,6 @@ static void _on_client_pkt(char *buf, size_t len)
 	{
 		case VIDEO_DATA:
 		{
-			printf("read data:%u\n", pkt->data_len);
 			on_package(pkt->data, pkt->data_len);
 			break;
 		}
@@ -53,7 +52,8 @@ void *tcp_client_thread(void *opaque)
 
 	while(1)
 	{
-		tcp_recv_pkt(fd, _recv_buf, _on_client_pkt);
+		if(tcp_recv_pkt(fd, _recv_buf, _on_client_pkt) == -1)
+			break;
 	}
 	close(fd);
 	return NULL;

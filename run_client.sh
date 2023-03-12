@@ -1,11 +1,11 @@
 #!/bin/bash
-if [ ! -d build ]; then
-	meson build
+if [ ! -d client_build ]; then
+	meson client_build -Dbuild_target=client
 fi
 
-ninja -C build
+ninja -C client_build
 if [ $? != 0 ]; then 
 	exit 
 fi
-# meson test -C build -v hprd_client_test
-./build/src/client
+# meson test -C client_build -v hprd_client_test
+./client_build/src/client

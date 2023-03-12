@@ -27,13 +27,13 @@ int tcp_recv_pkt(int fd, char *_recv_buf, void (*callback)(char *buf, size_t len
 {
 	int pkt_len;
 
-	if(_tcp_recv_all(fd, _recv_buf, 4) < 0)
+	if(_tcp_recv_all(fd, _recv_buf, 4) == -1)
 		return -1;
 
 	pkt_len = ntohl(*(uint32_t *)_recv_buf);
 	if(pkt_len > 0)
 	{
-		if(_tcp_recv_all(fd, _recv_buf, pkt_len) < 0)
+		if(_tcp_recv_all(fd, _recv_buf, pkt_len) == -1)
 			return -1;
 
 		callback(_recv_buf, pkt_len);

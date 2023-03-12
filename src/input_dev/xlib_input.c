@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <X11/extensions/XTest.h>
 #include <X11/keysym.h>
+#include <X11/keysymdef.h>
 
 #include <glib.h>
 
@@ -42,6 +43,31 @@ static int xlib_set_info(struct input_object *obj, GHashTable *fb_info)
 	return 0;
 }
 
+static long get_xkeycode(int keycode)
+{
+	    	// printf("%ld\n", XStringToKeysym("BackSpace"));
+	switch(keycode)
+	{
+		case 8:
+			return XStringToKeysym("BackSpace");
+		case 9:
+			return XStringToKeysym("Tab");
+		case 13:
+			return XStringToKeysym("Return");
+		case 16:
+			return XStringToKeysym("Shift_L");
+		case 17:
+			return XStringToKeysym("Control_L");
+		case 32:
+			return XStringToKeysym("space");
+	}
+
+	if(keycode > 32 && keycode < 255)
+		return keycode;
+	else
+		return XStringToKeysym("Control_L");
+}
+
 static int xlib_push_key(struct input_object *obj, struct input_event *event)
 {
 	struct xlib_input *priv = (struct xlib_input *)obj->priv;
@@ -49,19 +75,19 @@ static int xlib_push_key(struct input_object *obj, struct input_event *event)
     switch (event->type) {
 	    case MOUSE_MOVE:
 	    {
-	        XTestFakeRelativeMotionEvent(priv->display, event->x, event->y, 0);
+	        XTestFakeMotionEvent(priv->display, 0, event->x, event->y, 0);
 	        break;
 	    }
 	    case KEY_UP:
 	    {
 	        if (event->key_code == 0) return -1;
-	        XTestFakeKeyEvent(priv->display, event->key_code, false, 0);
+	        XTestFakeKeyEvent(priv->display, XKeysymToKeycode(priv->display,get_xkeycode(event->key_code)), false, 0);
 	        break;
 	    }
 	    case KEY_DOWN:
 	    {
 	        if (event->key_code == 0) return -1;
-	        XTestFakeKeyEvent(priv->display, event->key_code, true, 0);
+	        XTestFakeKeyEvent(priv->display, XKeysymToKeycode(priv->display,get_xkeycode(event->key_code)), true, 0);
 	        break;
 	    }
 	    case MOUSE_UP:
@@ -74,6 +100,13 @@ static int xlib_push_key(struct input_object *obj, struct input_event *event)
 	    {
 	        if (event->key_code == 0) return -1;
 	        XTestFakeButtonEvent(priv->display, event->key_code, true, 0);
+	        break;
+	    }
+	    case MOUSE_WHEEL:
+	    {
+	        if (event->key_code == 0) return -1;
+			XTestFakeButtonEvent(priv->display, event->key_code, true, CurrentTime);
+			XTestFakeButtonEvent(priv->display, event->key_code, false, CurrentTime);
 	        break;
 	    }
 	    default:

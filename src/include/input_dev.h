@@ -22,7 +22,7 @@ struct input_dev_ops
 	int (* release)(struct input_object *obj);
 };
 
-struct input_object *input_dev_init(struct mem_pool *pool);
+struct input_object *input_init();
 int input_set_info(struct input_object *input_obj, GHashTable *fb_info);
 int input_push_key(struct input_object *input_obj, struct input_event *event);
 int input_release(struct input_object *input_obj);

@@ -23,8 +23,7 @@ struct sdl_fd_out
 	int screen_h;
 	int fb_format;
 	int cur_buf_id;
-	int mouse_pos_x;
-	int mouse_pos_y;
+	struct input_event event;
 };
 
 void _poll_event(struct sdl_fd_out *priv)
@@ -53,8 +52,82 @@ void _poll_event(struct sdl_fd_out *priv)
 			}
 			case SDL_MOUSEMOTION:
 			{
-				priv->mouse_pos_x = event.motion.x;
-				priv->mouse_pos_y = event.motion.y;
+				if(priv->event.type == 0)
+				{
+					priv->event.type = MOUSE_MOVE;
+					priv->event.x = event.motion.x;
+					priv->event.y = event.motion.y;
+				}
+				break;
+			}
+			case SDL_MOUSEBUTTONDOWN:
+			{
+				if(priv->event.type == 0)
+				{
+					priv->event.type = MOUSE_DOWN;
+					priv->event.key_code = event.button.button;
+
+					priv->event.x = event.motion.x;
+					priv->event.y = event.motion.y;
+				}
+				break;
+			}
+			case SDL_MOUSEBUTTONUP:
+			{
+				if(priv->event.type == 0)
+				{
+					priv->event.type = MOUSE_UP;
+					priv->event.key_code = event.button.button;
+					
+					priv->event.x = event.motion.x;
+					priv->event.y = event.motion.y;
+				}
+				break;
+			}
+			case SDL_MOUSEWHEEL:
+			{
+				if(priv->event.type == 0)
+				{
+					priv->event.type = MOUSE_WHEEL;
+					if(event.wheel.y > 0)
+					{
+						priv->event.key_code = 4;
+					}
+					else if(event.wheel.y < 0)
+					{
+						priv->event.key_code = 5;
+					}
+
+					if(event.wheel.x < 0)
+					{
+						priv->event.key_code = 6;
+					}
+					else if(event.wheel.x > 0)
+					{
+						priv->event.key_code = 7;
+					}
+				}
+				break;
+			}
+			case SDL_KEYDOWN:
+			{
+				printf("------------- code:%d %d\n", event.key.keysym.scancode, event.key.keysym.sym);
+				if(priv->event.type == 0)
+				{
+					priv->event.type = KEY_DOWN;
+					if(event.key.keysym.sym == 1073742048)
+						event.key.keysym.sym = 17;
+					priv->event.key_code = event.key.keysym.sym;
+				}
+				break;
+			}
+			case SDL_KEYUP:
+			{
+				if(priv->event.type == 0)
+				{
+					priv->event.type = KEY_UP;
+					priv->event.key_code = event.key.keysym.sym;
+				}
 				break;
 			}
 			case SDL_WINDOWEVENT_NONE:
@@ -132,8 +205,8 @@ static int sdl_set_info(struct display_object *obj, GHashTable *fb_info)
 
 	priv->fb_width = *(uint32_t *)g_hash_table_lookup(fb_info, "width");
 	priv->fb_height = *(uint32_t *)g_hash_table_lookup(fb_info, "height");
-	priv->screen_w = *(uint32_t *)g_hash_table_lookup(fb_info, "width") / 2;
-	priv->screen_h = *(uint32_t *)g_hash_table_lookup(fb_info, "height") / 2;
+	priv->screen_w = *(uint32_t *)g_hash_table_lookup(fb_info, "width");
+	priv->screen_h = *(uint32_t *)g_hash_table_lookup(fb_info, "height");
 	fmt = *(uint32_t *)g_hash_table_lookup(fb_info, "format");
 	sdl_fmt = _com_fmt_to_sdl_fmt(fmt);
 
@@ -230,17 +303,16 @@ static int sdl_put_buffer(struct display_object *obj,
 static int sdl_main_loop(struct display_object *obj)
 {
 	struct sdl_fd_out *priv = (struct sdl_fd_out *)obj->priv;
-	struct input_event event;
 	
 	log_info("sdl_main_loop");
 
 	while(true)
 	{
-		memset(&event, 0, sizeof(struct input_event));
-		event.type = MOUSE_MOVE;
-		event.x = priv->mouse_pos_x;
-		event.y = priv->mouse_pos_y;
-		hsend_event(&event);
+		if(priv->event.type != 0)
+		{
+			hsend_event(&priv->event);
+			priv->event.type = 0;
+		}
 
 		obj->on_event(obj);
 		SDL_Delay(1000 / priv->frame_rate);

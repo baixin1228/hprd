@@ -10,7 +10,7 @@
 
 extern struct input_dev_ops xlib_input_dev_ops;
 
-struct input_object *input_dev_init(struct mem_pool *pool)
+struct input_object *input_init()
 {
 	int ret;
 	struct input_dev_ops *dev_ops;
@@ -42,3 +42,22 @@ struct input_object *input_dev_init(struct mem_pool *pool)
 
 DEV_SET_INFO(input, input_dev_ops)
 DEV_RELEASE(input, input_dev_ops)
+
+int input_push_key(struct input_object *obj, struct input_event *event)
+{
+	struct input_dev_ops *dev_ops;
+
+	if(!obj)
+		return -1;
+
+	dev_ops = (struct input_dev_ops *)obj->ops;
+	if(dev_ops)
+	{
+		if(dev_ops->push_key)
+			return dev_ops->push_key(obj, event);
+		else
+			printf("input dev not find func:push_key\n");
+	}
+
+	return -1;
+}

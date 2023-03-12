@@ -1,12 +1,12 @@
 #!/bin/bash
-if [ ! -d build ]; then
-	meson build
+if [ ! -d server_build ]; then
+	meson server_build -Dbuild_target=server
 fi
 
-ninja -C build
+ninja -C server_build
 if [ $? != 0 ]; then 
 	exit 
 fi
-# meson test -C build -v hprd_server_test
+# meson test -C server_build -v hprd_server_test
 
-./build/src/server
+./server_build/src/server

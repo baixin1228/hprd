@@ -8,13 +8,15 @@
 #include "codec.h"
 #include "encodec.h"
 #include "capture_dev.h"
+#include "input_dev.h"
 #include "tcp_server.h"
 #include "buffer_pool.h"
 
 struct mem_pool server_pool = {0};
 
 struct encodec_object *enc_obj = NULL;
-struct capture_object *in_obj = NULL;
+struct capture_object *cap_obj = NULL;
+struct input_object *in_obj = NULL;
 
 void capture_on_event(struct capture_object *obj)
 {
@@ -24,7 +26,7 @@ void capture_on_event(struct capture_object *obj)
 	if(get_client_count() == 0)
 		return;
 
-	buf_id = capture_get_fb(in_obj);
+	buf_id = capture_get_fb(cap_obj);
 	if(buf_id == -1)
 	{
 		log_error("capture_get_fb fail.");
@@ -44,12 +46,17 @@ void capture_on_event(struct capture_object *obj)
 		exit(-1);
 	}
 
-	ret = capture_put_fb(in_obj, buf_id);
+	ret = capture_put_fb(cap_obj, buf_id);
 	if(ret != 0)
 	{
 		log_error("capture_put_fb fail.");
 		exit(-1);
 	}
+}
+
+void on_key(struct input_event *event)
+{
+	input_push_key(in_obj, event);
 }
 
 int epfd = -1;
@@ -65,12 +72,13 @@ void *server_thread(void *opaque)
 	int buf_id;
 	uint32_t frame_rate = 60;
 	uint32_t stream_ftm = STREAM_H264;
-	uint32_t bit_rate = 100 * 1024 * 1024;
+	uint32_t bit_rate = 10 * 1024 * 1024;
 
 	GHashTable *fb_info = g_hash_table_new(g_str_hash, g_str_equal);
 
-	in_obj = capture_dev_init(&server_pool);
+	cap_obj = capture_dev_init(&server_pool);
 	enc_obj = encodec_init(&server_pool);
+	in_obj = input_init();
 
 	for (int i = 0; i < 5; ++i)
 	{
@@ -80,7 +88,7 @@ void *server_thread(void *opaque)
 			log_error("alloc_buffer fail.");
 			exit(-1);
 		}
-		ret = capture_map_fb(in_obj, buf_id);
+		ret = capture_map_fb(cap_obj, buf_id);
 		if(ret != 0)
 		{
 			log_error("capture_map_fb fail.");
@@ -95,9 +103,9 @@ void *server_thread(void *opaque)
 	}
 
 	g_hash_table_insert(fb_info, "frame_rate", &frame_rate);
-	capture_set_info(in_obj, fb_info);
-	capture_regist_event_callback(in_obj, capture_on_event);
-	capture_get_info(in_obj, fb_info);
+	capture_set_info(cap_obj, fb_info);
+	capture_regist_event_callback(cap_obj, capture_on_event);
+	capture_get_info(cap_obj, fb_info);
 
 	encodec_regist_event_callback(enc_obj, on_package);
 	g_hash_table_insert(fb_info, "stream_fmt", &stream_ftm);
@@ -106,7 +114,7 @@ void *server_thread(void *opaque)
 
 	g_hash_table_destroy(fb_info);
 
-	capture_main_loop(in_obj);
+	capture_main_loop(cap_obj);
 	return NULL;
 }
 

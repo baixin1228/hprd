@@ -5,13 +5,20 @@
 
 enum event_type
 {
-	MOUSE_MOVE,
+	MOUSE_MOVE = 1,
 	KEY_UP,
 	KEY_DOWN,
 	MOUSE_UP,
 	MOUSE_DOWN,
+	MOUSE_WHEEL,
 	BUTTON_UP,
 	BUTTON_DOWN,
+};
+
+enum event_key
+{
+	MOUSE_LEFT,
+	MOUSE_RIGHT,
 };
 
 struct input_event{

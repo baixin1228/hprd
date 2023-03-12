@@ -193,11 +193,12 @@ void callback_accept(int epfd, struct ep_event *ev) {
 	}
 }
 
+void on_key(struct input_event *event);
 static void _on_server_pkt(char *buf, size_t len) {
 	struct data_pkt *pkt = (struct data_pkt *)buf;
 	switch(pkt->cmd) {
 		case INPUT_EVENT: {
-			log_info("input event");
+			on_key((struct input_event *)pkt->data);
 			break;
 		}
 	}
@@ -333,8 +334,15 @@ void process_event(struct epoll_event *event)
 			}
 			break;
 		}
+		case EPOLLERR:
+		case EPOLLHUP:
+		{
+			remove_client(ser_info.epfd, ev);
+			break;
+		}
 		default:
 		{
+			remove_client(ser_info.epfd, ev);
 			log_warning("unknow EPOLL event:%d", event->events);
 			break;
 		}
@@ -351,7 +359,7 @@ void *tcp_server_thread(void *opaque) {
 
 	struct epoll_event events[MAX_EVENTS + 1];
 	while (1) {
-		check_active(ser_info.epfd);
+		// check_active(ser_info.epfd);
 		nfd = epoll_wait(ser_info.epfd, events, MAX_EVENTS + 1, 10);
 		perr(nfd < 0, "epoll_wait");
 		for (int i = 0; i < nfd; i++) {

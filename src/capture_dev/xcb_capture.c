@@ -250,7 +250,7 @@ static int xcb_main_loop(struct capture_object *obj)
 
 	while(1)
 	{
-		obj->on_event(obj);
+		obj->on_frame(obj);
 		usleep(1000000 / priv->frame_rate);
 	}
 
@@ -267,5 +267,5 @@ struct capture_dev_ops xcb_dev_ops = {
 	.put_buffer 		= xext_put_frame_buffer,
 	.unmap_buffer 		= xext_unmap_buffer,
 	.release 			= xext_dev_release,
-	.event_loop			= xcb_main_loop
+	.main_loop			= xcb_main_loop
 };

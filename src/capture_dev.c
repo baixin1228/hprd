@@ -49,12 +49,12 @@ DEV_GET_FB(capture, capture_dev_ops)
 DEV_PUT_FB(capture, capture_dev_ops)
 DEV_RELEASE(capture, capture_dev_ops)
 
-int capture_regist_event_callback(struct capture_object *capture_obj, void (* on_event)(struct capture_object *obj))
+int capture_regist_event_callback(struct capture_object *capture_obj, void (* on_frame)(struct capture_object *obj))
 {
 	if(!capture_obj)
 		return -1;
 
-	capture_obj->on_event = on_event;
+	capture_obj->on_frame = on_frame;
 
 	return 0;
 }
@@ -69,8 +69,8 @@ int capture_main_loop(struct capture_object *capture_obj)
 	dev_ops = (struct capture_dev_ops *)capture_obj->ops;
 	if(dev_ops)
 	{
-		if(dev_ops->event_loop)
-			return dev_ops->event_loop(capture_obj);
+		if(dev_ops->main_loop)
+			return dev_ops->main_loop(capture_obj);
 	}
 
 	return -1;

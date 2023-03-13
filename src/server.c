@@ -18,7 +18,7 @@ struct encodec_object *enc_obj = NULL;
 struct capture_object *cap_obj = NULL;
 struct input_object *in_obj = NULL;
 
-void capture_on_event(struct capture_object *obj)
+void capture_on_frame(struct capture_object *obj)
 {
 	int ret;
 	int buf_id;
@@ -104,7 +104,7 @@ void *server_thread(void *opaque)
 
 	g_hash_table_insert(fb_info, "frame_rate", &frame_rate);
 	capture_set_info(cap_obj, fb_info);
-	capture_regist_event_callback(cap_obj, capture_on_event);
+	capture_regist_event_callback(cap_obj, capture_on_frame);
 	capture_get_info(cap_obj, fb_info);
 
 	encodec_regist_event_callback(enc_obj, on_package);

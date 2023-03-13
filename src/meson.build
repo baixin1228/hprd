@@ -41,15 +41,21 @@ if build_target == 'client' or build_target == 'all'
 
 	client_deps += common_deps
 
-	client_srcs += 'client.c'
 	client_srcs += 'display_dev.c'
 	client_srcs += 'decodec.c'
 	client_srcs += 'dl_help.c'
 
-	hprd_client = executable('client', client_srcs,
+	client_share_lib = shared_library('client', client_srcs,
+			include_directories : inc,
+			dependencies: client_deps,
+			link_whole: client_libs,
+			link_args : ['-ldl', '-lpthread'],
+		    install : true)
+
+	hprd_client = executable('client', 'client.c',
 		include_directories : inc,
 		dependencies: client_deps,
-		link_with: client_libs,
+		link_with: client_share_lib,
 		link_args : ['-ldl', '-lpthread'],
 	    install : true)
 

@@ -10,7 +10,7 @@ struct capture_object
 {
 	void *priv;
 	struct mem_pool *buf_pool;
-	void (* on_event)(struct capture_object *obj);
+	void (* on_frame)(struct capture_object *obj);
 	struct capture_dev_ops *ops;
 };
 
@@ -24,7 +24,7 @@ struct capture_dev_ops
 	int (* put_buffer)(struct capture_object *obj, int buf_id);
 	int (* get_buffer)(struct capture_object *obj);
 	int (* unmap_buffer)(struct capture_object *obj, int buf_id);
-	int (* event_loop)(struct capture_object *obj);
+	int (* main_loop)(struct capture_object *obj);
 	int (* release)(struct capture_object *obj);
 };
 
@@ -34,7 +34,7 @@ int capture_set_info(struct capture_object *capture_obj, GHashTable *fb_info);
 int capture_map_fb(struct capture_object *capture_obj, int buf_id);
 int capture_get_fb(struct capture_object *capture_obj);
 int capture_put_fb(struct capture_object *capture_obj, int buf_id);
-int capture_regist_event_callback(struct capture_object *capture_obj, void (* on_event)(struct capture_object *obj));
+int capture_regist_event_callback(struct capture_object *capture_obj, void (* on_frame)(struct capture_object *obj));
 int capture_main_loop(struct capture_object *capture_obj);
 
 #endif

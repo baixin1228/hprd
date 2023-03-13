@@ -234,7 +234,6 @@ static int svc_push_pkt(struct decodec_object *obj, char *buf, size_t len)
     }
     if (svc_data->info.iBufferStatus != 1)
     {
-        log_warning("OpenH264: No frame produced");
         return -1;
     }
 

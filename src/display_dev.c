@@ -49,7 +49,18 @@ DEV_GET_FB(display, display_dev_ops)
 DEV_PUT_FB(display, display_dev_ops)
 DEV_RELEASE(display, display_dev_ops)
 
-int display_regist_event_callback(struct display_object *display_obj, void (* on_event)(struct display_object *obj))
+int display_regist_frame_callback(struct display_object *display_obj, void (* on_frame)(struct display_object *obj))
+{
+	if(!display_obj)
+		return -1;
+
+	display_obj->on_frame = on_frame;
+
+	return 0;
+}
+
+int display_regist_event_callback(struct display_object *display_obj,
+	void (* on_event)(struct display_object *obj, struct input_event *event))
 {
 	if(!display_obj)
 		return -1;
@@ -69,10 +80,10 @@ int display_main_loop(struct display_object *display_obj)
 	dev_ops = (struct display_dev_ops *)display_obj->ops;
 	if(dev_ops)
 	{
-		if(dev_ops->event_loop)
-			return dev_ops->event_loop(display_obj);
+		if(dev_ops->main_loop)
+			return dev_ops->main_loop(display_obj);
 		else
-			printf("display dev not find func:event_loop\n");
+			printf("display dev not find func:main_loop\n");
 	}
 
 	return -1;

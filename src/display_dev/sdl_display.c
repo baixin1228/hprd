@@ -310,11 +310,13 @@ static int sdl_main_loop(struct display_object *obj)
 	{
 		if(priv->event.type != 0)
 		{
-			hsend_event(&priv->event);
+			if(obj->on_event != NULL)
+				obj->on_event(obj, &priv->event);
+
 			priv->event.type = 0;
 		}
 
-		obj->on_event(obj);
+		obj->on_frame(obj);
 		SDL_Delay(1000 / priv->frame_rate);
 	}
 
@@ -329,5 +331,5 @@ struct display_dev_ops sdl_ops =
 	.map_buffer			= sdl_map_buffer,
 	.get_buffer			= sdl_get_buffer,
 	.put_buffer			= sdl_put_buffer,
-	.event_loop			= sdl_main_loop,
+	.main_loop			= sdl_main_loop,
 };

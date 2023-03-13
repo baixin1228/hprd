@@ -6,8 +6,25 @@ from PyQt5.QtGui import *
 import sys
 import configparser
 
-global UserName
-UserP = {}  #定义一个存储密码账号的元组
+from ctypes import *
+from platform import *
+
+cdll_names = {
+            'Darwin' : 'libc.dylib',
+            'Linux'  : '../../client_build/src/libclient.so',
+            'Windows': 'msvcrt.dll'
+        }
+
+clib = cdll.LoadLibrary(cdll_names[system()])
+clib.client_connect.argtypes = [POINTER(c_char), c_ushort]
+clib.client_connect.restype = c_int
+
+clib.tcp_recv_pkt.argtypes = [c_int, POINTER(c_char), c_void_p]
+clib.tcp_recv_pkt.restype = c_int
+
+def recv_pkt(buf, len):
+	print(len)
+
 class LoginWindow(QMainWindow):
 	def __init__(self, parent=None):
 		super(LoginWindow, self).__init__(parent)
@@ -99,18 +116,31 @@ class LoginWindow(QMainWindow):
 	#注册
 	def regist_button(self):
 		#载入数据库
-		# self.sql = Oper_Mysql()
-		# self.sql.ZSGC_Mysql()
 		self.re.show()
 		w.close()
 
-	#登录
-	def on_connect(self):
-		hprd.connect(self.ip_edit.text())
+	def on_timer(self):
+		print("timer")
+		clib.tcp_recv_pkt(self.fd, self.buf, self.cb)
 
-	def conn_success(self):
-		w.show()
-		self.close()
+	def on_connect(self):
+		global clib
+		port = 0
+		ip_port = self.ip_edit.text().split(":")
+
+		if len(ip_port) == 2:
+			port = int(ip_port[1])
+		else:
+			port = 9999
+
+		self.fd = clib.client_connect(ip_port[0].encode('utf-8'), port)
+		if self.fd > 0:
+			_cb = CFUNCTYPE(None, POINTER(c_char), c_ulong)
+			self.cb = _cb(recv_pkt)
+			self.buf = create_string_buffer(1024 * 1024);
+			self.timer = QTimer(self)
+			self.timer.timeout.connect(self.on_timer)
+			self.timer.start(33)
 
 if __name__=="__main__":
 	app = QApplication(sys.argv)

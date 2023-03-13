@@ -143,7 +143,7 @@ static void _on_client_pkt(char *buf, size_t len)
 static char _recv_buf[BUFLEN];
 void *tcp_client_thread(void *opaque)
 {
-	fd = client_connect(inet_addr("127.0.0.1"), htons(9999));
+	fd = client_connect("127.0.0.1", 9999);
 
 	if (fd < 0) {
 		exit(-1);

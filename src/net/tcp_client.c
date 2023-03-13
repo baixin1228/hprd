@@ -10,7 +10,7 @@
 #include "protocol.h"
 #include "net_help.h"
 
-int client_connect(uint32_t ip, uint16_t port)
+int client_connect(char *ip, uint16_t port)
 {
 	int fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd < 0) {
@@ -20,8 +20,8 @@ int client_connect(uint32_t ip, uint16_t port)
 
 	struct sockaddr_in addr = {
 		.sin_family = PF_INET,
-		.sin_addr.s_addr = ip,
-		.sin_port = port
+		.sin_addr.s_addr = inet_addr(ip),
+		.sin_port = htons(port)
 	};
 
 	int err = connect(fd, (struct sockaddr *)&addr, sizeof(addr));

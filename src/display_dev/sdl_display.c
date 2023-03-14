@@ -10,9 +10,9 @@
 
 struct sdl_fd_out
 {
-	SDL_Window *screen;
-	SDL_Renderer *sdlRenderer;
-	SDL_Texture *sdlTexture;
+	SDL_Window *sdl_window;
+	SDL_Renderer *sdl_renderer;
+	SDL_Texture *sdl_texture;
 	SDL_Thread *refresh_thread;
 	SDL_Rect sdlRect;
 	uint32_t fb_width;
@@ -40,8 +40,8 @@ void _poll_event(struct sdl_fd_out *priv)
 		{
 			case SDL_WINDOWEVENT:
 			{
-				if(priv->screen)
-					SDL_GetWindowSize(priv->screen, &priv->screen_w,
+				if(priv->sdl_window)
+					SDL_GetWindowSize(priv->sdl_window, &priv->screen_w,
 						&priv->screen_h);
 				break;
 			}
@@ -214,19 +214,19 @@ static int sdl_set_info(struct display_object *obj, GHashTable *fb_info)
 		priv->frame_rate = *(uint32_t *)g_hash_table_lookup(fb_info, "frame_rate");
 
 	//SDL 2.0 Support for multiple windows
-	priv->screen = SDL_CreateWindow("Simplest Video Play SDL2",
+	priv->sdl_window = SDL_CreateWindow("Simplest Video Play SDL2",
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
 		priv->screen_w, priv->screen_h,
 		SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
-	if(!priv->screen)
+	if(!priv->sdl_window)
 	{
 		printf("SDL: could not create window - exiting:%s\n", SDL_GetError());
 		return -1;
 	}
-	priv->sdlRenderer = SDL_CreateRenderer(priv->screen, -1,
+	priv->sdl_renderer = SDL_CreateRenderer(priv->sdl_window, -1,
 		SDL_RENDERER_ACCELERATED);
 
-	priv->sdlTexture = SDL_CreateTexture(priv->sdlRenderer, sdl_fmt,
+	priv->sdl_texture = SDL_CreateTexture(priv->sdl_renderer, sdl_fmt,
 		SDL_TEXTUREACCESS_STREAMING,
 		priv->fb_width, priv->fb_height);
 
@@ -267,7 +267,7 @@ static int sdl_put_buffer(struct display_object *obj,
 		return -1;
 	}
 
-	if(!priv->sdlTexture)
+	if(!priv->sdl_texture)
 	{
 		log_error("sdl texture is none!");
 		return -1;
@@ -276,25 +276,26 @@ static int sdl_put_buffer(struct display_object *obj,
 	switch(priv->fb_format)
 	{
 	case ARGB8888:
-		SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptrs[0], priv->fb_width * 4);
+		SDL_UpdateTexture(priv->sdl_texture, NULL, buffer->ptrs[0], priv->fb_width * 4);
 		break;
 	case YUV420P:
-		SDL_UpdateYUVTexture(priv->sdlTexture, NULL,
+		SDL_UpdateYUVTexture(priv->sdl_texture, NULL,
 			     (uint8_t *)buffer->ptrs[0], buffer->hor_stride,
 			     (uint8_t *)buffer->ptrs[1], buffer->hor_stride / 2,
 			     (uint8_t *)buffer->ptrs[2], buffer->hor_stride / 2);
 		break;
 	case NV12:
-		SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptrs[0], priv->fb_width);
+		SDL_UpdateTexture(priv->sdl_texture, NULL, buffer->ptrs[0], priv->fb_width);
 		break;
 	default:
-		SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptrs[0], priv->fb_width * 4);
+		SDL_UpdateTexture(priv->sdl_texture, NULL, buffer->ptrs[0], priv->fb_width * 4);
 		break;
 	}
 
-	SDL_RenderClear(priv->sdlRenderer);
-	SDL_RenderCopy(priv->sdlRenderer, priv->sdlTexture, NULL, &priv->sdlRect);
-	SDL_RenderPresent(priv->sdlRenderer);
+	SDL_RenderClear(priv->sdl_renderer);
+	SDL_RenderCopy(priv->sdl_renderer, priv->sdl_texture, NULL,
+		&priv->sdlRect);
+	SDL_RenderPresent(priv->sdl_renderer);
 	priv->cur_buf_id = buf_id;
 
 	return 0;
@@ -323,6 +324,21 @@ static int sdl_main_loop(struct display_object *obj)
 	return 0;
 }
 
+
+static int sdl_release(struct display_object *obj)
+{
+	struct sdl_fd_out *priv = (struct sdl_fd_out *)obj->priv;
+	
+	SDL_DestroyTexture(priv->sdl_texture);
+	SDL_DestroyRenderer(priv->sdl_renderer);
+	SDL_DestroyWindow(priv->sdl_window);
+	free(priv);
+	obj->priv = NULL;
+	
+	return 0;
+}
+
+
 struct display_dev_ops sdl_ops =
 {
 	.name				= "sdl_fb_out",
@@ -332,4 +348,5 @@ struct display_dev_ops sdl_ops =
 	.get_buffer			= sdl_get_buffer,
 	.put_buffer			= sdl_put_buffer,
 	.main_loop			= sdl_main_loop,
+	.release			= sdl_release,
 };

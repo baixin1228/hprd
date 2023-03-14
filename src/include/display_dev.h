@@ -29,7 +29,8 @@ struct display_dev_ops
 	int (* release)(struct display_object *obj);
 };
 
-struct display_object *display_dev_init(struct mem_pool *pool);
+struct display_object *display_dev_init(struct mem_pool *pool,
+	char *display_name);
 int display_set_info(struct display_object *display_obj, GHashTable *fb_info);
 int display_map_fb(struct display_object *display_obj, int buf_id);
 int display_get_fb(struct display_object *display_obj);

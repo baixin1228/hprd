@@ -8,5 +8,5 @@ if [ $? != 0 ]; then
 	exit 
 fi
 
-cd src/client
+cd src/clients/pyqt
 ./main.py

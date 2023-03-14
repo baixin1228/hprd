@@ -45,7 +45,7 @@ if build_target == 'client' or build_target == 'all'
 	client_srcs += 'decodec.c'
 	client_srcs += 'dl_help.c'
 
-	client_share_lib = shared_library('client', client_srcs,
+	client_static_lib = static_library('client', client_srcs,
 			include_directories : inc,
 			dependencies: client_deps,
 			link_whole: client_libs,
@@ -55,9 +55,10 @@ if build_target == 'client' or build_target == 'all'
 	hprd_client = executable('client', 'client.c',
 		include_directories : inc,
 		dependencies: client_deps,
-		link_with: client_share_lib,
+		link_with: client_static_lib,
 		link_args : ['-ldl', '-lpthread'],
 	    install : true)
 
+	subdir('clients/pyqt')
 	test('hprd_client_test', hprd_client, is_parallel : false, timeout: 1000)
 endif

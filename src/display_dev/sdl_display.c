@@ -341,7 +341,7 @@ static int sdl_release(struct display_object *obj)
 
 struct display_dev_ops sdl_ops =
 {
-	.name				= "sdl_fb_out",
+	.name				= "sdl_display",
 	.init				= sdl_dev_init,
 	.set_info			= sdl_set_info,
 	.map_buffer			= sdl_map_buffer,

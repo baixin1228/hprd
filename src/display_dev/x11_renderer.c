@@ -2,6 +2,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <EGL/egl.h>
+
+#include "util.h"
+#include "display_dev.h"
+#include "buffer_pool.h"
+#include "input_event.h"
 
 struct x11_renderer{
 	Display *x_display;
@@ -10,43 +16,47 @@ struct x11_renderer{
 	EGLDisplay display;
 	EGLContext context;
 	EGLSurface surface;
+	EGLConfig config;
 
 	uint32_t cur_buf_id;
 	uint32_t fb_format;
+	uint32_t fb_width;
+	uint32_t fb_height;
+	uint32_t frame_rate;
 };
 
-int xxxmain(void) {
-	Display *d;
-	Window w;
-	XEvent e;
-	const char *msg = "Hello, World!";
-	int s;
+// int xxxmain(void) {
+// 	Display *d;
+// 	Window w;
+// 	XEvent e;
+// 	const char *msg = "Hello, World!";
+// 	int s;
  
-	d = XOpenDisplay(NULL);
-	if (d == NULL) {
-	  fprintf(stderr, "Cannot open display\n");
-	  exit(1);
-	}
+// 	d = XOpenDisplay(NULL);
+// 	if (d == NULL) {
+// 	  fprintf(stderr, "Cannot open display\n");
+// 	  exit(1);
+// 	}
  
-	s = DefaultScreen(d);
-	w = XCreateSimpleWindow(d, RootWindow(d, s), 10, 10, 100, 100, 1,
-							BlackPixel(d, s), WhitePixel(d, s));
-	XSelectInput(d, w, ExposureMask | KeyPressMask);
-	XMapWindow(d, w);
+// 	s = DefaultScreen(d);
+// 	w = XCreateSimpleWindow(d, RootWindow(d, s), 10, 10, 100, 100, 1,
+// 							BlackPixel(d, s), WhitePixel(d, s));
+// 	XSelectInput(d, w, ExposureMask | KeyPressMask);
+// 	XMapWindow(d, w);
  
-	while (1) {
-	  XNextEvent(d, &e);
-	  if (e.type == Expose) {
-		 XFillRectangle(d, w, DefaultGC(d, s), 20, 20, 10, 10);
-		 XDrawString(d, w, DefaultGC(d, s), 10, 50, msg, strlen(msg));
-	  }
-	  if (e.type == KeyPress)
-		 break;
-	}
+// 	while (1) {
+// 	  XNextEvent(d, &e);
+// 	  if (e.type == Expose) {
+// 		 XFillRectangle(d, w, DefaultGC(d, s), 20, 20, 10, 10);
+// 		 XDrawString(d, w, DefaultGC(d, s), 10, 50, msg, strlen(msg));
+// 	  }
+// 	  if (e.type == KeyPress)
+// 		 break;
+// 	}
  
-	XCloseDisplay(d);
-	return 0;
-}
+// 	XCloseDisplay(d);
+// 	return 0;
+// }
 
 static int x11_renderer_init(struct display_object *obj)
 {
@@ -65,11 +75,49 @@ static int x11_renderer_init(struct display_object *obj)
 	}
 
 	priv->display = eglGetDisplay(priv->x_display);
-	priv->context = eglCreateContext(priv->x_display);
+    if (priv->display == EGL_NO_DISPLAY)
+    {
+        goto FAIL1;
+    }
 
+    EGLint major, minor;
+    if (!eglInitialize(priv->display, &major, &minor))
+    {
+        goto FAIL1;
+    }
+
+    const EGLint configAttribs[] = {
+		EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+		EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+        EGL_RED_SIZE,    8,
+        EGL_GREEN_SIZE,  8,
+		EGL_BLUE_SIZE,   8,
+		EGL_DEPTH_SIZE,  24,
+		EGL_NONE};
+
+    const EGLint contextAttribs[] = {EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE};
+
+    EGLint numConfigs;
+    if (!eglChooseConfig(priv->display, configAttribs, &priv->config, 1,
+    	&numConfigs))
+    {
+        goto FAIL1;
+    }
+
+    priv->context = eglCreateContext(priv->display, priv->config,
+    	EGL_NO_CONTEXT, contextAttribs);
+    if (priv->context == EGL_NO_CONTEXT)
+    {
+        goto FAIL1;
+    }
+
+    priv->frame_rate = 30;
 	obj->priv = (void *)priv;
-
 	return 0;
+
+FAIL1:
+	XCloseDisplay(priv->x_display);
+	return -1;
 }
 
 static int x11_renderer_set_info(struct display_object *obj, GHashTable *fb_info)
@@ -78,8 +126,6 @@ static int x11_renderer_set_info(struct display_object *obj, GHashTable *fb_info
 
 	priv->fb_width = *(uint32_t *)g_hash_table_lookup(fb_info, "width");
 	priv->fb_height = *(uint32_t *)g_hash_table_lookup(fb_info, "height");
-	priv->screen_w = *(uint32_t *)g_hash_table_lookup(fb_info, "width");
-	priv->screen_h = *(uint32_t *)g_hash_table_lookup(fb_info, "height");
 	priv->fb_format = *(uint32_t *)g_hash_table_lookup(fb_info, "format");
 
 	if(!g_hash_table_contains(fb_info, "window"))
@@ -93,11 +139,23 @@ static int x11_renderer_set_info(struct display_object *obj, GHashTable *fb_info
 	if(g_hash_table_contains(fb_info, "frame_rate"))
 	  priv->frame_rate = *(uint32_t *)g_hash_table_lookup(fb_info, "frame_rate");
 
-	priv->surface = eglCreateWindowSurface(priv->display, priv->native_window);
+    priv->surface = eglCreateWindowSurface(priv->display, priv->config, priv->native_window, NULL);
+    if (priv->surface == EGL_NO_SURFACE)
+    {
+        return -1;
+    }
 
-	eglMakeCurrent(priv->display, priv->surface, priv->surface,
-	  priv->context);
+    if (!eglMakeCurrent(priv->display, priv->surface, priv->surface, 
+    	priv->context))
+    {
+        goto FAIL1;
+    }
+
 	return 0;
+
+FAIL1:
+	eglDestroySurface(priv->display, priv->surface);
+	return -1;
 }
 
 static int x11_renderer_map_buffer(struct display_object *obj, int buf_id)
@@ -124,36 +182,38 @@ static int x11_renderer_put_buffer(struct display_object *obj,
 	  return -1;
 	}
 
-	if(!priv->sdlTexture)
-	{
-	  log_error("sdl texture is none!");
-	  return -1;
-	}
-
 	switch(priv->fb_format)
 	{
 	case ARGB8888:
-	  SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptrs[0], priv->fb_width * 4);
+	  // SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptrs[0], priv->fb_width * 4);
 	  break;
 	case YUV420P:
-	  SDL_UpdateYUVTexture(priv->sdlTexture, NULL,
-			  (uint8_t *)buffer->ptrs[0], buffer->hor_stride,
-			  (uint8_t *)buffer->ptrs[1], buffer->hor_stride / 2,
-			  (uint8_t *)buffer->ptrs[2], buffer->hor_stride / 2);
 	  break;
 	case NV12:
-	  SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptrs[0], priv->fb_width);
+	  // SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptrs[0], priv->fb_width);
 	  break;
 	default:
-	  SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptrs[0], priv->fb_width * 4);
+	  // SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptrs[0], priv->fb_width * 4);
 	  break;
 	}
 
-	SDL_RenderClear(priv->sdlRenderer);
-	SDL_RenderCopy(priv->sdlRenderer, priv->sdlTexture, NULL, &priv->sdlRect);
-	SDL_RenderPresent(priv->sdlRenderer);
+	eglSwapBuffers(priv->display, priv->surface);
 	priv->cur_buf_id = buf_id;
 
+	return 0;
+}
+
+static int x11_renderer_release(struct display_object *obj)
+{
+	struct x11_renderer *priv = (struct x11_renderer *)obj->priv;
+	
+	eglDestroyContext(priv->display, priv->context);
+	eglDestroySurface(priv->display, priv->surface);
+	XCloseDisplay(priv->x_display);
+
+	free(priv);
+	obj->priv = NULL;
+	
 	return 0;
 }
 
@@ -165,4 +225,5 @@ struct display_dev_ops x11_renderer_ops =
 	.map_buffer		= x11_renderer_map_buffer,
 	.get_buffer		= x11_renderer_get_buffer,
 	.put_buffer		= x11_renderer_put_buffer,
+	.release		= x11_renderer_release,
 };

@@ -4,6 +4,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 import sys
+import sip
 import configparser
 
 from ctypes import *
@@ -11,19 +12,70 @@ from platform import *
 
 cdll_names = {
             'Darwin' : 'libc.dylib',
-            'Linux'  : '../../client_build/src/libclient.so',
+            'Linux'  : '../../../client_build/src/clients/pyqt/libpyqt_proxy.so',
             'Windows': 'msvcrt.dll'
         }
 
 clib = cdll.LoadLibrary(cdll_names[system()])
-clib.client_connect.argtypes = [POINTER(c_char), c_ushort]
-clib.client_connect.restype = c_int
+clib.py_client_connect.argtypes = [POINTER(c_char), c_ushort]
+clib.py_client_connect.restype = c_int
 
-clib.tcp_recv_pkt.argtypes = [c_int, POINTER(c_char), c_void_p]
-clib.tcp_recv_pkt.restype = c_int
+clib.py_on_frame.argtypes = []
+clib.py_on_frame.restype = c_int
+
+clib.py_client_init_config.argtypes = []
+clib.py_client_init_config.restype = c_int
+
+clib.py_client_close.argtypes = []
+clib.py_client_close.restype = c_int
+
+tasks = []
+def _on_timer():
+	global tasks
+	for i in range(len(tasks) - 1, -1, -1):
+		task = tasks[i]
+		if task["delay"] == 0:
+			task["callback"](*task["params"])
+			if not task["loop"]:
+				tasks.remove(task)
+
+		if task["delay"] > 0:
+			task["delay"] = task["delay"] - 1
+
+def addTask(delay, loop, callback, *params):
+	global tasks
+	task = {}
+	task["delay"] = delay
+	task["loop"] = loop
+	task["callback"] = callback
+	task["params"] = (task, *params)
+	tasks.append(task)
+
+class RenderWindow(QMainWindow):
+	def __init__(self, parent=None):
+		global clib
+		super(RenderWindow, self).__init__(parent)
+		self.setupUi()
+
+	def setupUi(self):
+		self.resize(1920, 1080)
+		self.setAnimated(True)
+
+	def frame_loop(self, task):
+		if clib.py_on_frame() == -1:
+			sys.exit(-1);
+
+	def init_client(self, task):
+		print(self.winId())
+		print(sip.voidptr(self.winId()))
+		print(hex(self.winId().__int__()))
+		if(clib.py_client_init_config(self.winId().__int__()) == 0):
+			task["loop"] = False;
+			addTask(1, True, self.frame_loop)
 
 def recv_pkt(buf, len):
-	print(len)
+	pass
+	# print(len)
 
 class LoginWindow(QMainWindow):
 	def __init__(self, parent=None):
@@ -65,11 +117,10 @@ class LoginWindow(QMainWindow):
 		self.conn_button = QPushButton()
 		self.conn_button.setText("连接")
 		self.layout.addWidget(self.conn_button,3,1,1,2)
- 
-		# self.retranslateUi()
+
+		self.render_win = RenderWindow()
  
 	def initUi(self):
-		# self.IsRememberUser()
 		self.ip_edit.setFocus()
 		self.ip_edit.setPlaceholderText("请输入ip地址")
 		self.user_edit.setPlaceholderText("请输入用户名")
@@ -77,51 +128,9 @@ class LoginWindow(QMainWindow):
 
 		self.conn_button.clicked.connect(self.on_connect)  # 登录
 
-
-	"""设置记住密码"""
-	def IsRememberUser(self):
-		config = configparser.ConfigParser()
-		file = config.read('user.ini') #读取密码账户的配置文件
-		config_dict = config.defaults() #返回包含实例范围默认值的字典
-		self.account = config_dict['user_name']  #获取账号信息
-		self.UserName.setText(self.account)  #写入账号上面
-		if config_dict['remember'] == 'True':
-			self.passwd = config_dict['password']
-			self.PassWord.setText(self.passwd)
-			self.RememberUser.setChecked(True)
-		else:
-			self.RememberUser.setChecked(False)
-
-	"""设置配置文件格式"""
-	def config_ini(self):
-		self.account = self.UserName.text()
-		self.passwd = self.PassWord.text()
-		config = configparser.ConfigParser()
-		if self.RememberUser.isChecked():
-			config["DEFAULT"] = {
-				"user_name":self.account,
-				"password":self.passwd,
-				"remember":self.RememberUser.isChecked()
-			}
-		else:
-			config["DEFAULT"] = {
-				"user_name": self.account,
-				"password": "",
-				"remember": self.RememberUser.isChecked()
-			}
-		with open('user.ini', 'w') as configfile:
-			config.write((configfile))
-		print(self.account, self.passwd)
-		
-	#注册
-	def regist_button(self):
-		#载入数据库
-		self.re.show()
-		w.close()
-
-	def on_timer(self):
-		print("timer")
-		clib.tcp_recv_pkt(self.fd, self.buf, self.cb)
+	def render_win_show(self, task):
+		self.render_win.show()
+		self.close()
 
 	def on_connect(self):
 		global clib
@@ -133,17 +142,21 @@ class LoginWindow(QMainWindow):
 		else:
 			port = 9999
 
-		self.fd = clib.client_connect(ip_port[0].encode('utf-8'), port)
-		if self.fd > 0:
+		ret = clib.py_client_connect(ip_port[0].encode('utf-8'), port)
+		if ret == 0:
 			_cb = CFUNCTYPE(None, POINTER(c_char), c_ulong)
 			self.cb = _cb(recv_pkt)
 			self.buf = create_string_buffer(1024 * 1024);
-			self.timer = QTimer(self)
-			self.timer.timeout.connect(self.on_timer)
-			self.timer.start(33)
+			addTask(1, False, self.render_win_show)
+			addTask(2, True, self.render_win.init_client)
 
 if __name__=="__main__":
 	app = QApplication(sys.argv)
 	w = LoginWindow()
 	w.show()
+
+	timer = QTimer(app)
+	timer.timeout.connect(_on_timer)
+	timer.start(33)
+
 	sys.exit(app.exec())

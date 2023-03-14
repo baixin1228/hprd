@@ -9,8 +9,15 @@
 #include "dev_templete.h"
 
 extern struct display_dev_ops sdl_ops;
+extern struct display_dev_ops x11_renderer_ops;
 
-struct display_object *display_dev_init(struct mem_pool *pool)
+static struct display_dev_ops* devs[] = {
+	&x11_renderer_ops,
+	&sdl_ops
+};
+
+struct display_object *display_dev_init(struct mem_pool *pool,
+	char *display_name)
 {
 	int ret;
 	struct display_dev_ops *dev_ops;
@@ -20,7 +27,7 @@ struct display_object *display_dev_init(struct mem_pool *pool)
 
 	display_obj->buf_pool = pool;
 
-	dev_ops = &sdl_ops;
+	dev_ops = devs[0];
 
 	if(!dev_ops)
 	{

@@ -20,6 +20,7 @@ struct display_object *display_dev_init(struct mem_pool *pool,
 	char *display_name)
 {
 	int ret;
+	int dpy_idx = -1;
 	struct display_dev_ops *dev_ops;
 	struct display_object *display_obj;
 
@@ -27,7 +28,17 @@ struct display_object *display_dev_init(struct mem_pool *pool,
 
 	display_obj->buf_pool = pool;
 
-	dev_ops = devs[0];
+	if(display_name == NULL)
+	{
+		dpy_idx = 0;
+	}
+	for (int i = 0; i < sizeof(devs) / sizeof(struct display_dev_ops*); ++i)
+	{
+		if(strcmp(display_name, devs[i]->name) == 0)
+			dpy_idx = i;
+	}
+
+	dev_ops = devs[dpy_idx];
 
 	if(!dev_ops)
 	{

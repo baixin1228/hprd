@@ -5,6 +5,7 @@
 #include <EGL/egl.h>
 
 #include "util.h"
+#include "gl_help.h"
 #include "display_dev.h"
 #include "buffer_pool.h"
 #include "input_event.h"
@@ -23,6 +24,9 @@ struct x11_renderer{
 	uint32_t fb_width;
 	uint32_t fb_height;
 	uint32_t frame_rate;
+
+	struct gl_object *gl;
+	bool share_mem;
 };
 
 // int xxxmain(void) {
@@ -160,6 +164,9 @@ FAIL1:
 
 static int x11_renderer_map_buffer(struct display_object *obj, int buf_id)
 {
+	struct x11_renderer *priv = (struct x11_renderer *)obj->priv;
+
+	priv->share_mem = false;
 	return 0;
 }
 
@@ -169,33 +176,36 @@ static int x11_renderer_get_buffer(struct display_object *obj)
 	return priv->cur_buf_id;
 }
 
+static int __init_gl(struct x11_renderer *priv)
+{
+	if(priv->gl == NULL)
+	{
+		priv->gl = gl_init(priv->fb_width, priv->fb_height, priv->fb_format);
+		if(priv->gl)
+			return 0;
+		else
+			return -1;
+	}
+	return 0;
+}
+
 static int x11_renderer_put_buffer(struct display_object *obj,
 					int buf_id)
 {
-	struct raw_buffer *buffer;
+	// struct raw_buffer *buffer;
 	struct x11_renderer *priv = (struct x11_renderer *)obj->priv;
 
-	buffer = get_raw_buffer(obj->buf_pool, buf_id);
-	if(buffer == NULL)
-	{
-	  log_error("sdl get buffer fail! buf_id:%d", buf_id);
-	  return -1;
-	}
+	__init_gl(priv);
 
-	switch(priv->fb_format)
-	{
-	case ARGB8888:
-	  // SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptrs[0], priv->fb_width * 4);
-	  break;
-	case YUV420P:
-	  break;
-	case NV12:
-	  // SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptrs[0], priv->fb_width);
-	  break;
-	default:
-	  // SDL_UpdateTexture(priv->sdlTexture, NULL, buffer->ptrs[0], priv->fb_width * 4);
-	  break;
-	}
+	// buffer = get_raw_buffer(obj->buf_pool, buf_id);
+	// if(buffer == NULL)
+	// {
+	//   log_error("sdl get buffer fail! buf_id:%d", buf_id);
+	//   return -1;
+	// }
+
+	if(priv->gl)
+		gl_render(priv->gl, buf_id);
 
 	eglSwapBuffers(priv->display, priv->surface);
 	priv->cur_buf_id = buf_id;

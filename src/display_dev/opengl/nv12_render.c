@@ -1,7 +1,9 @@
+#include "util.h"
 #include "gl_help.h"
 
 int nv12_init(struct gl_object *obj)
 {
+	log_info("nv12");
 	GLbyte v_shader_str[] =
 		"#version 100                                \n"
 		"uniform mat4 u_mvp_matrix;                   \n"
@@ -59,12 +61,6 @@ int nv12_init(struct gl_object *obj)
 	return 0;
 }
 
-/* Triangular order */
-GLuint rect_points[] =
-{
-	0, 3, 1,
-	0, 2, 3,
-};
 int nv12_render(struct gl_object *obj, struct gl_texture *texture)
 {
 	glActiveTexture(GL_TEXTURE0);
@@ -79,9 +75,6 @@ int nv12_render(struct gl_object *obj, struct gl_texture *texture)
 	glBindTexture(GL_TEXTURE_2D, texture->UV_texture);
 	checkGlError(__FILE__, __LINE__);
 	glUniform1i (obj->uv_sampler, 1);
-	checkGlError(__FILE__, __LINE__);
-
-	glDrawElements (GL_TRIANGLES, 6 , GL_UNSIGNED_INT, rect_points);
 	checkGlError(__FILE__, __LINE__);
 	return 0;
 }

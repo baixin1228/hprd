@@ -164,6 +164,8 @@ struct gl_object *gl_init(uint32_t width, uint32_t height, int pix_format)
 		}
 		case YUV420P:
 		{
+			extern struct shader_render_ops yuv420_ops;
+			obj->gl_ops = &yuv420_ops;
 			break;
 		}
 		case NV12:
@@ -179,7 +181,10 @@ struct gl_object *gl_init(uint32_t width, uint32_t height, int pix_format)
 	}
 
 	if(obj->gl_ops == NULL)
+	{
+		log_error("gl_init unknow pix format.");
 		goto FAIL;
+	}
 
 	if(obj->gl_ops->init(obj) == -1)
 		goto FAIL;
@@ -222,9 +227,21 @@ FAIL:
 	return NULL;
 }
 
+/* Triangular order */
+GLuint rect_points[] =
+{
+	0, 3, 1,
+	0, 2, 3,
+};
 int gl_render(struct gl_object *obj, int texture_id)
 {
-	return obj->gl_ops->render(obj, &obj->texture[texture_id]);
+	log_info("gl renderer");
+	if(obj->gl_ops->render(obj, &obj->texture[texture_id]) == -1)
+		return -1;
+
+	glDrawElements (GL_TRIANGLES, 6 , GL_UNSIGNED_INT, rect_points);
+	checkGlError(__FILE__, __LINE__);
+	return 0;
 }
 
 void gl_release(struct gl_object *obj)

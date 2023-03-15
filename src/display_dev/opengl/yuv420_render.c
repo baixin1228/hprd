@@ -1,8 +1,8 @@
+#include "util.h"
+#include "gl_help.h"
 
-void init_420p_programger(struct gl_object *obj)
+int yuv420_init(struct gl_object *obj)
 {
-	struct user_data *obj = &ctx->obj;
-
 	GLbyte vShaderStr[] =
 		"#version 100                                \n"
 		"uniform mat4 u_mvp_matrix;                   \n"
@@ -28,8 +28,8 @@ void init_420p_programger(struct gl_object *obj)
 		"  float sub = 16.0 / 256.0;                         \n"
 
 		"  y = texture2D(y_texture, v_texCoord).r;           \n"
-		"  u = (texture2D(u_texture, v_texCoord).r);			 \n"
-		"  v = (texture2D(v_texture, v_texCoord).r); 			 \n"
+		"  u = texture2D(u_texture, v_texCoord).r;			 \n"
+		"  v = texture2D(v_texture, v_texCoord).r; 			 \n"
 		// "  gl_FragColor.b = y + 1.4075 * (v - 0.5);\n"
 		// "  gl_FragColor.g = y - 0.3455 * (u - 0.5) - 0.7169 * (v - 0.5);\n"
 		// "  gl_FragColor.r = y + 1.779 * (u - 0.5);\n"
@@ -61,86 +61,48 @@ void init_420p_programger(struct gl_object *obj)
 	checkGlError(__FILE__, __LINE__);
 	obj->v_sampler = glGetUniformLocation(obj->shader, "v_texture");
 	checkGlError(__FILE__, __LINE__);
+
+	return 0;
 }
 
-GLuint g_planeIndices[] =
+int yuv420_render(struct gl_object *obj, struct gl_texture *texture)
 {
-	0, 3, 1, //front plane
-	0, 2, 3,
-};
+	glActiveTexture(GL_TEXTURE0);
+	checkGlError(__FILE__, __LINE__);
+	glBindTexture(GL_TEXTURE_2D, texture->Y_texture);
+	checkGlError(__FILE__, __LINE__);
+	glUniform1i (obj->y_sampler, 0);
+	checkGlError(__FILE__, __LINE__);
 
-int gl_render(struct gl_obj *gl, EGLContext context)
-{
-	struct gl_surface *surface = &gl->surfaces[gl->render_idx];
-	struct user_data *userData = &gl->userData;
+	glActiveTexture(GL_TEXTURE1);
+	checkGlError(__FILE__, __LINE__);
+	glBindTexture(GL_TEXTURE_2D, texture->U_texture);
+	checkGlError(__FILE__, __LINE__);
+	glUniform1i (obj->u_sampler, 1);
+	checkGlError(__FILE__, __LINE__);
 
-	if(surface->drm_buffer == NULL)
-	{
-		line_error("gl_render drm buffer is null\n");
-		return -1;
-	}
-	EGLContext cur_context = eglGetCurrentContext();
-
-	if(!cur_context)
-	{
-		line_error("eglContext is null.\n");
-		return -1;
-	}
-	if(cur_context != context)
-	{
-		line_error("eglContext is not same.\n");
-		return -1;
-	}
-	switch(surface->drm_buffer->format)
-	{
-		case DRM_FORMAT_YUV420:
-			glActiveTexture(GL_TEXTURE0);
-			checkGlError(__FILE__, __LINE__);
-			glBindTexture(GL_TEXTURE_2D, surface->Y_texture);
-			checkGlError(__FILE__, __LINE__);
-			glUniform1i (userData->y_sampler, 0);
-			checkGlError(__FILE__, __LINE__);
-
-			glActiveTexture(GL_TEXTURE1);
-			checkGlError(__FILE__, __LINE__);
-			glBindTexture(GL_TEXTURE_2D, surface->U_texture);
-			checkGlError(__FILE__, __LINE__);
-			glUniform1i (userData->u_sampler, 1);
-			checkGlError(__FILE__, __LINE__);
-
-			glActiveTexture(GL_TEXTURE2);
-			checkGlError(__FILE__, __LINE__);
-			glBindTexture(GL_TEXTURE_2D, surface->V_texture);
-			checkGlError(__FILE__, __LINE__);
-			glUniform1i (userData->v_sampler, 2);
-			checkGlError(__FILE__, __LINE__);
-		break;
-		case DRM_FORMAT_RGB888:
-			glActiveTexture(GL_TEXTURE0);
-			checkGlError(__FILE__, __LINE__);
-			glBindTexture(GL_TEXTURE_2D, gl->surfaces[gl->render_idx].texture);
-			checkGlError(__FILE__, __LINE__);
-			glUniform1i (userData->samplerLoc, 0);
-			checkGlError(__FILE__, __LINE__);
-		break;
-		case DRM_FORMAT_NV12:
-			glActiveTexture(GL_TEXTURE0);
-			checkGlError(__FILE__, __LINE__);
-			glBindTexture(GL_TEXTURE_2D, surface->Y_texture);
-			checkGlError(__FILE__, __LINE__);
-			glUniform1i (userData->y_sampler, 0);
-			checkGlError(__FILE__, __LINE__);
-
-			glActiveTexture(GL_TEXTURE1);
-			checkGlError(__FILE__, __LINE__);
-			glBindTexture(GL_TEXTURE_2D, surface->UV_texture);
-			checkGlError(__FILE__, __LINE__);
-			glUniform1i (userData->uv_sampler, 1);
-			checkGlError(__FILE__, __LINE__);
-		break;
-	}
-
-	glDrawElements (GL_TRIANGLES, 6 /*userData->numIndices*/, GL_UNSIGNED_INT, g_planeIndices);
+	glActiveTexture(GL_TEXTURE2);
+	checkGlError(__FILE__, __LINE__);
+	glBindTexture(GL_TEXTURE_2D, texture->V_texture);
+	checkGlError(__FILE__, __LINE__);
+	glUniform1i (obj->v_sampler, 2);
 	checkGlError(__FILE__, __LINE__);
 	return 0;
 }
+
+int yuv420_release(struct gl_object *obj)
+{
+	if(obj->shader)
+	{
+		glDeleteProgram(obj->shader);
+		obj->shader = 0;
+	}
+	return 0;
+}
+
+struct shader_render_ops yuv420_ops = 
+{
+	.init 		= yuv420_init,
+	.render 	= yuv420_render,
+	.release	= yuv420_release,
+};

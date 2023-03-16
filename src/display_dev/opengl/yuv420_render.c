@@ -92,7 +92,6 @@ int yuv420_bind_khr(struct gl_texture *texture, char *data[4])
 
 int yuv420_render(struct gl_object *obj, struct gl_texture *texture)
 {
-	// log_error("yuv420 render");
 	glActiveTexture(GL_TEXTURE0);
 	checkEGlError(__FILE__, __LINE__);
 	glBindTexture(GL_TEXTURE_2D, texture->Y_texture);

@@ -167,6 +167,6 @@ if __name__=="__main__":
 
 	timer = QTimer(app)
 	timer.timeout.connect(_on_timer)
-	timer.start(33)
+	timer.start(1000 / 60)
 
 	sys.exit(app.exec())

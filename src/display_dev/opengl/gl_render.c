@@ -95,7 +95,7 @@ struct gl_object *gl_init(uint32_t width, uint32_t height, int pix_format)
 	checkEGlError(__FILE__, __LINE__);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	// glViewport(0, 0, obj->width, obj->height);
+	// glViewport(100, 200, obj->width, obj->height);
 	glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 

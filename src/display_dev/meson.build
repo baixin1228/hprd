@@ -14,7 +14,7 @@ x11_renderer_lib = static_library('x11renderer',
                         x11_renderer_source,
 						dependencies: [dependency('x11'), dependency('egl'),
 						dependency('glib-2.0')],
-						link_with : gl_lib,
+						link_whole : gl_lib,
                         include_directories : ['../include', 'opengl'])
 
 client_libs += x11_renderer_lib

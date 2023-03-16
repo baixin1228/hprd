@@ -1,10 +1,15 @@
 #ifndef __GL_HELP_H__
 #define __GL_HELP_H__
 
-#include "GL/glew.h"
-#include "EGL/egl.h"
-#include "EGL/eglext.h"
+#include <GL/gl.h>
+#include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>
+#include <GLES2/gl2platform.h>
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+
 #include "common.h"
+#include "frame_buffer.h"
 
 struct gl_texture
 {
@@ -18,6 +23,10 @@ struct gl_texture
 	EGLImageKHR V_image;
 	GLuint	UV_texture;
 	EGLImageKHR UV_image;
+	uint32_t width;
+	uint32_t height;
+	uint32_t h_stride;
+	uint32_t v_stride;
 };
 
 #define SURFACE_BUFFER_COUNT 25
@@ -39,17 +48,12 @@ struct gl_object
 	struct shader_render_ops *gl_ops;
 };
 
-struct shader_render_ops {
-	int (* init)(struct gl_object *obj);
-	int (* render)(struct gl_object *obj, struct gl_texture *texture);
-	int (* release)(struct gl_object *obj);
-};
-
+void checkEGlError(char *file, unsigned int  LineNumber);
 void checkGlError(char *file, unsigned int  LineNumber);
 GLuint gl_load_program(const char *vertShaderSrc, const char *fragShaderSrc);
-struct gl_object *gl_init(uint32_t width, uint32_t height, int pix_format);
-int gl_render(struct gl_object *obj, int texture_id);
-void gl_release(struct gl_object *obj);
-void gl_show_version();
+void gl_create_pbo_texture(GLuint *gl_texture, uint32_t width, uint32_t height,
+	char *data);
+void gl_update_pbo_texture(GLuint *gl_texture, uint32_t width, uint32_t height,
+	char *data);
 
 #endif

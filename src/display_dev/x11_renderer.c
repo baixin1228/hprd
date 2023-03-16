@@ -5,7 +5,7 @@
 #include <EGL/egl.h>
 
 #include "util.h"
-#include "gl_help.h"
+#include "gl_render.h"
 #include "display_dev.h"
 #include "buffer_pool.h"
 #include "input_event.h"
@@ -154,6 +154,7 @@ static int x11_renderer_set_info(struct display_object *obj, GHashTable *fb_info
     {
         goto FAIL1;
     }
+	eglSwapBuffers(priv->display, priv->surface);
 
 	return 0;
 
@@ -176,15 +177,22 @@ static int x11_renderer_get_buffer(struct display_object *obj)
 	return priv->cur_buf_id;
 }
 
-static int __init_gl(struct x11_renderer *priv)
+static int __init_gl(struct x11_renderer *priv, struct raw_buffer *buffer)
 {
 	if(priv->gl == NULL)
 	{
 		priv->gl = gl_init(priv->fb_width, priv->fb_height, priv->fb_format);
-		if(priv->gl)
-			return 0;
-		else
+		if(!priv->gl)
 			return -1;
+
+		gl_show_version();
+		if(!priv->share_mem)
+		{
+			if(gl_bind_pbo(priv->gl, buffer) == -1)
+				return -1;
+		}
+
+		return 0;
 	}
 	return 0;
 }
@@ -192,20 +200,44 @@ static int __init_gl(struct x11_renderer *priv)
 static int x11_renderer_put_buffer(struct display_object *obj,
 					int buf_id)
 {
-	// struct raw_buffer *buffer;
+	struct raw_buffer *buffer;
 	struct x11_renderer *priv = (struct x11_renderer *)obj->priv;
 
-	__init_gl(priv);
+    if (!eglMakeCurrent(priv->display, priv->surface, priv->surface, 
+    	priv->context))
+    {
+    	log_error("make current fail.");
+		return -1;
+    }
 
-	// buffer = get_raw_buffer(obj->buf_pool, buf_id);
-	// if(buffer == NULL)
-	// {
-	//   log_error("sdl get buffer fail! buf_id:%d", buf_id);
-	//   return -1;
-	// }
+	if(!priv->share_mem)
+	{
+		buffer = get_raw_buffer(obj->buf_pool, buf_id);
+		if(buffer == NULL)
+		{
+			log_error("x11 get buffer fail! buf_id:%d", buf_id);
+			return -1;
+		}
+		if(__init_gl(priv, buffer) == -1)
+			return -1;
 
-	if(priv->gl)
-		gl_render(priv->gl, buf_id);
+		if(buffer == NULL)
+		{
+			log_error("sdl get buffer fail! buf_id:%d", buf_id);
+			return -1;
+		}
+
+		gl_transport_pbo(priv->gl, buffer);
+
+		if(priv->gl)
+			gl_render(priv->gl, 0);
+	}else{
+		if(__init_gl(priv, NULL) == -1)
+			return -1;
+
+		if(priv->gl)
+			gl_render(priv->gl, buf_id);
+	}
 
 	eglSwapBuffers(priv->display, priv->surface);
 	priv->cur_buf_id = buf_id;

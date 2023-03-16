@@ -51,11 +51,20 @@ def addTask(delay, loop, callback, *params):
 	task["params"] = (task, *params)
 	tasks.append(task)
 
+def set_win_center(ui):
+    main_screen = QApplication.primaryScreen().geometry()
+    # screen = QDesktopWidget().screenGeometry(0)
+    size = ui.geometry()
+    newLeft = main_screen.x() + (main_screen.width() - size.width()) / 2
+    newTop = main_screen.y() + (main_screen.height() - size.height()) / 2
+    ui.move(int(newLeft),int(newTop))
+
 class RenderWindow(QMainWindow):
 	def __init__(self, parent=None):
 		global clib
 		super(RenderWindow, self).__init__(parent)
 		self.setupUi()
+		set_win_center(self)
 
 	def setupUi(self):
 		self.resize(1920, 1080)
@@ -82,6 +91,7 @@ class LoginWindow(QMainWindow):
 		super(LoginWindow, self).__init__(parent)
 		self.setupUi()
 		self.initUi()
+		set_win_center(self)
 
 	def setupUi(self):
 		self.resize(720, 400)

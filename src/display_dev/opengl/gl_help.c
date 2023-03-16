@@ -11,6 +11,16 @@
 
 void checkGlError(char *file, unsigned int  LineNumber)
 {
+	EGLint error = glGetError();
+	if (error != EGL_SUCCESS)
+	{
+		log_error("eglGetError: %04X at file:%s line:%d\n",error, file, LineNumber);
+		exit(-1);
+	}
+}
+
+void checkEGlError(char *file, unsigned int  LineNumber)
+{
 	EGLint error = eglGetError();
 	if (error != EGL_SUCCESS)
 	{
@@ -119,140 +129,26 @@ GLuint gl_load_program(const char *vertShaderSrc, const char *fragShaderSrc)
 	return shader;
 }
 
-#define S1 1.0f
-#define S2 1.0f
-#define pA - S1,   S2, -1,
-#define pB   S1,   S2, -1,
-#define pC - S1, - S2, -1,
-#define pD   S1, - S2, -1,
-
-GLfloat g_plane_verts[] =
+void gl_create_pbo_texture(GLuint *gl_texture, uint32_t width, uint32_t height,
+	char *data)
 {
-	pA pB
-	pC pD
-};
-
-GLfloat v_tex_vertices[] =
-{
-	0.0f, 0.0f, 1.0f, 0.0f,
-	0.0f, 1.0f, 1.0f, 1.0f,
-};
-
-struct gl_object *gl_init(uint32_t width, uint32_t height, int pix_format)
-{
-	struct gl_object* obj = calloc(1, sizeof(struct gl_object));
-
-	obj->width = width == 0 ? 640 : width;
-	obj->height = height == 0 ? 480 : height;
-
-	for (int i = 0; i < 4; ++i)
-	{
-		for (int j = 0; j < 4; ++j)
-		{
-			if(i == j)
-				obj->mvp_matrix[i][j] = 1;
-			else
-				obj->mvp_matrix[i][j] = 0;
-		}
-	}
-	
-	switch(pix_format)
-	{
-		case ARGB8888:
-		{
-			break;
-		}
-		case YUV420P:
-		{
-			extern struct shader_render_ops yuv420_ops;
-			obj->gl_ops = &yuv420_ops;
-			break;
-		}
-		case NV12:
-		{
-			extern struct shader_render_ops nv12_ops;
-			obj->gl_ops = &nv12_ops;
-			break;
-		}
-		default:
-		{
-			break;
-		}
-	}
-
-	if(obj->gl_ops == NULL)
-	{
-		log_error("gl_init unknow pix format.");
-		goto FAIL;
-	}
-
-	if(obj->gl_ops->init(obj) == -1)
-		goto FAIL;
-
-	glUseProgram(obj->shader);
-	checkGlError(__FILE__, __LINE__);
-
-	glEnableVertexAttribArray(obj->positions);
-	checkGlError(__FILE__, __LINE__);
-	glVertexAttribPointer(obj->positions, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), g_plane_verts);
-	checkGlError(__FILE__, __LINE__);
-	glUniformMatrix4fv(obj->mvp, 1, GL_FALSE, (GLfloat*) obj->mvp_matrix);
-	checkGlError(__FILE__, __LINE__);
-	glEnableVertexAttribArray (obj->tex_coord);
-	checkGlError(__FILE__, __LINE__);
-	glVertexAttribPointer(obj->tex_coord, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), v_tex_vertices);
-	checkGlError(__FILE__, __LINE__);
-
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	checkGlError(__FILE__, __LINE__);
-	glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
-	checkGlError(__FILE__, __LINE__);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	checkGlError(__FILE__, __LINE__);
-	// Set the viewport
-	glViewport(0, 0, obj->width, obj->height);
-	checkGlError(__FILE__, __LINE__);
-	glCullFace(GL_BACK);
-	checkGlError(__FILE__, __LINE__);
-	glEnable(GL_CULL_FACE);
-	checkGlError(__FILE__, __LINE__);
-	glEnable(GL_DEPTH_TEST);
-	checkGlError(__FILE__, __LINE__);
-	glDepthFunc(GL_LESS);
-	checkGlError(__FILE__, __LINE__);
-
-	return obj;
-FAIL:
-	free(obj);
-	return NULL;
+    glEnable(GL_TEXTURE_2D);
+    glGenTextures(1, gl_texture);
+    glBindTexture(GL_TEXTURE_2D, *gl_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED,
+                 width, height,
+                 0, GL_RED, GL_UNSIGNED_BYTE,
+                 data);
 }
 
-/* Triangular order */
-GLuint rect_points[] =
+void gl_update_pbo_texture(GLuint *gl_texture, uint32_t width, uint32_t height,
+	char *data)
 {
-	0, 3, 1,
-	0, 2, 3,
-};
-int gl_render(struct gl_object *obj, int texture_id)
-{
-	log_info("gl renderer");
-	if(obj->gl_ops->render(obj, &obj->texture[texture_id]) == -1)
-		return -1;
-
-	glDrawElements (GL_TRIANGLES, 6 , GL_UNSIGNED_INT, rect_points);
-	checkGlError(__FILE__, __LINE__);
-	return 0;
-}
-
-void gl_release(struct gl_object *obj)
-{
-	obj->gl_ops->release(obj);
-	free(obj);
-}
-
-void gl_show_version()
-{
-	log_info("OpenGL实现厂商的名字：%s\n", glGetString(GL_VENDOR));
-	log_info("渲染器标识符：%s\n", glGetString(GL_RENDERER));
-	log_info("OOpenGL实现的版本号：%s\n", glGetString(GL_VERSION));
+    glBindTexture(GL_TEXTURE_2D, *gl_texture);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
+                 width, height,
+                 GL_RED, GL_UNSIGNED_BYTE,
+                 data);
 }

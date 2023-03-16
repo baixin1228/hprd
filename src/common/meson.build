@@ -1,4 +1,5 @@
 common_source = []
+common_source += 'util.c'
 common_source += 'queue.c'
 common_source += 'buffer_pool.c'
 common_source += 'buffer_util.c'

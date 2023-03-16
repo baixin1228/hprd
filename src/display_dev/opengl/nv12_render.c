@@ -1,5 +1,6 @@
 #include "util.h"
 #include "gl_help.h"
+#include "gl_render.h"
 
 int nv12_init(struct gl_object *obj)
 {
@@ -61,6 +62,29 @@ int nv12_init(struct gl_object *obj)
 	return 0;
 }
 
+int nv12_bind_pbo(struct gl_texture *texture, char *data[4])
+{
+	gl_create_pbo_texture(&texture->Y_texture, texture->width, texture->height,
+		data[0]);
+	gl_create_pbo_texture(&texture->UV_texture, texture->width, texture->height / 2,
+		data[1]);
+	return 0;
+} 	
+
+int nv12_transport_pbo(struct gl_texture *texture, char *data[4])
+{
+	gl_update_pbo_texture(&texture->Y_texture, texture->width, texture->height,
+		data[0]);
+	gl_update_pbo_texture(&texture->UV_texture, texture->width, texture->height / 2,
+		data[1]);
+	return 0;
+}
+
+int nv12_bind_khr(struct gl_texture *texture, char *data[4])
+{
+	return 0;
+}
+
 int nv12_render(struct gl_object *obj, struct gl_texture *texture)
 {
 	glActiveTexture(GL_TEXTURE0);
@@ -91,7 +115,10 @@ int nv12_release(struct gl_object *obj)
 
 struct shader_render_ops nv12_ops = 
 {
-	.init 		= nv12_init,
-	.render 	= nv12_render,
-	.release	= nv12_release,
+	.init 			= nv12_init,
+	.bind_pbo 		= nv12_bind_pbo,
+	.transport_pbo 	= nv12_transport_pbo,
+	.bind_khr 		= nv12_bind_khr,
+	.render 		= nv12_render,
+	.release		= nv12_release,
 };

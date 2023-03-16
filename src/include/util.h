@@ -62,4 +62,8 @@ static inline void log_perr(const char *fmt, ...)
 	va_end(va);
 	fflush(stderr);
 }
+
+void print_stack(char *sig);
+void debug_info_regist();
+
 #endif

@@ -127,6 +127,8 @@ int py_client_connect(char *ip, uint16_t port)
 	int ret;
 	int buf_id;
 
+	debug_info_regist();
+	
 	fd = client_connect(ip, port);
 
 	if (fd < 0) {

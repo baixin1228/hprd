@@ -266,6 +266,7 @@ static int sdl_put_buffer(struct display_object *obj,
 		log_error("sdl get buffer fail! buf_id:%d", buf_id);
 		return -1;
 	}
+		printf("buffer,w:%d h:%d h:%d v:%d\n", buffer->width, buffer->height, buffer->hor_stride, buffer->ver_stride);
 
 	if(!priv->sdl_texture)
 	{

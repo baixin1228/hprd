@@ -97,7 +97,7 @@ class LoginWindow(QMainWindow):
 		set_win_center(self)
 		if self.ip != None and self.silent == True:
 			self.on_connect()
-			
+
 	def initArg(self):
 		# parser = argparse.ArgumentParser(description='hprd')
 		parser = argparse.ArgumentParser()

@@ -266,8 +266,8 @@ static int svc_get_info(struct decodec_object *obj, GHashTable *fb_info)
     g_hash_table_insert(fb_info, "format", &svc_data->format);
     g_hash_table_insert(fb_info, "width", &svc_data->width);
     g_hash_table_insert(fb_info, "height", &svc_data->height);
-    g_hash_table_insert(fb_info, "hor_stride", &svc_data->width);
-    g_hash_table_insert(fb_info, "ver_stride", &svc_data->height);
+    g_hash_table_insert(fb_info, "hor_stride", &svc_data->hor_stride);
+    g_hash_table_insert(fb_info, "ver_stride", &svc_data->ver_stride);
     return 0;
 }
 

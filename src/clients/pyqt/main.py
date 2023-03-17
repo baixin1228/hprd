@@ -3,8 +3,10 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
+
 import sys
 import sip
+import argparse
 import configparser
 
 from ctypes import *
@@ -87,11 +89,20 @@ def recv_pkt(buf, len):
 	# print(len)
 
 class LoginWindow(QMainWindow):
-	def __init__(self, parent=None):
-		super(LoginWindow, self).__init__(parent)
+	def __init__(self):
+		super(LoginWindow, self).__init__(None)
+		self.initArg();
 		self.setupUi()
 		self.initUi()
 		set_win_center(self)
+
+	def initArg(self):
+		# parser = argparse.ArgumentParser(description='hprd')
+		parser = argparse.ArgumentParser()
+		parser.add_argument('-a', '--ip', dest='ip', type=str, metavar='', required=True, help='Remote server ip addr')
+
+		args = parser.parse_args()
+		self.ip = args.ip
 
 	def setupUi(self):
 		self.resize(720, 400)
@@ -106,7 +117,7 @@ class LoginWindow(QMainWindow):
 		self.ip_lable.setText("IP:")
 		self.layout.addWidget(self.ip_lable,0,0,1,1, Qt.AlignRight)
 		self.ip_edit = QLineEdit()
-		self.ip_edit.setText("127.0.0.1:9999")
+		self.ip_edit.setText(self.ip or "127.0.0.1:9999")
 		self.layout.addWidget(self.ip_edit,0,1,1,3)
 
 		self.user_lable = QLabel()
@@ -167,6 +178,6 @@ if __name__=="__main__":
 
 	timer = QTimer(app)
 	timer.timeout.connect(_on_timer)
-	timer.start(1000 / 60)
+	timer.start(int(1000 / 60))
 
 	sys.exit(app.exec())

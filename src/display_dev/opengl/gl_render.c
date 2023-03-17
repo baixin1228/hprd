@@ -10,23 +10,25 @@
 #include "gl_render.h"
 #include "frame_buffer.h"
 
-#define S1 1.0f
-#define S2 1.0f
-#define pA - S1,   S2, -1,
-#define pB   S1,   S2, -1,
-#define pC - S1, - S2, -1,
-#define pD   S1, - S2, -1,
+#define pA - 1.0f,  1.0f, -1.0f,
+#define pB   1.0f,  1.0f, -1.0f,
+#define pC - 1.0f, -1.0f, -1.0f,
+#define pD   1.0f, -1.0f, -1.0f,
 
+/* 坐标点 */
 GLfloat g_plane_verts[] =
 {
 	pA pB
 	pC pD
 };
 
+/* 2D纹理与坐标的映射 */
 GLfloat v_tex_vertices[] =
 {
-	0.0f, 0.0f, 1.0f, 0.0f,
-	0.0f, 1.0f, 1.0f, 1.0f,
+	0.0f, 0.0f,
+	1.0f, 0.0f,
+	0.0f, 1.0f,
+	1.0f, 1.0f,
 };
 
 struct gl_object *gl_init(uint32_t width, uint32_t height, int pix_format)
@@ -99,15 +101,6 @@ struct gl_object *gl_init(uint32_t width, uint32_t height, int pix_format)
 	glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// glCullFace(GL_BACK);
-	// checkEGlError(__FILE__, __LINE__);
-	// glEnable(GL_CULL_FACE);
-	// checkEGlError(__FILE__, __LINE__);
-	// glEnable(GL_DEPTH_TEST);
-	// checkEGlError(__FILE__, __LINE__);
-	// glDepthFunc(GL_LESS);
-	// checkEGlError(__FILE__, __LINE__);
-
 	return obj;
 FAIL:
 	free(obj);
@@ -138,7 +131,7 @@ int gl_bind_khr(struct gl_object *obj, struct gl_texture *texture,
 	return obj->gl_ops->bind_khr(texture, buffer->ptrs);
 }
 
-/* Triangular order */
+/* 绘制坐标点三角形顺序 */
 GLuint rect_points[] =
 {
 	0, 3, 1,

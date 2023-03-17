@@ -64,18 +64,18 @@ int nv12_init(struct gl_object *obj)
 
 int nv12_bind_pbo(struct gl_texture *texture, char *data[4])
 {
-	gl_create_pbo_texture(&texture->Y_texture, texture->width, texture->height,
+	gl_create_pbo_texture(&texture->Y_texture, texture->h_stride, texture->width, texture->height,
 		data[0]);
-	gl_create_pbo_texture(&texture->UV_texture, texture->width, texture->height / 2,
+	gl_create_pbo_texture(&texture->UV_texture, texture->h_stride, texture->width, texture->height / 2,
 		data[1]);
 	return 0;
 } 	
 
 int nv12_transport_pbo(struct gl_texture *texture, char *data[4])
 {
-	gl_update_pbo_texture(&texture->Y_texture, texture->width, texture->height,
+	gl_update_pbo_texture(&texture->Y_texture, texture->h_stride, texture->width, texture->height,
 		data[0]);
-	gl_update_pbo_texture(&texture->UV_texture, texture->width, texture->height / 2,
+	gl_update_pbo_texture(&texture->UV_texture, texture->h_stride, texture->width, texture->height / 2,
 		data[1]);
 	return 0;
 }

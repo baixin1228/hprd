@@ -51,9 +51,8 @@ struct gl_object
 void checkEGlError(char *file, unsigned int  LineNumber);
 void checkGlError(char *file, unsigned int  LineNumber);
 GLuint gl_load_program(const char *vertShaderSrc, const char *fragShaderSrc);
-void gl_create_pbo_texture(GLuint *gl_texture, uint32_t width, uint32_t height,
-	char *data);
-void gl_update_pbo_texture(GLuint *gl_texture, uint32_t width, uint32_t height,
-	char *data);
-
+void gl_create_pbo_texture(GLuint *gl_texture, uint32_t h_stride,
+	uint32_t width, uint32_t height, char *data);
+void gl_update_pbo_texture(GLuint *gl_texture, uint32_t h_stride,
+	uint32_t width, uint32_t height, char *data);
 #endif

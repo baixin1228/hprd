@@ -129,12 +129,13 @@ GLuint gl_load_program(const char *vertShaderSrc, const char *fragShaderSrc)
 	return shader;
 }
 
-void gl_create_pbo_texture(GLuint *gl_texture, uint32_t width, uint32_t height,
-	char *data)
+void gl_create_pbo_texture(GLuint *gl_texture, uint32_t h_stride,
+	uint32_t width, uint32_t height, char *data)
 {
     glEnable(GL_TEXTURE_2D);
     glGenTextures(1, gl_texture);
     glBindTexture(GL_TEXTURE_2D, *gl_texture);
+    glPixelStorei(GL_UNPACK_ROW_LENGTH_EXT, h_stride);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RED,
@@ -143,10 +144,11 @@ void gl_create_pbo_texture(GLuint *gl_texture, uint32_t width, uint32_t height,
                  data);
 }
 
-void gl_update_pbo_texture(GLuint *gl_texture, uint32_t width, uint32_t height,
-	char *data)
+void gl_update_pbo_texture(GLuint *gl_texture, uint32_t h_stride,
+	uint32_t width, uint32_t height, char *data)
 {
     glBindTexture(GL_TEXTURE_2D, *gl_texture);
+    glPixelStorei(GL_UNPACK_ROW_LENGTH_EXT, h_stride);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
                  width, height,
                  GL_RED, GL_UNSIGNED_BYTE,

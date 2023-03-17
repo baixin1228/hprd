@@ -68,12 +68,12 @@ int yuv420_bind_pbo(struct gl_texture *texture, char *data[4])
 	uint32_t height;
 	height = texture->v_stride > texture->height ? texture->v_stride : texture->height; 
 
-	gl_create_pbo_texture(&texture->Y_texture, texture->h_stride, height,
+	gl_create_pbo_texture(&texture->Y_texture, texture->h_stride, texture->width ,height,
 		data[0]);
 	gl_create_pbo_texture(&texture->U_texture, texture->h_stride / 2,
-		height / 2, data[1]);
+		texture->width / 2, height / 2, data[1]);
 	gl_create_pbo_texture(&texture->V_texture, texture->h_stride / 2,
-		height / 2, data[2]);
+		texture->width / 2, height / 2, data[2]);
 	return 0;
 }
 
@@ -82,12 +82,12 @@ int yuv420_transport_pbo(struct gl_texture *texture, char *data[4])
 	uint32_t height;
 	height = texture->v_stride > texture->height ? texture->v_stride : texture->height; 
 
-	gl_update_pbo_texture(&texture->Y_texture, texture->h_stride, height,
+	gl_update_pbo_texture(&texture->Y_texture, texture->h_stride, texture->width, height,
 		data[0]);
 	gl_update_pbo_texture(&texture->U_texture, texture->h_stride / 2,
-		height / 2, data[1]);
+		texture->width / 2, height / 2, data[1]);
 	gl_update_pbo_texture(&texture->V_texture, texture->h_stride / 2,
-		height / 2, data[2]);
+		texture->width / 2, height / 2, data[2]);
 	return 0;
 }
 

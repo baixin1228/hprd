@@ -95,14 +95,19 @@ class LoginWindow(QMainWindow):
 		self.setupUi()
 		self.initUi()
 		set_win_center(self)
-
+		if self.ip != None and self.silent == True:
+			self.on_connect()
+			
 	def initArg(self):
 		# parser = argparse.ArgumentParser(description='hprd')
 		parser = argparse.ArgumentParser()
-		parser.add_argument('-a', '--ip', dest='ip', type=str, metavar='', required=True, help='Remote server ip addr')
+		parser.add_argument('-a', '--ip', dest='ip', type=str, metavar='', required=False, help='Remote server ip addr')
+		parser.add_argument('-s', '--silent', dest='silent', action='store_true', required=False, help='Silent mode, Direct connect')
 
 		args = parser.parse_args()
 		self.ip = args.ip
+		self.silent = args.silent
+
 
 	def setupUi(self):
 		self.resize(720, 400)

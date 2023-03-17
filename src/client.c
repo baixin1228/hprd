@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <arpa/inet.h>
+#include <getopt.h>
 
 #include "util.h"
 #include "codec.h"
@@ -75,7 +76,7 @@ static void display_on_frame(struct display_object *obj)
 
 struct mem_pool client_pool = {0};
 struct display_object *out_obj = NULL;
-void *client_thread(void *opaque)
+void client_main()
 {
 	int ret;
 	int buf_id;
@@ -121,7 +122,6 @@ void *client_thread(void *opaque)
 	g_hash_table_destroy(fb_info);
 
 	display_main_loop(out_obj);
-	return NULL;
 }
 
 static void _on_client_pkt(char *buf, size_t len)
@@ -141,9 +141,10 @@ static void _on_client_pkt(char *buf, size_t len)
 
 #define BUFLEN 1024 * 1024 * 10
 static char _recv_buf[BUFLEN];
-void *tcp_client_thread(void *opaque)
+void *tcp_client_net_thread(void *op)
 {
-	fd = client_connect("127.0.0.1", 9999);
+	char *ip = (char *)op;
+	fd = client_connect(ip, 9999);
 
 	if (fd < 0) {
 		exit(-1);
@@ -158,12 +159,62 @@ void *tcp_client_thread(void *opaque)
 	return NULL;
 }
 
-int main()
+struct option long_options[] =
 {
+	{"help",  	no_argument,       NULL, 'h'},
+	{"reqarg", 	required_argument, NULL, 'r'},
+	{"optarg", 	optional_argument, NULL, 'o'},
+	{"ip", 		required_argument, NULL, 'i'},
+	{NULL,		0,                 NULL,  0}
+};
+
+void print_help()
+{
+	printf("help\n");
+}
+
+int main(int argc, char* argv[])
+{
+    int ret = -1;
 	pthread_t p1;
-	pthread_t p2;
-	pthread_create(&p1, NULL, client_thread, NULL);
-	pthread_create(&p2, NULL, tcp_client_thread, NULL);
+    char *ip = NULL;
+    int option_index = 0;
+
+    while ((ret = getopt_long(argc, argv, "h", long_options, &option_index)) != -1)
+    {
+    	switch(ret)
+    	{
+    		case 0:
+    		case 'h':
+    		default:
+    		{
+    			print_help();
+    			exit(0);
+    			break;
+    		}
+    		case 1:
+    		case 2:
+    		case 3:
+    		case 'i':
+    		{
+    			ip = optarg;
+    			break;
+    		}
+    	}
+        printf("ret = %c\t", ret);
+        printf("optarg = %s\t", optarg);
+        printf("optind = %d\t", optind);
+        printf("argv[optind] = %s\t", argv[optind]);
+        printf("option_index = %d\n", option_index);
+    }
+    if(ip == NULL)
+    {
+    	print_help();
+		exit(0);
+    }
+
+	pthread_create(&p1, NULL, tcp_client_net_thread, ip);
+
+	client_main();
 	pthread_join(p1, NULL);
-	pthread_join(p2, NULL);
 }

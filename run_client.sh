@@ -8,4 +8,4 @@ if [ $? != 0 ]; then
 	exit 
 fi
 # meson test -C client_build -v hprd_client_test
-./client_build/src/client
+./client_build/src/client $*

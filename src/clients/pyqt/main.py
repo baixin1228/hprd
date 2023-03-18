@@ -34,6 +34,9 @@ clib.py_client_close.restype = c_int
 clib.py_mouse_move.argtypes = [c_int, c_int]
 clib.py_mouse_move.restype = c_int
 
+clib.py_mouse_click.argtypes = [c_int, c_int, c_int, c_int]
+clib.py_mouse_click.restype = c_int
+
 tasks = []
 def _on_timer():
 	global tasks
@@ -75,6 +78,7 @@ class RenderWindow(QMainWindow):
 		self.resize(1920, 1080)
 		self.setAnimated(True)
 		self.setMouseTracking(True)
+		self.mouse_key = 0
 
 	def frame_loop(self, task):
 		if clib.py_on_frame() == -1:
@@ -89,15 +93,25 @@ class RenderWindow(QMainWindow):
 			addTask(1, True, self.frame_loop)
 
 	def mousePressEvent(self,event):
-		print("press")
+		if self.mouse_key != 0:
+			return
+
+		self.mouse_key = 1
+		if event.buttons() == Qt.LeftButton:
+			self.mouse_key = 1
+		if event.buttons() == Qt.RightButton:
+			self.mouse_key = 3
+		if event.buttons() == Qt.MidButton:
+			self.mouse_key = 2
+
+		clib.py_mouse_click(event.x(), event.y(), self.mouse_key, 1)
 
 	def mouseMoveEvent(self,event):
 		clib.py_mouse_move(event.x(), event.y())
 
 	def mouseReleaseEvent(self,event):
-		print("release")
-		x = event.x()
-		y = event.y()
+		clib.py_mouse_click(event.x(), event.y(), self.mouse_key, 0)
+		self.mouse_key = 0
 
 def recv_pkt(buf, len):
 	pass

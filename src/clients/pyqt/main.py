@@ -124,7 +124,7 @@ class LoginWindow(QMainWindow):
 		self.setupUi()
 		self.initUi()
 		set_win_center(self)
-		if self.ip != None and self.silent == True:
+		if self.silent == True:
 			self.on_connect()
 
 	def initArg(self):

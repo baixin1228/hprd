@@ -170,5 +170,49 @@ int py_client_close()
 		close(fd);
 		fd = -1;
 	}
+
+	return 0;
+}
+
+int py_mouse_move(int x, int y)
+{
+	struct input_event event;
+
+	event.type = MOUSE_MOVE;
+	event.x = x;
+	event.y = y;
+
+	if(send_event(fd, INPUT_EVENT, (char *)&event, sizeof(struct input_event))
+		== -1)
+	{
+		log_error("send_event fail.");
+		return -1;
+	}
+
+	return 0;
+}
+
+int py_mouse_click(int x, int y, int key, int down_or_up)
+{
+	struct input_event event;
+
+	if(down_or_up)
+	{
+		event.type = MOUSE_DOWN;
+	}else{
+		event.type = MOUSE_UP;
+	}
+	
+	event.key_code = key;
+	event.x = x;
+	event.y = y;
+
+	if(send_event(fd, INPUT_EVENT, (char *)&event, sizeof(struct input_event))
+		== -1)
+	{
+		log_error("send_event fail.");
+		return -1;
+	}
+
 	return 0;
 }

@@ -13,10 +13,10 @@ from ctypes import *
 from platform import *
 
 cdll_names = {
-            'Darwin' : 'libc.dylib',
-            'Linux'  : '../../../client_build/src/clients/pyqt/libpyqt_proxy.so',
-            'Windows': 'msvcrt.dll'
-        }
+			'Darwin' : 'libc.dylib',
+			'Linux'  : '../../../client_build/src/clients/pyqt/libpyqt_proxy.so',
+			'Windows': 'msvcrt.dll'
+		}
 
 clib = cdll.LoadLibrary(cdll_names[system()])
 clib.py_client_connect.argtypes = [POINTER(c_char), c_ushort]
@@ -30,6 +30,12 @@ clib.py_client_init_config.restype = c_int
 
 clib.py_client_close.argtypes = []
 clib.py_client_close.restype = c_int
+
+clib.py_mouse_move.argtypes = [c_int, c_int]
+clib.py_mouse_move.restype = c_int
+
+clib.py_mouse_click.argtypes = [c_int, c_int, c_int, c_int]
+clib.py_mouse_click.restype = c_int
 
 tasks = []
 def _on_timer():
@@ -54,12 +60,12 @@ def addTask(delay, loop, callback, *params):
 	tasks.append(task)
 
 def set_win_center(ui):
-    main_screen = QApplication.primaryScreen().geometry()
-    # screen = QDesktopWidget().screenGeometry(0)
-    size = ui.geometry()
-    newLeft = main_screen.x() + (main_screen.width() - size.width()) / 2
-    newTop = main_screen.y() + (main_screen.height() - size.height()) / 2
-    ui.move(int(newLeft),int(newTop))
+	main_screen = QApplication.primaryScreen().geometry()
+	# screen = QDesktopWidget().screenGeometry(0)
+	size = ui.geometry()
+	newLeft = main_screen.x() + (main_screen.width() - size.width()) / 2
+	newTop = main_screen.y() + (main_screen.height() - size.height()) / 2
+	ui.move(int(newLeft),int(newTop))
 
 class RenderWindow(QMainWindow):
 	def __init__(self, parent=None):
@@ -71,6 +77,8 @@ class RenderWindow(QMainWindow):
 	def setupUi(self):
 		self.resize(1920, 1080)
 		self.setAnimated(True)
+		self.setMouseTracking(True)
+		self.mouse_key = 0
 
 	def frame_loop(self, task):
 		if clib.py_on_frame() == -1:
@@ -83,6 +91,27 @@ class RenderWindow(QMainWindow):
 		if(clib.py_client_init_config(self.winId().__int__()) == 0):
 			task["loop"] = False;
 			addTask(1, True, self.frame_loop)
+
+	def mousePressEvent(self,event):
+		if self.mouse_key != 0:
+			return
+
+		self.mouse_key = 1
+		if event.buttons() == Qt.LeftButton:
+			self.mouse_key = 1
+		if event.buttons() == Qt.RightButton:
+			self.mouse_key = 3
+		if event.buttons() == Qt.MidButton:
+			self.mouse_key = 2
+
+		clib.py_mouse_click(event.x(), event.y(), self.mouse_key, 1)
+
+	def mouseMoveEvent(self,event):
+		clib.py_mouse_move(event.x(), event.y())
+
+	def mouseReleaseEvent(self,event):
+		clib.py_mouse_click(event.x(), event.y(), self.mouse_key, 0)
+		self.mouse_key = 0
 
 def recv_pkt(buf, len):
 	pass

@@ -226,7 +226,6 @@ static int x11_renderer_put_buffer(struct display_object *obj,
 			log_error("sdl get buffer fail! buf_id:%d", buf_id);
 			return -1;
 		}
-		printf("buffer:%d %d\n", buffer->hor_stride, buffer->ver_stride);
 		gl_transport_pbo(priv->gl, buffer);
 
 		if(priv->gl)

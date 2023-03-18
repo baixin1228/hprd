@@ -29,6 +29,6 @@ struct input_event{
   uint32_t y;
 };
 
-int hsend_event(struct input_event *event);
+int send_event(int fd, uint32_t cmd, char *buf, size_t len);
 
 #endif

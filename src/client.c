@@ -7,31 +7,23 @@
 #include "util.h"
 #include "codec.h"
 #include "decodec.h"
+#include "protocol.h"
+#include "net_help.h"
 #include "tcp_client.h"
 #include "display_dev.h"
 #include "buffer_pool.h"
-#include "protocol.h"
-#include "net_help.h"
 
 int fd;
 struct decodec_object *dec_obj = NULL;
 
 static void on_event(struct display_object *obj, struct input_event *event)
 {
-	struct data_pkt *pkt = calloc(1, sizeof(struct data_pkt) +
-		sizeof(struct input_event));
-
-	pkt->cmd = INPUT_EVENT;
-	memcpy(pkt->data, event, sizeof(struct input_event));
-	pkt->data_len = htonl(sizeof(struct input_event));
-
-	if(client_send_pkt(fd, (char *)pkt, sizeof(struct data_pkt) +
-		sizeof(struct input_event)) == -1)
+	if(send_event(fd, INPUT_EVENT, (char *)event, sizeof(struct input_event))
+		== -1)
 	{
-		log_error("client_send_pkt fail.");
+		log_error("send_event fail.");
 		exit(-1);
 	}
-	free(pkt);
 }
 
 static void on_package(char *buf, size_t len)

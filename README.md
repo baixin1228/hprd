@@ -14,8 +14,8 @@
 For Deepin V20 and Debian:
 ```
 #server side
-sudo apt install meson ninja-build build-essential
-sudo apt install libavcodec-dev libavformat-dev libswscale-dev
+sudo apt install meson ninja-build build-essential cmake libglib2.0-dev
+sudo apt install libavcodec-dev libavformat-dev libswscale-dev libopenh264-dev libsdl2-dev libx11-dev libxext-dev libxtst-dev
 
 #client side
 # clone and build openh264 package

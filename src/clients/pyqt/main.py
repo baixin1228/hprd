@@ -67,8 +67,6 @@ class LoginWindow(QMainWindow):
 		self.conn_button = QPushButton()
 		self.conn_button.setText("连接")
 		self.layout.addWidget(self.conn_button,3,1,1,2)
-
-		self.main_win = MainWindow()
  
 	def init_ui(self):
 		self.ip_edit.setFocus()
@@ -79,6 +77,7 @@ class LoginWindow(QMainWindow):
 		self.conn_button.clicked.connect(self.on_connect)  # 登录
 
 	def main_win_show(self, task):
+		self.main_win = MainWindow()
 		self.main_win.show()
 		self.close()
 

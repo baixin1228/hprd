@@ -36,10 +36,10 @@ sudo apt install libdrm-dev
 Run Server:
 ./run_server.sh
 
-Run Client:
+### Run Client:
 ./run_client.sh
 ./run_client.sh --ip 192.168.0.1
-
+### Run Python Client
 ./run_python_client.sh
 ./run_python_client.sh --ip 192.168.0.1 -s
 

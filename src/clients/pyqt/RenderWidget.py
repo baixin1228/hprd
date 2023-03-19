@@ -11,8 +11,9 @@ from ctypes import *
 from pyqt_proxy import *
 
 class RenderWidget(QWidget):
-	def __init__(self):
+	def __init__(self, on_client_init):
 		super(RenderWidget, self).__init__()
+		self.on_client_init = on_client_init
 		self._setup_ui()
 		set_win_center(self)
 		add_task(1, True, self._init_client)
@@ -38,6 +39,8 @@ class RenderWidget(QWidget):
 		if(proxy().py_client_init_config(self.winId().__int__()) == 0):
 			task["loop"] = False;
 			add_task(1, True, self._frame_loop)
+			if self.on_client_init:
+				self.on_client_init()
 
 	def _get_remote_pos(self, x , y):
 		x = x / self.width() * self.stream_width

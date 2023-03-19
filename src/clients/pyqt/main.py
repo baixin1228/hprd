@@ -8,126 +8,21 @@ import sys
 import sip
 import argparse
 import configparser
-
-from ctypes import *
-from platform import *
-
-cdll_names = {
-			'Darwin' : 'libc.dylib',
-			'Linux'  : '../../../client_build/src/clients/pyqt/libpyqt_proxy.so',
-			'Windows': 'msvcrt.dll'
-		}
-
-clib = cdll.LoadLibrary(cdll_names[system()])
-clib.py_client_connect.argtypes = [POINTER(c_char), c_ushort]
-clib.py_client_connect.restype = c_int
-
-clib.py_on_frame.argtypes = []
-clib.py_on_frame.restype = c_int
-
-clib.py_client_init_config.argtypes = []
-clib.py_client_init_config.restype = c_int
-
-clib.py_client_close.argtypes = []
-clib.py_client_close.restype = c_int
-
-clib.py_mouse_move.argtypes = [c_int, c_int]
-clib.py_mouse_move.restype = c_int
-
-clib.py_mouse_click.argtypes = [c_int, c_int, c_int, c_int]
-clib.py_mouse_click.restype = c_int
-
-tasks = []
-def _on_timer():
-	global tasks
-	for i in range(len(tasks) - 1, -1, -1):
-		task = tasks[i]
-		if task["delay"] == 0:
-			task["callback"](*task["params"])
-			if not task["loop"]:
-				tasks.remove(task)
-
-		if task["delay"] > 0:
-			task["delay"] = task["delay"] - 1
-
-def addTask(delay, loop, callback, *params):
-	global tasks
-	task = {}
-	task["delay"] = delay
-	task["loop"] = loop
-	task["callback"] = callback
-	task["params"] = (task, *params)
-	tasks.append(task)
-
-def set_win_center(ui):
-	main_screen = QApplication.primaryScreen().geometry()
-	# screen = QDesktopWidget().screenGeometry(0)
-	size = ui.geometry()
-	newLeft = main_screen.x() + (main_screen.width() - size.width()) / 2
-	newTop = main_screen.y() + (main_screen.height() - size.height()) / 2
-	ui.move(int(newLeft),int(newTop))
-
-class RenderWindow(QMainWindow):
-	def __init__(self, parent=None):
-		global clib
-		super(RenderWindow, self).__init__(parent)
-		self.setupUi()
-		set_win_center(self)
-
-	def setupUi(self):
-		self.resize(1920, 1080)
-		self.setAnimated(True)
-		self.setMouseTracking(True)
-		self.mouse_key = 0
-
-	def frame_loop(self, task):
-		if clib.py_on_frame() == -1:
-			sys.exit(-1);
-
-	def init_client(self, task):
-		print(self.winId())
-		print(sip.voidptr(self.winId()))
-		print(hex(self.winId().__int__()))
-		if(clib.py_client_init_config(self.winId().__int__()) == 0):
-			task["loop"] = False;
-			addTask(1, True, self.frame_loop)
-
-	def mousePressEvent(self,event):
-		if self.mouse_key != 0:
-			return
-
-		self.mouse_key = 1
-		if event.buttons() == Qt.LeftButton:
-			self.mouse_key = 1
-		if event.buttons() == Qt.RightButton:
-			self.mouse_key = 3
-		if event.buttons() == Qt.MidButton:
-			self.mouse_key = 2
-
-		clib.py_mouse_click(event.x(), event.y(), self.mouse_key, 1)
-
-	def mouseMoveEvent(self,event):
-		clib.py_mouse_move(event.x(), event.y())
-
-	def mouseReleaseEvent(self,event):
-		clib.py_mouse_click(event.x(), event.y(), self.mouse_key, 0)
-		self.mouse_key = 0
-
-def recv_pkt(buf, len):
-	pass
-	# print(len)
+from util import *
+from pyqt_proxy import proxy
+from MainWindow import MainWindow
 
 class LoginWindow(QMainWindow):
 	def __init__(self):
 		super(LoginWindow, self).__init__(None)
-		self.initArg();
-		self.setupUi()
-		self.initUi()
+		self.init_args();
+		self.setup_ui()
+		self.init_ui()
 		set_win_center(self)
 		if self.silent == True:
 			self.on_connect()
 
-	def initArg(self):
+	def init_args(self):
 		# parser = argparse.ArgumentParser(description='hprd')
 		parser = argparse.ArgumentParser()
 		parser.add_argument('-a', '--ip', dest='ip', type=str, metavar='', required=False, help='Remote server ip addr')
@@ -138,7 +33,7 @@ class LoginWindow(QMainWindow):
 		self.silent = args.silent
 
 
-	def setupUi(self):
+	def setup_ui(self):
 		self.resize(720, 400)
 		self.setAnimated(True)
 		self.centralwidget = QWidget(self)
@@ -173,9 +68,9 @@ class LoginWindow(QMainWindow):
 		self.conn_button.setText("连接")
 		self.layout.addWidget(self.conn_button,3,1,1,2)
 
-		self.render_win = RenderWindow()
+		self.main_win = MainWindow()
  
-	def initUi(self):
+	def init_ui(self):
 		self.ip_edit.setFocus()
 		self.ip_edit.setPlaceholderText("请输入ip地址")
 		self.user_edit.setPlaceholderText("请输入用户名")
@@ -183,12 +78,11 @@ class LoginWindow(QMainWindow):
 
 		self.conn_button.clicked.connect(self.on_connect)  # 登录
 
-	def render_win_show(self, task):
-		self.render_win.show()
+	def main_win_show(self, task):
+		self.main_win.show()
 		self.close()
 
 	def on_connect(self):
-		global clib
 		port = 0
 		ip_port = self.ip_edit.text().split(":")
 
@@ -197,13 +91,10 @@ class LoginWindow(QMainWindow):
 		else:
 			port = 9999
 
-		ret = clib.py_client_connect(ip_port[0].encode('utf-8'), port)
+		ret = proxy().py_client_connect(ip_port[0].encode('utf-8'), port)
 		if ret == 0:
-			_cb = CFUNCTYPE(None, POINTER(c_char), c_ulong)
-			self.cb = _cb(recv_pkt)
-			self.buf = create_string_buffer(1024 * 1024);
-			addTask(1, False, self.render_win_show)
-			addTask(2, True, self.render_win.init_client)
+			add_task(1, False, self.main_win_show)
+			add_task(2, True, self.main_win.init_client)
 
 if __name__=="__main__":
 	app = QApplication(sys.argv)
@@ -211,7 +102,7 @@ if __name__=="__main__":
 	w.show()
 
 	timer = QTimer(app)
-	timer.timeout.connect(_on_timer)
+	timer.timeout.connect(on_timer)
 	timer.start(int(1000 / 60))
 
 	sys.exit(app.exec())

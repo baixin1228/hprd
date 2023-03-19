@@ -40,7 +40,10 @@ class MainWindow(QMainWindow):
 		display_menu.triggered[QAction].connect(self.processTrigger)
 
 		debug_menu = menu_bar.addMenu("Debug")
-		debug_menu.addAction("Runing Info")
+		runing_info = QAction("Runing Info", self)
+		runing_info.setCheckable(True)
+		runing_info.setChecked(False)
+		debug_menu.addAction(runing_info)
 		debug_menu.triggered[QAction].connect(self.processTrigger)
 
 		self.centralwidget = QWidget()
@@ -50,10 +53,15 @@ class MainWindow(QMainWindow):
 		self.statusBar = QStatusBar()
 		self.setStatusBar(self.statusBar)
 		self.statusBar.showMessage(" 菜单选项被点击了", 5000)
+		self.statusBar.setVisible(False)
 		
-	@staticmethod
-	def processTrigger(q):
-		print(q.text() + " is triggered")
+	def processTrigger(self, q):
+		if q.text() == "Runing Info":
+			if q.isChecked():
+				self.statusBar.setVisible(True)
+			else:
+				self.statusBar.setVisible(False)
+
 
 	def frame_loop(self, task):
 		if proxy().py_on_frame() == -1:

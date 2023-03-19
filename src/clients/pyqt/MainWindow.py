@@ -69,6 +69,7 @@ class MainWindow(QMainWindow):
 		self.statusBar.setVisible(False)
 
 	def init_ui(self):
+		self.setWindowTitle("High Performance Remote Desktop")
 		self.runing_info.setChecked(False)
 		self.d_a_adapt.setChecked(True)
 

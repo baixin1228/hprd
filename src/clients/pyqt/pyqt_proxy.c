@@ -17,6 +17,9 @@ struct mem_pool client_pool = {0};
 struct display_object *dsp_obj = NULL;
 struct decodec_object *dec_obj = NULL;
 
+void *resize_cb_oqu = NULL;
+void (* resize_cb_callback)(void *oqu, uint32_t width, uint32_t height) = NULL;
+
 static void _on_event(struct display_object *obj, struct input_event *event)
 {
 	struct data_pkt *pkt = calloc(1, sizeof(struct data_pkt) +
@@ -116,6 +119,10 @@ int py_client_init_config(uint64_t winid)
 	g_hash_table_insert(fb_info, "frame_rate", &frame_rate);
 	g_hash_table_insert(fb_info, "window", &winid);
 	display_set_info(dsp_obj, fb_info);
+	if(resize_cb_callback != NULL)
+		resize_cb_callback(resize_cb_oqu, 
+			*(uint32_t *)g_hash_table_lookup(fb_info, "width"),
+			*(uint32_t *)g_hash_table_lookup(fb_info, "height"));
 	ret = 0;
 END:
 	g_hash_table_destroy(fb_info);
@@ -169,6 +176,14 @@ int py_client_resize(uint32_t width, uint32_t height)
 		return -1;
 
 	return display_resize(dsp_obj, width, height);
+}
+
+int py_client_regist_stream_size_cb(void * oqu, void (*callback)(void * oqu,
+	uint32_t width, uint32_t height))
+{
+	resize_cb_oqu = oqu;
+	resize_cb_callback = callback;
+	return 0;
 }
 
 int py_client_close()

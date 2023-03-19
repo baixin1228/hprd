@@ -31,10 +31,13 @@ clib.py_mouse_click.restype = c_int
 clib.py_client_resize.argtypes = [c_uint, c_uint]
 clib.py_client_resize.restype = c_int
 
+clib.py_client_regist_stream_size_cb.argtypes = [py_object, c_void_p] 
+clib.py_client_regist_stream_size_cb.restype = c_int
+
 def proxy():
 	global clib
 	return clib
 
-def new_callback(callback):
-	_cb = CFUNCTYPE(None, POINTER(c_char), c_ulong)
-	return _cb(recv_pkt)
+def new_callback(callback, *params):
+	cb = CFUNCTYPE(None, *params)
+	return cb(callback)

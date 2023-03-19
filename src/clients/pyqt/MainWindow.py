@@ -22,8 +22,8 @@ class MainWindow(QMainWindow):
 		self.setAnimated(True)
 
 		# self.setStyleSheet("background:#f00")
-		menu_bar = self.menuBar()
-		file_menu = menu_bar.addMenu("File")
+		self.menu_bar = self.menuBar()
+		file_menu = self.menu_bar.addMenu("File")
 		new_button = QAction("New Session", self)
 		new_button.setShortcut("Ctrl+N")
 		file_menu.addAction(new_button)
@@ -32,7 +32,7 @@ class MainWindow(QMainWindow):
 		file_menu.addAction(quit_button)
 		file_menu.triggered[QAction].connect(self.processTrigger)
 
-		display_menu = menu_bar.addMenu("Display")
+		display_menu = self.menu_bar.addMenu("Display")
 		scale_button = display_menu.addMenu("Scale")
 
 		self.d_a_adapt = QAction("Adapt", self)
@@ -53,7 +53,7 @@ class MainWindow(QMainWindow):
 
 		display_menu.triggered[QAction].connect(self.processTrigger)
 
-		debug_menu = menu_bar.addMenu("Debug")
+		debug_menu = self.menu_bar.addMenu("Debug")
 		self.runing_info = QAction("Runing Info", self)
 		self.runing_info.setCheckable(True)
 		debug_menu.addAction(self.runing_info)
@@ -72,9 +72,18 @@ class MainWindow(QMainWindow):
 		self.runing_info.setChecked(False)
 		self.d_a_adapt.setChecked(True)
 
+	def _resize_to_1_1(self):
+		render_size = self.centralwidget.get_stream_size()
+		if self.statusBar.isVisible():
+			self.setFixedSize(render_size[0], render_size[1] + self.menu_bar.height() + self.statusBar.height())
+		else:
+			self.setFixedSize(render_size[0], render_size[1] + self.menu_bar.height())
+
 	def processTrigger(self, q):
 		if q.text() == "Runing Info":
 			if q.isChecked():
 				self.statusBar.setVisible(True)
 			else:
 				self.statusBar.setVisible(False)
+		elif q.text() == "1:1":
+			self._resize_to_1_1()

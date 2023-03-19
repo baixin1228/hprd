@@ -28,6 +28,12 @@ clib.py_mouse_move.restype = c_int
 clib.py_mouse_click.argtypes = [c_int, c_int, c_int, c_int]
 clib.py_mouse_click.restype = c_int
 
+clib.py_wheel_event.argtypes = [c_int]
+clib.py_wheel_event.restype = c_int
+
+clib.py_key_event.argtypes = [c_int, c_int]
+clib.py_key_event.restype = c_int
+
 clib.py_client_resize.argtypes = [c_uint, c_uint]
 clib.py_client_resize.restype = c_int
 

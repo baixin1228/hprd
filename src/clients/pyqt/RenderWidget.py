@@ -22,6 +22,7 @@ class RenderWidget(QWidget):
 
 	def _setup_ui(self):
 		self.setMouseTracking(True)
+		self.setFocusPolicy(Qt.StrongFocus)
 		self.mouse_key = 0
 
 	@CFUNCTYPE(None, py_object, c_uint, c_uint)
@@ -42,6 +43,14 @@ class RenderWidget(QWidget):
 		x = x / self.width() * self.stream_width
 		y = y / self.height() * self.stream_height
 		return int(x), int(y)
+
+	def keyPressEvent(self, event):
+		keycode = get_key_code(event.key())
+		proxy().py_key_event(keycode, 1)
+
+	def keyReleaseEvent(self, event):
+		keycode = get_key_code(event.key())
+		proxy().py_key_event(keycode, 0)
 
 	def mousePressEvent(self,event):
 		if self.mouse_key != 0:

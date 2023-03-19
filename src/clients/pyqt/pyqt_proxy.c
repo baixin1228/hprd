@@ -239,3 +239,43 @@ int py_mouse_click(int x, int y, int key, int down_or_up)
 
 	return 0;
 }
+
+int py_wheel_event(int key)
+{
+	struct input_event event;
+
+	event.type = MOUSE_WHEEL;
+	event.key_code = key;
+
+	if(send_event(fd, INPUT_EVENT, (char *)&event, sizeof(struct input_event))
+		== -1)
+	{
+		log_error("send_event fail.");
+		return -1;
+	}
+
+	return 0;
+}
+
+int py_key_event(int key, int down_or_up)
+{
+	struct input_event event;
+
+	if(down_or_up)
+	{
+		event.type = KEY_DOWN;
+	}else{
+		event.type = KEY_UP;
+	}
+	
+	event.key_code = key;
+
+	if(send_event(fd, INPUT_EVENT, (char *)&event, sizeof(struct input_event))
+		== -1)
+	{
+		log_error("send_event fail.");
+		return -1;
+	}
+
+	return 0;
+}

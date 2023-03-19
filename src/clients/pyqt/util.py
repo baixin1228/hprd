@@ -32,3 +32,66 @@ def set_win_center(ui):
 	newLeft = main_screen.x() + (main_screen.width() - size.width()) / 2
 	newTop = main_screen.y() + (main_screen.height() - size.height()) / 2
 	ui.move(int(newLeft),int(newTop))
+
+def get_key_code(code):
+	if code <= 222:
+		return code
+
+	if code == Qt.Key_Backspace:
+		return 8
+
+	if code == Qt.Key_Tab:
+		return 9
+
+	if code == Qt.Key_Return:
+		return 13
+
+	if code == Qt.Key_Enter:
+		return 13
+
+	if code == Qt.Key_Shift:
+		return 16
+
+	if code == Qt.Key_Control:
+		return 17
+
+	if code == Qt.Key_Alt:
+		return 18
+
+	if code == Qt.Key_CapsLock:
+		return 20
+
+	if code == Qt.Key_Escape:
+		return 27
+
+	if code == Qt.Key_Space:
+		return 32
+
+	if code == Qt.Key_PageUp:
+		return 33
+
+	if code == Qt.Key_PageDown:
+		return 34
+
+	if code == Qt.Key_End:
+		return 35
+
+	if code == Qt.Key_Home:
+		return 36
+
+	if code == Qt.Key_Left:
+		return 37
+
+	if code == Qt.Key_Up:
+		return 38
+
+	if code == Qt.Key_Right:
+		return 39
+
+	if code == Qt.Key_Down:
+		return 40
+
+	if code == Qt.Key_Escape:
+		return 27
+
+	return 17

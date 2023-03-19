@@ -60,9 +60,17 @@ static long get_xkeycode(int keycode)
 			return XStringToKeysym("Control_L");
 		case 32:
 			return XStringToKeysym("space");
+		case 37:
+			return XStringToKeysym("Left");
+		case 38:
+			return XStringToKeysym("Up");
+		case 39:
+			return XStringToKeysym("Right");
+		case 40:
+			return XStringToKeysym("Down");
 	}
 
-	if(keycode > 32 && keycode < 255)
+	if(keycode > 32 && keycode <= 222)
 		return keycode;
 	else
 		return XStringToKeysym("Control_L");

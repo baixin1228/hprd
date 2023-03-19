@@ -14,8 +14,8 @@
 For Deepin V20 and Debian:
 ```
 #server side
-sudo apt install meson ninja-build build-essential
-sudo apt install libavcodec-dev libavformat-dev libswscale-dev
+sudo apt install meson ninja-build build-essential cmake libglib2.0-dev
+sudo apt install libavcodec-dev libavformat-dev libswscale-dev libopenh264-dev libsdl2-dev libx11-dev libxext-dev libxtst-dev
 
 #client side
 # clone and build openh264 package
@@ -36,11 +36,14 @@ sudo apt install libdrm-dev
 Run Server:
 ./run_server.sh
 
-Run Client:
+### Run Client:
 ./run_client.sh
-./run_client.sh --ip 192.168.0.1
 
+./run_client.sh --ip 192.168.0.1
+### Run Python Client
+pip3 install PyQt5
 ./run_python_client.sh
+
 ./run_python_client.sh --ip 192.168.0.1 -s
 
 ## Development

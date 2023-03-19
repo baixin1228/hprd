@@ -14,8 +14,11 @@
 
 int fd = -1;
 struct mem_pool client_pool = {0};
-struct display_object *out_obj = NULL;
+struct display_object *dsp_obj = NULL;
 struct decodec_object *dec_obj = NULL;
+
+void *resize_cb_oqu = NULL;
+void (* resize_cb_callback)(void *oqu, uint32_t width, uint32_t height) = NULL;
 
 static void _on_event(struct display_object *obj, struct input_event *event)
 {
@@ -74,13 +77,13 @@ int py_on_frame()
 		return 0;
 	}
 
-	ret = display_put_fb(out_obj, buf_id);
+	ret = display_put_fb(dsp_obj, buf_id);
 	if(ret != 0)
 	{
 		log_error("display_put_fb fail.");
 		return -1;
 	}
-	buf_id = display_get_fb(out_obj);
+	buf_id = display_get_fb(dsp_obj);
 	if(buf_id == -1)
 	{
 		log_error("display_get_fb fail.");
@@ -112,10 +115,14 @@ int py_client_init_config(uint64_t winid)
 		goto END;
 	}
 
-	display_regist_event_callback(out_obj, _on_event);
+	display_regist_event_callback(dsp_obj, _on_event);
 	g_hash_table_insert(fb_info, "frame_rate", &frame_rate);
 	g_hash_table_insert(fb_info, "window", &winid);
-	display_set_info(out_obj, fb_info);
+	display_set_info(dsp_obj, fb_info);
+	if(resize_cb_callback != NULL)
+		resize_cb_callback(resize_cb_oqu, 
+			*(uint32_t *)g_hash_table_lookup(fb_info, "width"),
+			*(uint32_t *)g_hash_table_lookup(fb_info, "height"));
 	ret = 0;
 END:
 	g_hash_table_destroy(fb_info);
@@ -136,7 +143,7 @@ int py_client_connect(char *ip, uint16_t port)
 	}
 
 	dec_obj = decodec_init(&client_pool);
-	out_obj = display_dev_init(&client_pool, "x11_renderer");
+	dsp_obj = display_dev_init(&client_pool, "x11_renderer");
 
 	for (int i = 0; i < 5; ++i)
 	{
@@ -152,7 +159,7 @@ int py_client_connect(char *ip, uint16_t port)
 			log_error("decodec_map_fb fail.");
 			return -1;
 		}
-		ret = display_map_fb(out_obj, buf_id);
+		ret = display_map_fb(dsp_obj, buf_id);
 		if(ret != 0)
 		{
 			log_error("display_map_fb fail.");
@@ -160,6 +167,22 @@ int py_client_connect(char *ip, uint16_t port)
 		}
 	}
 
+	return 0;
+}
+
+int py_client_resize(uint32_t width, uint32_t height)
+{
+	if(!dsp_obj)
+		return -1;
+
+	return display_resize(dsp_obj, width, height);
+}
+
+int py_client_regist_stream_size_cb(void * oqu, void (*callback)(void * oqu,
+	uint32_t width, uint32_t height))
+{
+	resize_cb_oqu = oqu;
+	resize_cb_callback = callback;
 	return 0;
 }
 

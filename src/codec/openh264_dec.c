@@ -29,7 +29,7 @@ struct svc_dec_data
 
 void _libopenh264_trace_callback(void *ctx, int level, const char *msg)
 {
-    log_info("[%p] %s", ctx, msg);
+    // log_info("[%p] %s", ctx, msg);
 }
 
 static int svc_decode_init(struct decodec_object *obj)

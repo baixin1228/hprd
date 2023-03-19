@@ -97,7 +97,6 @@ struct gl_object *gl_init(uint32_t width, uint32_t height, int pix_format)
 	checkEGlError(__FILE__, __LINE__);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	// glViewport(100, 200, obj->width, obj->height);
 	glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -145,6 +144,11 @@ int gl_render(struct gl_object *obj, int texture_id)
 	glDrawElements (GL_TRIANGLES, 6 , GL_UNSIGNED_INT, rect_points);
 	checkEGlError(__FILE__, __LINE__);
 	return 0;
+}
+
+void gl_resize(struct gl_object *obj, uint32_t width, uint32_t height)
+{
+	glViewport(0, 0, width, height);
 }
 
 void gl_release(struct gl_object *obj)

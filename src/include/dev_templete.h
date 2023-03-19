@@ -124,6 +124,27 @@ int __obj##_put_fb(struct __obj##_object *obj, int buf_id)\
 	return -1;										\
 }
 
+#define DEV_RESIZE(__obj, __obj_ops)				\
+int __obj##_resize(struct __obj##_object *obj,		\
+	uint32_t width, uint32_t height)				\
+{													\
+	struct __obj_ops *dev_ops;						\
+													\
+	if(!obj)										\
+		return -1;									\
+													\
+	dev_ops = (struct __obj_ops *)obj->ops;			\
+	if(dev_ops)										\
+	{												\
+		if(dev_ops->resize)						\
+			return dev_ops->resize(obj, width, height);\
+		else 										\
+			log_error(#__obj" dev not find func:resize\n");\
+	}												\
+													\
+	return -1;										\
+}
+
 #define DEV_RELEASE(__obj, __obj_ops)				\
 int __obj##_release(struct __obj##_object *obj)		\
 {													\

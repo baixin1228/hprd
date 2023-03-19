@@ -65,6 +65,7 @@ DEV_MAP_FB(display, display_dev_ops)
 DEV_UNMAP_FB(display, display_dev_ops)
 DEV_GET_FB(display, display_dev_ops)
 DEV_PUT_FB(display, display_dev_ops)
+DEV_RESIZE(display, display_dev_ops)
 DEV_RELEASE(display, display_dev_ops)
 
 int display_regist_frame_callback(struct display_object *display_obj, void (* on_frame)(struct display_object *obj))

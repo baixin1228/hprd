@@ -14,6 +14,7 @@ class MainWindow(QMainWindow):
 	def __init__(self):
 		super(MainWindow, self).__init__()
 		self.setup_ui()
+		self.init_ui()
 		set_win_center(self)
 
 	def setup_ui(self):
@@ -33,15 +34,29 @@ class MainWindow(QMainWindow):
 
 		display_menu = menu_bar.addMenu("Display")
 		scale_button = display_menu.addMenu("Scale")
-		scale_button.addAction("adapt")
-		scale_button.addAction("stretch")
+
+		self.d_a_adapt = QAction("Adapt", self)
+		self.d_a_adapt.setCheckable(True)
+		scale_button.addAction(self.d_a_adapt)
+		self.d_a_stretch = QAction("Stretch", self)
+		self.d_a_stretch.setCheckable(True)
+		scale_button.addAction(self.d_a_stretch)
+		self.d_a_match = QAction("1:1", self)
+		self.d_a_match.setCheckable(True)
+		scale_button.addAction(self.d_a_match)
+
+		self.algrithmAction = QActionGroup(self);
+		self.algrithmAction.addAction(self.d_a_adapt);
+		self.algrithmAction.addAction(self.d_a_stretch);
+		self.algrithmAction.addAction(self.d_a_match);
+		self.algrithmAction.setExclusive(True);
+
 		display_menu.triggered[QAction].connect(self.processTrigger)
 
 		debug_menu = menu_bar.addMenu("Debug")
-		runing_info = QAction("Runing Info", self)
-		runing_info.setCheckable(True)
-		runing_info.setChecked(False)
-		debug_menu.addAction(runing_info)
+		self.runing_info = QAction("Runing Info", self)
+		self.runing_info.setCheckable(True)
+		debug_menu.addAction(self.runing_info)
 		debug_menu.triggered[QAction].connect(self.processTrigger)
 
 		self.centralwidget = RenderWidget()
@@ -52,7 +67,11 @@ class MainWindow(QMainWindow):
 		self.setStatusBar(self.statusBar)
 		self.statusBar.showMessage(" 菜单选项被点击了", 5000)
 		self.statusBar.setVisible(False)
-		
+
+	def init_ui(self):
+		self.runing_info.setChecked(False)
+		self.d_a_adapt.setChecked(True)
+
 	def processTrigger(self, q):
 		if q.text() == "Runing Info":
 			if q.isChecked():

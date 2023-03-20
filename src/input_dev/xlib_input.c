@@ -58,8 +58,22 @@ static long get_xkeycode(int keycode)
 			return XStringToKeysym("Shift_L");
 		case 17:
 			return XStringToKeysym("Control_L");
+		case 18:
+			return XStringToKeysym("Alt_L");
+		case 20:
+			return XStringToKeysym("CapsLock");
+		case 27:
+			return XStringToKeysym("Escape");
 		case 32:
 			return XStringToKeysym("space");
+		case 33:
+			return XStringToKeysym("PageUp");
+		case 34:
+			return XStringToKeysym("PageDown");
+		case 35:
+			return XStringToKeysym("End");
+		case 36:
+			return XStringToKeysym("Home");
 		case 37:
 			return XStringToKeysym("Left");
 		case 38:

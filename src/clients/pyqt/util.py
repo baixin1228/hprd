@@ -91,7 +91,4 @@ def get_key_code(code):
 	if code == Qt.Key_Down:
 		return 40
 
-	if code == Qt.Key_Escape:
-		return 27
-
 	return 17

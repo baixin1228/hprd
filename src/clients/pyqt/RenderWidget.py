@@ -16,7 +16,7 @@ class RenderWidget(QWidget):
 		self.on_client_init = on_client_init
 		self._setup_ui()
 		set_win_center(self)
-		add_task(1, True, self._init_client)
+		add_task(1, True, self._waiting_init)
 		proxy().py_client_regist_stream_size_cb(py_object(self), self._stream_size_cb)
 		self.stream_width = 0
 		self.stream_height = 0
@@ -35,12 +35,16 @@ class RenderWidget(QWidget):
 		if proxy().py_on_frame() == -1:
 			sys.exit(-1);
 
-	def _init_client(self, task):
-		if(proxy().py_client_init_config(self.winId().__int__()) == 0):
+	def _waiting_init(self, task):
+		ret = proxy().py_client_init_config(self.winId().__int__())
+		if ret == 0:
 			task["loop"] = False;
 			add_task(1, True, self._frame_loop)
 			if self.on_client_init:
 				self.on_client_init()
+		if ret == -1:
+			print("py_client_init_config fail.")
+			sys.exit(-1)
 
 	def _get_remote_pos(self, x , y):
 		x = x / self.width() * self.stream_width

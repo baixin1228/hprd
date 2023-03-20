@@ -11,15 +11,17 @@ from ctypes import *
 from pyqt_proxy import *
 
 class RenderWidget(QWidget):
-	def __init__(self, on_client_init):
+	def __init__(self, on_render_show):
 		super(RenderWidget, self).__init__()
-		self.on_client_init = on_client_init
+		self.on_render_show = on_render_show
 		self._setup_ui()
 		set_win_center(self)
 		add_task(1, True, self._waiting_init)
 		proxy().py_client_regist_stream_size_cb(py_object(self), self._stream_size_cb)
 		self.stream_width = 0
 		self.stream_height = 0
+		self.old_width = self.width()
+		self.old_height = self.height()
 
 	def _setup_ui(self):
 		self.setMouseTracking(True)
@@ -40,8 +42,8 @@ class RenderWidget(QWidget):
 		if ret == 0:
 			task["loop"] = False;
 			add_task(1, True, self._frame_loop)
-			if self.on_client_init:
-				self.on_client_init()
+			if self.on_render_show:
+				self.on_render_show()
 		if ret == -1:
 			print("py_client_init_config fail.")
 			sys.exit(-1)
@@ -83,7 +85,10 @@ class RenderWidget(QWidget):
 		self.mouse_key = 0
 
 	def resizeEvent(self, event):
-		proxy().py_client_resize(event.size().width(), int(event.size().height()))
+		if self.old_width != event.size().width() or self.old_height != event.size().height():
+			self.old_width = event.size().width()
+			self.old_height = event.size().height()
+			proxy().py_client_resize(event.size().width(), int(event.size().height()))
 
 	def get_stream_size(self):
 		return int(self.stream_width), int(self.stream_height)

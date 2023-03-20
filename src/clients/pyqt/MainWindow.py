@@ -59,7 +59,7 @@ class MainWindow(QMainWindow):
 		debug_menu.addAction(self.runing_info)
 		debug_menu.triggered[QAction].connect(self.processTrigger)
 
-		self.centralwidget = RenderWidget(self._on_client_init)
+		self.centralwidget = RenderWidget(self._on_render_show)
 		# self.centralwidget.setStyleSheet("background:#0f0")
 		self.setCentralWidget(self.centralwidget)
 
@@ -73,12 +73,12 @@ class MainWindow(QMainWindow):
 		self.runing_info.setChecked(False)
 		self.d_a_adapt.setChecked(True)
 
-	def _on_client_init(self):
+	def _on_render_show(self):
 		render_size = self.centralwidget.get_stream_size()
 		if self.statusBar.isVisible():
 			self.resize(render_size[0], render_size[1] + self.menu_bar.height() + self.statusBar.height())
 		else:
-			self.resize(render_size[0], render_size[1] + self.menu_bar.height())	
+			self.resize(render_size[0], render_size[1] + self.menu_bar.height())
 
 	def _resize_to_1_1(self):
 		render_size = self.centralwidget.get_stream_size()

@@ -102,7 +102,7 @@ int py_on_frame()
 
 int py_client_init_config(uint64_t winid)
 {
-	int ret = -1;
+	int ret = -2;
 	uint32_t frame_rate = 61;
 	GHashTable *fb_info = g_hash_table_new(g_str_hash, g_str_equal);
 
@@ -138,7 +138,7 @@ int py_client_connect(char *ip, uint16_t port)
 	
 	fd = client_connect(ip, port);
 
-	if (fd < 0) {
+	if (fd == -1) {
 		return -1;
 	}
 

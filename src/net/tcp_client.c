@@ -15,7 +15,7 @@ int client_connect(char *ip, uint16_t port)
 	int fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd < 0) {
 		perror("\n");
-		return fd;
+		return -1;
 	}
 
 	struct sockaddr_in addr = {
@@ -27,7 +27,7 @@ int client_connect(char *ip, uint16_t port)
 	int err = connect(fd, (struct sockaddr *)&addr, sizeof(addr));
 	if (err < 0) {
 		perror("\n connect");
-		return err;
+		return -1;
 	}
 
 	return fd;

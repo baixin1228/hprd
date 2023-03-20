@@ -93,6 +93,8 @@ class LoginWindow(QMainWindow):
 		ret = proxy().py_client_connect(ip_port[0].encode('utf-8'), port)
 		if ret == 0:
 			add_task(1, False, self.main_win_show)
+		else:
+			print("connect to {} fail.", ip_port[0])
 
 if __name__=="__main__":
 	app = QApplication(sys.argv)

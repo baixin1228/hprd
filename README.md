@@ -11,26 +11,29 @@
 ### Features
 
 ## Requirements
-For Deepin V20 and Debian:
-#### server side
+#### For Deepin V20、Debian and Ubuntu 20.04:
+server side
 ```sh
-sudo apt install meson ninja-build build-essential
-sudo apt install libavcodec-dev libavformat-dev libswscale-dev
+sudo apt install meson ninja-build build-essential libavcodec-dev libavformat-dev libswscale-dev
 ```
-#### client side
-clone and build openh264 package
+client side
 ```sh
 git clone https://salsa.debian.org/debian/openh264
+cd openh264
 dpkg-buildpackage -uc -us -Jauto
-```
-install openh264 debs after build it.
-```sh
-sudo apt install ./libopenh264-7_2.3.1+dfsg-3_amd64.deb
-sudo apt install ./libopenh264-dev_2.3.1+dfsg-3_amd64.deb
-```
-install other dependency
-```sh
+sudo apt install ../libopenh264-7_2.3.1+dfsg-3_amd64.deb
+sudo apt install ../libopenh264-dev_2.3.1+dfsg-3_amd64.deb
 sudo apt install libdrm-dev
+```
+
+#### For Ubuntu 22.04:
+server side
+```sh
+sudo apt install meson ninja-build build-essential libavcodec-dev libavformat-dev libswscale-dev
+```
+client side
+```sh
+sudo apt install libopenh264-dev libdrm-dev
 ```
 
 ## Configuration

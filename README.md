@@ -42,6 +42,7 @@ Run Server:
 ./run_client.sh --ip 192.168.0.1
 ### Run Python Client
 pip3 install PyQt5
+sudo apt install libxcb-xinerama0 libxcb-xkb1
 ./run_python_client.sh
 
 ./run_python_client.sh --ip 192.168.0.1 -s

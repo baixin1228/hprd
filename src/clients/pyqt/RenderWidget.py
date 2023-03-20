@@ -53,6 +53,20 @@ class RenderWidget(QWidget):
 		y = y / self.height() * self.stream_height
 		return int(x), int(y)
 
+	def wheelEvent(self, event):
+		angle = event.angleDelta()
+		if angle.y() > 0:
+			proxy().py_wheel_event(4)
+
+		if angle.y() < 0:
+			proxy().py_wheel_event(5)
+
+		if angle.x() < 0:
+			proxy().py_wheel_event(6)
+
+		if angle.x() > 0:
+			proxy().py_wheel_event(7)
+
 	def keyPressEvent(self, event):
 		keycode = get_key_code(event.key())
 		proxy().py_key_event(keycode, 1)

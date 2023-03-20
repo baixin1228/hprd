@@ -1,6 +1,6 @@
 [icon]
 
-# Name
+# High Performance Remote Desktop
 
 [Badges]
 
@@ -33,15 +33,15 @@ sudo apt install libdrm-dev
 ## Installation
 
 ## Usage
-Run Server:
-./run_server.sh
+Run Server:  
+`./run_server.sh`
 
-Run Client:
-./run_client.sh
-./run_client.sh --ip 192.168.0.1
+Run Client:  
+`./run_client.sh`  
+`./run_client.sh --ip 192.168.0.1`
 
-./run_python_client.sh
-./run_python_client.sh --ip 192.168.0.1 -s
+`./run_python_client.sh`  
+`./run_python_client.sh --ip 192.168.0.1 -s`
 
 ## Development
 

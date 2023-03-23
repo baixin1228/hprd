@@ -83,9 +83,9 @@ class MainWindow(QMainWindow):
 		display_menu.triggered[QAction].connect(self.processTrigger)
 
 		debug_menu = self.menu_bar.addMenu("Debug")
-		self.runing_info = QAction("Runing Info", self)
-		self.runing_info.setCheckable(True)
-		debug_menu.addAction(self.runing_info)
+		self.status_bar_action = QAction("Status Bar", self)
+		self.status_bar_action.setCheckable(True)
+		debug_menu.addAction(self.status_bar_action)
 		debug_menu.triggered[QAction].connect(self.processTrigger)
 
 		self.centralwidget = RenderWidget(self._on_render_show)
@@ -97,7 +97,7 @@ class MainWindow(QMainWindow):
 
 	def init_ui(self):
 		self.setWindowTitle("High Performance Remote Desktop")
-		self.runing_info.setChecked(False)
+		self.status_bar_action.setChecked(True)
 
 		self.d_a_adapt.setChecked(True)
 		self.dsp_mode = 1

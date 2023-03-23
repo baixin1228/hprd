@@ -1,13 +1,15 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <unistd.h>
 #include <getopt.h>
 #include <errno.h>
-#include <sys/mman.h>
 #include <signal.h>
+#include <sys/mman.h>
+#include <sys/time.h>
 #include <execinfo.h>
-#include <stdio.h>
+
 #include "util.h"
 
 static void _show_file_line(char addr[])
@@ -145,4 +147,18 @@ void debug_info_regist()
 
 	signal(SIGTERM, _signal_exit_handler);        //15.kill
 	signal(SIGSTKFLT, _signal_crash_handler);    //16.Stack fault
+}
+
+uint64_t get_time_us(void)
+{
+	struct timeval time;
+	gettimeofday(&time, NULL);
+	return time.tv_sec * 1000000 + time.tv_usec;
+}
+
+uint64_t get_time_ms(void)
+{
+	struct timeval time;
+	gettimeofday(&time, NULL);
+	return time.tv_sec * 1000 + time.tv_usec / 1000;
 }

@@ -3,10 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <netinet/in.h>
 
 #include "util.h"
 #include "codec.h"
 #include "encodec.h"
+#include "protocol.h"
 #include "capture_dev.h"
 #include "input_dev.h"
 #include "tcp_server.h"
@@ -59,8 +61,39 @@ void on_key(struct input_event *event)
 	input_push_key(in_obj, event);
 }
 
+void on_setting(struct setting_event *event)
+{
+	switch(event->cmd)
+	{
+		case TARGET_BIT_RATE:
+		{
+			break;
+		}
+		case TARGET_FRAME_RATE:
+		{
+			capture_change_frame_rate(cap_obj, ntohl(event->value));
+			log_info("change frame rate.");
+			break;
+		}
+	}
+}
+
+void on_server_pkt(char *buf, size_t len) {
+	struct data_pkt *pkt = (struct data_pkt *)buf;
+	switch(pkt->cmd) {
+		case INPUT_EVENT: {
+			on_key((struct input_event *)pkt->data);
+			break;
+		}
+		case SETTING_EVENT: {
+			on_setting((struct setting_event *)pkt->data);
+			break;
+		}
+	}
+}
+
 int epfd = -1;
-void on_package(char *buf, size_t len)
+void on_enc_package(char *buf, size_t len)
 {
 	if(epfd != -1)
 		server_bradcast_data_safe(epfd, buf, len);
@@ -107,7 +140,7 @@ void *server_thread(void *opaque)
 	capture_regist_event_callback(cap_obj, capture_on_frame);
 	capture_get_info(cap_obj, fb_info);
 
-	encodec_regist_event_callback(enc_obj, on_package);
+	encodec_regist_event_callback(enc_obj, on_enc_package);
 	g_hash_table_insert(fb_info, "stream_fmt", &stream_ftm);
 	g_hash_table_insert(fb_info, "bit_rate", &bit_rate);
 	encodec_set_info(enc_obj, fb_info);

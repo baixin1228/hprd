@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
 
 #include "util.h"
 #include "codec.h"
@@ -20,24 +21,6 @@ struct decodec_object *dec_obj = NULL;
 void *resize_cb_oqu = NULL;
 void (* resize_cb_callback)(void *oqu, uint32_t width, uint32_t height) = NULL;
 
-static void _on_event(struct display_object *obj, struct input_event *event)
-{
-	struct data_pkt *pkt = calloc(1, sizeof(struct data_pkt) +
-		sizeof(struct input_event));
-
-	pkt->cmd = INPUT_EVENT;
-	memcpy(pkt->data, event, sizeof(struct input_event));
-	pkt->data_len = htonl(sizeof(struct input_event));
-
-	if(client_send_pkt(fd, (char *)pkt, sizeof(struct data_pkt) +
-		sizeof(struct input_event)) == -1)
-	{
-		log_error("client_send_pkt fail.");
-		exit(-1);
-	}
-	free(pkt);
-}
-
 static void _on_package(char *buf, size_t len)
 {
 	if(dec_obj)
@@ -46,10 +29,13 @@ static void _on_package(char *buf, size_t len)
 	}
 }
 
+uint32_t recv_sum = 0;
 static void _on_client_pkt(char *buf, size_t len)
 {
 	struct data_pkt *pkt = (struct data_pkt *)buf;
 	pkt->data_len = ntohl(pkt->data_len);
+
+	recv_sum += len;
 
 	switch(pkt->cmd)
 	{
@@ -61,8 +47,16 @@ static void _on_client_pkt(char *buf, size_t len)
 	}
 }
 
+uint32_t py_get_and_clean_recv_sum()
+{
+	uint32_t ret = recv_sum;
+	recv_sum = 0;
+	return ret;
+}
+
 #define BUFLEN 1024 * 1024 * 10
 static char _recv_buf[BUFLEN];
+uint32_t frame_sum = 0;
 int py_on_frame()
 {
 	int ret;
@@ -97,7 +91,16 @@ int py_on_frame()
 		return -1;
 	}
 
+	frame_sum++;
+
 	return 0;
+}
+
+uint32_t py_get_and_clean_frame()
+{
+	uint32_t ret = frame_sum;
+	frame_sum = 0;
+	return ret;
 }
 
 int py_client_init_config(uint64_t winid)
@@ -115,7 +118,6 @@ int py_client_init_config(uint64_t winid)
 		goto END;
 	}
 
-	display_regist_event_callback(dsp_obj, _on_event);
 	g_hash_table_insert(fb_info, "frame_rate", &frame_rate);
 	g_hash_table_insert(fb_info, "window", &winid);
 	display_set_info(dsp_obj, fb_info);
@@ -205,7 +207,7 @@ int py_mouse_move(int x, int y)
 	event.x = x;
 	event.y = y;
 
-	if(send_event(fd, INPUT_EVENT, (char *)&event, sizeof(struct input_event))
+	if(send_event(fd, INPUT_EVENT, (char *)&event, sizeof(event))
 		== -1)
 	{
 		log_error("send_event fail.");
@@ -230,7 +232,7 @@ int py_mouse_click(int x, int y, int key, int down_or_up)
 	event.x = x;
 	event.y = y;
 
-	if(send_event(fd, INPUT_EVENT, (char *)&event, sizeof(struct input_event))
+	if(send_event(fd, INPUT_EVENT, (char *)&event, sizeof(event))
 		== -1)
 	{
 		log_error("send_event fail.");
@@ -247,7 +249,7 @@ int py_wheel_event(int key)
 	event.type = MOUSE_WHEEL;
 	event.key_code = key;
 
-	if(send_event(fd, INPUT_EVENT, (char *)&event, sizeof(struct input_event))
+	if(send_event(fd, INPUT_EVENT, (char *)&event, sizeof(event))
 		== -1)
 	{
 		log_error("send_event fail.");
@@ -270,7 +272,41 @@ int py_key_event(int key, int down_or_up)
 	
 	event.key_code = key;
 
-	if(send_event(fd, INPUT_EVENT, (char *)&event, sizeof(struct input_event))
+	if(send_event(fd, INPUT_EVENT, (char *)&event, sizeof(event))
+		== -1)
+	{
+		log_error("send_event fail.");
+		return -1;
+	}
+
+	return 0;
+}
+
+int py_change_frame_rate(uint32_t frame_rate)
+{
+	struct setting_event event;
+
+	event.cmd = TARGET_FRAME_RATE;
+	event.value = htonl(frame_rate);
+
+	if(send_event(fd, SETTING_EVENT, (char *)&event, sizeof(event))
+		== -1)
+	{
+		log_error("send_event fail.");
+		return -1;
+	}
+
+	return 0;
+}
+
+int py_change_bit_rate(uint32_t bit_rate)
+{
+	struct setting_event event;
+
+	event.cmd = TARGET_BIT_RATE;
+	event.value = htonl(bit_rate);
+
+	if(send_event(fd, SETTING_EVENT, (char *)&event, sizeof(event))
 		== -1)
 	{
 		log_error("send_event fail.");

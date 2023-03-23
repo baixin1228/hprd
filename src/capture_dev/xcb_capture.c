@@ -247,12 +247,28 @@ static int xext_dev_release(struct capture_object *obj) {
 static int xcb_main_loop(struct capture_object *obj)
 {
 	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
-
+	uint64_t time_start, time_sub;
 	while(1)
 	{
+		time_start = get_time_us();
 		obj->on_frame(obj);
-		usleep(1000000 / priv->frame_rate);
+		time_sub = get_time_us() - time_start;
+
+		if(1000000 / priv->frame_rate > time_sub)
+			usleep(1000000 / priv->frame_rate - time_sub);
 	}
+
+	return 0;
+}
+
+static int xcb_change_frame_rate(struct capture_object *obj, uint32_t frame_rate)
+{
+	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
+
+	if(frame_rate > 0)
+		priv->frame_rate = frame_rate;
+	else
+		log_error("frame_rate is invalid.");
 
 	return 0;
 }
@@ -267,5 +283,6 @@ struct capture_dev_ops xcb_dev_ops = {
 	.put_buffer 		= xext_put_frame_buffer,
 	.unmap_buffer 		= xext_unmap_buffer,
 	.release 			= xext_dev_release,
-	.main_loop			= xcb_main_loop
+	.main_loop			= xcb_main_loop,
+	.change_frame_rate	= xcb_change_frame_rate
 };

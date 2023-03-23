@@ -29,6 +29,17 @@ struct input_event{
   uint32_t y;
 };
 
+enum setting_cmd
+{
+	TARGET_BIT_RATE = 1,
+	TARGET_FRAME_RATE,
+};
+
+struct setting_event{
+  uint8_t cmd;
+  uint32_t value;
+};
+
 int send_event(int fd, uint32_t cmd, char *buf, size_t len);
 
 #endif

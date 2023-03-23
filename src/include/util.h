@@ -65,5 +65,6 @@ static inline void log_perr(const char *fmt, ...)
 
 void print_stack(char *sig);
 void debug_info_regist();
-
+uint64_t get_time_ms(void);
+uint64_t get_time_us(void);
 #endif

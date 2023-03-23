@@ -8,22 +8,44 @@ def on_timer():
 	global tasks
 	for i in range(len(tasks) - 1, -1, -1):
 		task = tasks[i]
-		if task["delay"] == 0:
+		if task["_interval"] == 0:
 			task["callback"](*task["params"])
-			if not task["loop"]:
+			if task["interval"] == 0:
 				tasks.remove(task)
+			else:
+				task["_interval"] = task["interval"]
 
-		if task["delay"] > 0:
-			task["delay"] = task["delay"] - 1
+		if task["_interval"] > 0:
+			task["_interval"] = task["_interval"] - 1
 
-def add_task(delay, loop, callback, *params):
+timer = None
+def start_timer(app):
+	global timer
+	timer = QTimer(app)
+	timer.timeout.connect(on_timer)
+	timer.start(int(1000 / 60))
+
+def timer_set_interval(interval):
+	global timer
+	timer.setInterval(interval)
+
+"""
+delay: delay frames to start
+interval: loop interval，0 is not loop
+callback: callback func
+*params: callback params
+"""
+def add_task(delay, interval, callback, *params):
 	global tasks
 	task = {}
-	task["delay"] = delay
-	task["loop"] = loop
+	task["_interval"] = delay
+	task["interval"] = interval
 	task["callback"] = callback
 	task["params"] = (task, *params)
 	tasks.append(task)
+
+def stop_task(task):
+	task["interval"] = 0
 
 def set_win_center(ui):
 	main_screen = QApplication.primaryScreen().geometry()
@@ -92,3 +114,17 @@ def get_key_code(code):
 		return 40
 
 	return 17
+
+def format_speed(speed):
+	if speed < 1024:
+		return "%db/s" % (speed)
+	if speed < 1024 * 1024:
+		return "%dkb/s" % (speed / 1024)
+	if speed < 1024 * 1024 * 1024:
+		return "%dMb/s" % (speed / 1024 / 1024)
+	if speed < 1024 * 1024 * 1024 * 1204:
+		return "%dGb/s" % (speed / 1024 / 1024 / 1024)
+	if speed < 1024 * 1024 * 1024 * 1024 * 1024:
+		return "%dTb/s" % (speed / 1024 / 1024 / 1024 / 1024)
+
+	return "out of range"

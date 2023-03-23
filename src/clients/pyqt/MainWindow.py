@@ -34,8 +34,8 @@ class MainWindow(QMainWindow):
 		file_menu.triggered[QAction].connect(self.processTrigger)
 
 		display_menu = self.menu_bar.addMenu("Display")
-		scale_button = display_menu.addMenu("Scale")
 
+		scale_button = display_menu.addMenu("Scale")
 		self.d_a_adapt = QAction("Adapt", self)
 		self.d_a_adapt.setCheckable(True)
 		scale_button.addAction(self.d_a_adapt)
@@ -45,6 +45,9 @@ class MainWindow(QMainWindow):
 		self.d_a_match = QAction("1:1", self)
 		self.d_a_match.setCheckable(True)
 		scale_button.addAction(self.d_a_match)
+
+		display_menu.addAction("Taget Frame Rate")
+		display_menu.addAction("Taget Bit Rate")
 
 		self.algrithmAction = QActionGroup(self);
 		self.algrithmAction.addAction(self.d_a_adapt);
@@ -130,3 +133,6 @@ class MainWindow(QMainWindow):
 			self._set_dsp_mode(2)
 		elif q.text() == "1:1":
 			self._set_dsp_mode(3)
+
+		elif q.text() == "Quit":
+			sys.exit(0)

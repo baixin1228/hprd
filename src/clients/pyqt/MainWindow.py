@@ -6,6 +6,7 @@ from PyQt5.QtGui import *
 
 import sys
 import sip
+import time
 from util import *
 from pyqt_proxy import proxy
 from RenderWidget import RenderWidget
@@ -65,15 +66,26 @@ class MainWindow(QMainWindow):
 
 		self.statusBar = QStatusBar()
 		self.setStatusBar(self.statusBar)
-		self.statusBar.showMessage(" 菜单选项被点击了", 0)
-		self.statusBar.setVisible(False)
 
 	def init_ui(self):
 		self.setWindowTitle("High Performance Remote Desktop")
 		self.runing_info.setChecked(False)
-		
+
 		self.d_a_adapt.setChecked(True)
 		self.dsp_mode = 1
+
+		self.time_ms = int(round(time.time() * 1000))
+
+		add_task(1, 10, self._loop_10)
+
+	def _loop_10(self, task):
+		time_ms = int(round(time.time() * 1000))
+		time_sub = time_ms - self.time_ms
+		if self.statusBar.isVisible():
+			self.statusBar.showMessage("码流帧率:%d  码率:%s" %
+			(proxy().py_get_and_clean_frame() * 1000 / time_sub,
+			format_speed(proxy().py_get_and_clean_recv_sum() * 1000 / time_sub)), 0)
+		self.time_ms = time_ms
 
 	def _on_render_show(self):
 		render_size = self.centralwidget.get_stream_size()
@@ -103,7 +115,6 @@ class MainWindow(QMainWindow):
 	def _set_dsp_mode(self, mode):
 		self.dsp_mode = mode
 		self._update_dsp_mode()
-
 
 	def processTrigger(self, q):
 		if q.text() == "Runing Info":

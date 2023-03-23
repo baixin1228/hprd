@@ -16,7 +16,7 @@ class RenderWidget(QWidget):
 		self.on_render_show = on_render_show
 		self._setup_ui()
 		set_win_center(self)
-		add_task(1, True, self._waiting_init)
+		add_task(1, 1, self._waiting_init)
 		proxy().py_client_regist_stream_size_cb(py_object(self), self._stream_size_cb)
 		self.stream_width = 0
 		self.stream_height = 0
@@ -35,13 +35,14 @@ class RenderWidget(QWidget):
 
 	def _frame_loop(self, task):
 		if proxy().py_on_frame() == -1:
+			print("py_on_frame fail.")
 			sys.exit(-1);
 
 	def _waiting_init(self, task):
 		ret = proxy().py_client_init_config(self.winId().__int__())
 		if ret == 0:
-			task["loop"] = False;
-			add_task(1, True, self._frame_loop)
+			stop_task(task)
+			add_task(1, 1, self._frame_loop)
 			if self.on_render_show:
 				self.on_render_show()
 		if ret == -1:

@@ -46,10 +46,13 @@ static void _on_package(char *buf, size_t len)
 	}
 }
 
+uint32_t recv_sum = 0;
 static void _on_client_pkt(char *buf, size_t len)
 {
 	struct data_pkt *pkt = (struct data_pkt *)buf;
 	pkt->data_len = ntohl(pkt->data_len);
+
+	recv_sum += len;
 
 	switch(pkt->cmd)
 	{
@@ -61,8 +64,16 @@ static void _on_client_pkt(char *buf, size_t len)
 	}
 }
 
+uint32_t py_get_and_clean_recv_sum()
+{
+	uint32_t ret = recv_sum;
+	recv_sum = 0;
+	return ret;
+}
+
 #define BUFLEN 1024 * 1024 * 10
 static char _recv_buf[BUFLEN];
+uint32_t frame_sum = 0;
 int py_on_frame()
 {
 	int ret;
@@ -97,7 +108,16 @@ int py_on_frame()
 		return -1;
 	}
 
+	frame_sum++;
+
 	return 0;
+}
+
+uint32_t py_get_and_clean_frame()
+{
+	uint32_t ret = frame_sum;
+	frame_sum = 0;
+	return ret;
 }
 
 int py_client_init_config(uint64_t winid)

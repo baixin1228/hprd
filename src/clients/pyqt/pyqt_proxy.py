@@ -43,6 +43,12 @@ clib.py_get_and_clean_recv_sum.restype = c_uint
 clib.py_get_and_clean_frame.argtypes = []
 clib.py_get_and_clean_frame.restype = c_uint
 
+clib.py_change_frame_rate.argtypes = [c_uint]
+clib.py_change_frame_rate.restype = c_int
+
+clib.py_change_bit_rate.argtypes = [c_uint]
+clib.py_change_bit_rate.restype = c_int
+
 clib.py_client_regist_stream_size_cb.argtypes = [py_object, c_void_p] 
 clib.py_client_regist_stream_size_cb.restype = c_int
 

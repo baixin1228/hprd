@@ -25,6 +25,7 @@ struct capture_dev_ops
 	int (* get_buffer)(struct capture_object *obj);
 	int (* unmap_buffer)(struct capture_object *obj, int buf_id);
 	int (* main_loop)(struct capture_object *obj);
+	int (* change_frame_rate)(struct capture_object *obj, uint32_t frame_rate);
 	int (* release)(struct capture_object *obj);
 };
 
@@ -36,5 +37,7 @@ int capture_get_fb(struct capture_object *capture_obj);
 int capture_put_fb(struct capture_object *capture_obj, int buf_id);
 int capture_regist_event_callback(struct capture_object *capture_obj, void (* on_frame)(struct capture_object *obj));
 int capture_main_loop(struct capture_object *capture_obj);
+int capture_change_frame_rate(struct capture_object *capture_obj,
+	uint32_t frate_rate);
 
 #endif

@@ -45,6 +45,11 @@ class MainWindow(QMainWindow):
 		self.d_a_match = QAction("1:1", self)
 		self.d_a_match.setCheckable(True)
 		scale_button.addAction(self.d_a_match)
+		scale_group = QActionGroup(self);
+		scale_group.addAction(self.d_a_adapt);
+		scale_group.addAction(self.d_a_stretch);
+		scale_group.addAction(self.d_a_match);
+		scale_group.setExclusive(True);
 
 		framerate_button = display_menu.addMenu("Taget Frame Rate")
 		self.fps_30 = QAction("30fps", self)
@@ -59,6 +64,12 @@ class MainWindow(QMainWindow):
 		self.fps_240 = QAction("240fps", self)
 		self.fps_240.setCheckable(True)
 		framerate_button.addAction(self.fps_240)
+		frame_rate_group = QActionGroup(self);
+		frame_rate_group.addAction(self.fps_30);
+		frame_rate_group.addAction(self.fps_60);
+		frame_rate_group.addAction(self.fps_120);
+		frame_rate_group.addAction(self.fps_240);
+		frame_rate_group.setExclusive(True);
 
 		bitrate_button = display_menu.addMenu("Target Bit Rate")
 		self.b_1M = QAction("1Mbps", self)
@@ -73,12 +84,12 @@ class MainWindow(QMainWindow):
 		self.b_1000M = QAction("1000Mbps", self)
 		self.b_1000M.setCheckable(True)
 		bitrate_button.addAction(self.b_1000M)
-
-		self.algrithmAction = QActionGroup(self);
-		self.algrithmAction.addAction(self.d_a_adapt);
-		self.algrithmAction.addAction(self.d_a_stretch);
-		self.algrithmAction.addAction(self.d_a_match);
-		self.algrithmAction.setExclusive(True);
+		target_bit_group = QActionGroup(self);
+		target_bit_group.addAction(self.b_1M);
+		target_bit_group.addAction(self.b_10M);
+		target_bit_group.addAction(self.b_100M);
+		target_bit_group.addAction(self.b_1000M);
+		target_bit_group.setExclusive(True);
 
 		display_menu.triggered[QAction].connect(self.processTrigger)
 
@@ -161,6 +172,19 @@ class MainWindow(QMainWindow):
 			self._set_dsp_mode(2)
 		elif q.text() == "1:1":
 			self._set_dsp_mode(3)
+
+		elif q.text() == "30fps":
+			proxy().py_change_frame_rate(28)
+			timer_set_interval(1000 / 30)
+		elif q.text() == "60fps":
+			proxy().py_change_frame_rate(58)
+			timer_set_interval(1000 / 60)
+		elif q.text() == "120fps":
+			proxy().py_change_frame_rate(118)
+			timer_set_interval(1000 / 120)
+		elif q.text() == "240fps":
+			proxy().py_change_frame_rate(238)
+			timer_set_interval(1000 / 240)
 
 		elif q.text() == "Quit":
 			sys.exit(0)

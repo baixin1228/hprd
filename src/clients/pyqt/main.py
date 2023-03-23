@@ -101,8 +101,6 @@ if __name__=="__main__":
 	w = LoginWindow()
 	w.show()
 
-	timer = QTimer(app)
-	timer.timeout.connect(on_timer)
-	timer.start(int(1000 / 60))
+	start_timer(app)
 
 	sys.exit(app.exec())

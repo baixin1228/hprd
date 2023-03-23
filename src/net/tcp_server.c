@@ -193,19 +193,9 @@ void callback_accept(int epfd, struct ep_event *ev) {
 	}
 }
 
-void on_key(struct input_event *event);
-static void _on_server_pkt(char *buf, size_t len) {
-	struct data_pkt *pkt = (struct data_pkt *)buf;
-	switch(pkt->cmd) {
-		case INPUT_EVENT: {
-			on_key((struct input_event *)pkt->data);
-			break;
-		}
-	}
-}
-
+void on_server_pkt(char *buf, size_t len);
 void callback_recvdata(int epfd, struct ep_event *ev) {
-	if(tcp_recv_pkt(ev->fd, ev->recv_buf, _on_server_pkt) == -1) {
+	if(tcp_recv_pkt(ev->fd, ev->recv_buf, on_server_pkt) == -1) {
 		log_error("recv error.");
 		remove_client(epfd, ev);
 		return;

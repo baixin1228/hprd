@@ -109,13 +109,11 @@ class RenderWidget(QWidget):
 
 	def update_size(self):
 		if self.old_width != self.width() or self.old_height != self.height():
-			print("resize", self.width(), self.height())
 			self.old_width = self.width()
 			self.old_height = self.height()
 			proxy().py_client_resize(self.width(), int(self.height()))
 
 	def resizeEvent(self, event):
-		print("resizeEvent")
 		self.update_size()
 		event.accept()
 

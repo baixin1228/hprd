@@ -46,8 +46,33 @@ class MainWindow(QMainWindow):
 		self.d_a_match.setCheckable(True)
 		scale_button.addAction(self.d_a_match)
 
-		display_menu.addAction("Taget Frame Rate")
-		display_menu.addAction("Taget Bit Rate")
+		framerate_button = display_menu.addMenu("Taget Frame Rate")
+		self.fps_30 = QAction("30fps", self)
+		self.fps_30.setCheckable(True)
+		framerate_button.addAction(self.fps_30)
+		self.fps_60 = QAction("60fps", self)
+		self.fps_60.setCheckable(True)
+		framerate_button.addAction(self.fps_60)
+		self.fps_120 = QAction("120fps", self)
+		self.fps_120.setCheckable(True)
+		framerate_button.addAction(self.fps_120)
+		self.fps_240 = QAction("240fps", self)
+		self.fps_240.setCheckable(True)
+		framerate_button.addAction(self.fps_240)
+
+		bitrate_button = display_menu.addMenu("Target Bit Rate")
+		self.b_1M = QAction("1Mbps", self)
+		self.b_1M.setCheckable(True)
+		bitrate_button.addAction(self.b_1M)
+		self.b_10M = QAction("10Mbps", self)
+		self.b_10M.setCheckable(True)
+		bitrate_button.addAction(self.b_10M)
+		self.b_100M = QAction("100Mbps", self)
+		self.b_100M.setCheckable(True)
+		bitrate_button.addAction(self.b_100M)
+		self.b_1000M = QAction("1000Mbps", self)
+		self.b_1000M.setCheckable(True)
+		bitrate_button.addAction(self.b_1000M)
 
 		self.algrithmAction = QActionGroup(self);
 		self.algrithmAction.addAction(self.d_a_adapt);
@@ -76,6 +101,9 @@ class MainWindow(QMainWindow):
 
 		self.d_a_adapt.setChecked(True)
 		self.dsp_mode = 1
+
+		self.b_10M.setChecked(True)
+		self.fps_60.setChecked(True)
 
 		self.time_ms = int(round(time.time() * 1000))
 

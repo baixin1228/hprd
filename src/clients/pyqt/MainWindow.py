@@ -65,13 +65,15 @@ class MainWindow(QMainWindow):
 
 		self.statusBar = QStatusBar()
 		self.setStatusBar(self.statusBar)
-		self.statusBar.showMessage(" 菜单选项被点击了", 5000)
+		self.statusBar.showMessage(" 菜单选项被点击了", 0)
 		self.statusBar.setVisible(False)
 
 	def init_ui(self):
 		self.setWindowTitle("High Performance Remote Desktop")
 		self.runing_info.setChecked(False)
+		
 		self.d_a_adapt.setChecked(True)
+		self.dsp_mode = 1
 
 	def _on_render_show(self):
 		render_size = self.centralwidget.get_stream_size()
@@ -87,11 +89,33 @@ class MainWindow(QMainWindow):
 		else:
 			self.setFixedSize(render_size[0], render_size[1] + self.menu_bar.height())
 
+	def _update_dsp_mode(self):
+		if(self.dsp_mode == 1):
+			return
+
+		if(self.dsp_mode == 2):
+			return
+
+		if(self.dsp_mode == 3):
+			self._resize_to_1_1()
+			return
+
+	def _set_dsp_mode(self, mode):
+		self.dsp_mode = mode
+		self._update_dsp_mode()
+
+
 	def processTrigger(self, q):
 		if q.text() == "Runing Info":
 			if q.isChecked():
 				self.statusBar.setVisible(True)
+				self._update_dsp_mode()
 			else:
 				self.statusBar.setVisible(False)
+				self._update_dsp_mode()
+		elif q.text() == "Adapt":
+			self._set_dsp_mode(1)
+		elif q.text() == "Stretch":
+			self._set_dsp_mode(2)
 		elif q.text() == "1:1":
-			self._resize_to_1_1()
+			self._set_dsp_mode(3)

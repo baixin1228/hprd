@@ -167,6 +167,11 @@ static int sdl_dev_init(struct display_object *obj)
 		printf( "Could not initialize SDL - %s\n", SDL_GetError());
 		return -1;
 	}
+	
+#ifdef SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR
+    SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
+#endif
+    SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1");
 
 	priv->frame_rate = 33;
 

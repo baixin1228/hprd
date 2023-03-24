@@ -27,7 +27,7 @@ struct svc_dec_data
     struct dev_id_queue buf_q;
 };
 
-void _libopenh264_trace_callback(void *ctx, int level, const char *msg)
+static void _libopenh264_trace_callback(void *ctx, int level, const char *msg)
 {
     // log_info("[%p] %s", ctx, msg);
 }

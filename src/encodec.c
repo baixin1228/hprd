@@ -8,6 +8,7 @@
 #include "dev_templete.h"
 
 extern struct encodec_ops ffmpeg_enc_ops;
+struct encodec_ops openh264_enc_ops;
 
 struct encodec_object *encodec_init(struct mem_pool *pool)
 {

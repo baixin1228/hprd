@@ -20,20 +20,26 @@ if build_target == 'server' or build_target == 'all'
 
 	server_deps += common_deps
 
-	server_srcs += 'server.c'
 	server_srcs += 'input_dev.c'
 	server_srcs += 'capture_dev.c'
 	server_srcs += 'encodec.c'
 	server_srcs += 'dl_help.c'
 
-	hprd_server = executable('server', server_srcs,
+	server_static_lib = static_library('server', server_srcs,
 		include_directories : inc,
 		dependencies: server_deps,
-		link_with: server_libs,
+		link_whole: server_libs,
 		link_args : ['-ldl', '-lpthread'],
-	    install : true)
+		install : true)
 
-	test('hprd_server_test', hprd_server, is_parallel : false, timeout: 1000)
+	hprd_server = executable('server', 'server.c',
+		include_directories : inc,
+		dependencies: server_deps,
+		link_with: server_static_lib,
+		link_args : ['-ldl', '-lpthread'],
+		install : true)
+
+	subdir('server_tests')
 endif
 
 if build_target == 'client' or build_target == 'all'

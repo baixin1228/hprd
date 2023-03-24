@@ -159,9 +159,9 @@ static int xext_map_buffer(struct capture_object *obj, int buf_id) {
 	raw_buf->bpp = 32;
 	raw_buf->size = priv->width * priv->height * 4;
 	raw_buf->ptrs[0] = xext_buf->ximg->data;
-	raw_buf->ptrs[1] = malloc(1);
-	raw_buf->ptrs[2] = malloc(1);
-	raw_buf->ptrs[3] = malloc(1);
+	raw_buf->ptrs[1] = NULL;
+	raw_buf->ptrs[2] = NULL;
+	raw_buf->ptrs[3] = NULL;
 
 	return 0;
 
@@ -226,10 +226,8 @@ static int xext_unmap_buffer(struct capture_object *obj, int buf_id) {
 	raw_buf->height = 0;
 	raw_buf->ver_stride = 0;
 	raw_buf->size = 0;
+	free(raw_buf->ptrs[0]);
 	raw_buf->ptrs[0] = NULL;
-	free(raw_buf->ptrs[1]);
-	free(raw_buf->ptrs[2]);
-	free(raw_buf->ptrs[3]);
 	return 0;
 }
 

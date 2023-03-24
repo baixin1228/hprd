@@ -27,7 +27,7 @@ struct encodec_ops
 	int (* release)(struct encodec_object *obj);
 };
 
-struct encodec_object *encodec_init(struct mem_pool *pool);
+struct encodec_object *encodec_init(struct mem_pool *pool, char *encodec_name);
 int encodec_set_info(struct encodec_object *display_obj, GHashTable *fb_info);
 int encodec_map_fb(struct encodec_object *encodec_obj, int buf_id);
 int encodec_get_fb(struct encodec_object *encodec_obj);

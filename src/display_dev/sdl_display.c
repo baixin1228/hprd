@@ -344,7 +344,6 @@ static int sdl_release(struct display_object *obj)
 	return 0;
 }
 
-
 struct display_dev_ops sdl_ops =
 {
 	.name				= "sdl_display",

@@ -16,7 +16,7 @@ if build_target == 'server' or build_target == 'all'
                                 dependency('openh264')],
                                 include_directories : '../include')
 
-        client_libs += openh264_enc_lib
+        server_libs += openh264_enc_lib
 endif
 
 if build_target == 'client' or build_target == 'all'

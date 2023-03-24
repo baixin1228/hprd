@@ -25,9 +25,6 @@ void capture_on_frame(struct capture_object *obj)
 	int ret;
 	int buf_id;
 
-	if(get_client_count() == 0)
-		return;
-
 	buf_id = capture_get_fb(cap_obj);
 	if(buf_id == -1)
 	{
@@ -56,47 +53,18 @@ void capture_on_frame(struct capture_object *obj)
 	}
 }
 
-void on_key(struct input_event *event)
-{
-	input_push_key(in_obj, event);
-}
-
-void on_setting(struct setting_event *event)
-{
-	switch(event->cmd)
-	{
-		case TARGET_BIT_RATE:
-		{
-			break;
-		}
-		case TARGET_FRAME_RATE:
-		{
-			capture_change_frame_rate(cap_obj, ntohl(event->value));
-			log_info("change frame rate.");
-			break;
-		}
-	}
-}
-
-void on_server_pkt(char *buf, size_t len) {
-	struct data_pkt *pkt = (struct data_pkt *)buf;
-	switch(pkt->cmd) {
-		case INPUT_EVENT: {
-			on_key((struct input_event *)pkt->data);
-			break;
-		}
-		case SETTING_EVENT: {
-			on_setting((struct setting_event *)pkt->data);
-			break;
-		}
-	}
-}
-
-int epfd = -1;
+FILE *fp = NULL;
+uint32_t frames = 0;
 void on_enc_package(char *buf, size_t len)
 {
-	if(epfd != -1)
-		server_bradcast_data_safe(epfd, buf, len);
+	if(fp)
+	{
+		log_info("write frame");
+		fwrite(buf, len, 1, fp);
+		frames++;
+		if(frames > 200)
+			exit(0);
+	}
 }
 
 int server_start()
@@ -162,6 +130,7 @@ int server_start()
 int main()
 {
 	debug_info_regist();
-	epfd = tcp_server_init("0.0.0.0", 9999);
+	log_info("start encodec test.");
+	fp = fopen("out.h264", "wb");
 	server_start();
 }

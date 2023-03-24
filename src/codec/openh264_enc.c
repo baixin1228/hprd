@@ -3,6 +3,7 @@
 #include <string.h>
 #include <wels/codec_api.h>
 #include <wels/codec_ver.h>
+#include <libswscale/swscale.h>
 
 #include "util.h"
 #include "codec.h"
@@ -22,51 +23,53 @@ struct openh264_enc_data {
 	uint32_t height;
 	uint32_t ver_stride;
 
+	struct SwsContext *sws_ctx;
+	uint8_t * frame_data[4];
+	int linesize[4];
 	struct int_queue id_queue;
 };
 
 static int openh264_enc_init(struct encodec_object *obj) {
-	struct openh264_enc_data *enc_data;
+	struct openh264_enc_data *priv;
 
-	enc_data = calloc(1, sizeof(*enc_data));
-	if(!enc_data) {
+	priv = calloc(1, sizeof(*priv));
+	if(!priv) {
 		log_error("calloc fail, check free memery.");
 		return -1;
 	}
 
-	if (WelsCreateSVCEncoder (&enc_data->encoder)  ||
-			(NULL == enc_data->encoder)) {
+	if (WelsCreateSVCEncoder (&priv->encoder)  ||
+			(NULL == priv->encoder)) {
 		printf ("Create encoder failed.\n");
 		goto FAIL1;
 	}
 
-	obj->priv = enc_data;
+	obj->priv = priv;
 	return 0;
 
 FAIL1:
-	free(enc_data);
+	free(priv);
 	return -1;
 }
 
 static void _libopenh264_trace_callback(void *ctx, int level, const char *msg) {
-	// log_info("[%p] %s", ctx, msg);
+	log_info("openh264_enc [%p] %s", ctx, msg);
 }
 
 uint32_t com_to_svc_fmt(uint32_t format) {
 	switch(format) {
-		case ARGB8888:
-		{
-			return videoFormatRGBA;
-		}
-		case RGB888: {
-			return videoFormatRGB;
-		}
-		case YUV420P: {
-			return videoFormatI420;
-		}
-		case NV12: {
-			return videoFormatNV12;
-		}
+	case ARGB8888: {
+		return videoFormatRGBA;
+	}
+	case RGB888: {
+		return videoFormatRGB;
+	}
+	case YUV420P: {
+		return videoFormatI420;
+	}
+	case NV12: {
+		return videoFormatNV12;
+	}
 	}
 
 	return videoFormatI420;
@@ -87,9 +90,9 @@ static int openh264_enc_set_info(
 	else
 		frame_rate = 30;
 
-	stream_format = com_to_svc_fmt(*(uint32_t *)g_hash_table_lookup(enc_info, "stream_fmt"));
+	stream_format = *(uint32_t *)g_hash_table_lookup(enc_info, "stream_fmt");
 	if(stream_format != STREAM_H264) {
-		log_error("stream_format is invalid.");
+		log_error("stream_format is invalid.%d %d", stream_format, STREAM_H264);
 		return -1;
 	}
 
@@ -97,6 +100,23 @@ static int openh264_enc_set_info(
 	width = *(uint32_t *)g_hash_table_lookup(enc_info, "width");
 	height = *(uint32_t *)g_hash_table_lookup(enc_info, "height");
 	priv->fb_format = com_to_svc_fmt(*(uint32_t *)g_hash_table_lookup(enc_info, "format"));
+
+	priv->sws_ctx = sws_getContext(
+						width,
+						height,
+						AV_PIX_FMT_RGB32,
+						width,
+						height,
+						AV_PIX_FMT_YUV420P,
+						SWS_POINT, NULL, NULL, NULL);
+	priv->linesize[0] = width;
+	priv->linesize[1] = width / 2;
+	priv->linesize[2] = width / 2;
+	priv->linesize[3] = 0;
+	priv->frame_data[0] = malloc(width * height * 4);
+	priv->frame_data[1] = malloc(width * height);
+	priv->frame_data[2] = malloc(width * height);
+	priv->frame_data[3] = NULL;
 
 	priv->param.iUsageType     = SCREEN_CONTENT_REAL_TIME;
 	priv->param.fMaxFrameRate  = frame_rate;
@@ -128,23 +148,29 @@ static int openh264_enc_map_buf(struct encodec_object *obj, int buf_id) {
 }
 
 static int openh264_frame_enc(struct encodec_object *obj, int buf_id) {
+	int linesizes[4] = {0};
 	struct raw_buffer *buffer;
 	struct openh264_enc_data *priv = obj->priv;
 
 	buffer = get_raw_buffer(obj->buf_pool, buf_id);
+
+	linesizes[0] = buffer->width * 4;
+	sws_scale(priv->sws_ctx, (const uint8_t *const *)buffer->ptrs, linesizes, 0, buffer->height, priv->frame_data, priv->linesize);
 
 	// 初始化图片对象
 	memset(&priv->pic, 0, sizeof(SSourcePicture));
 	priv->pic.iPicWidth = buffer->width;
 	priv->pic.iPicHeight = buffer->height;
 
-	priv->pic.iColorFormat = priv->fb_format;
-	priv->pic.iStride[0] = buffer->hor_stride;
-	priv->pic.iStride[1] = buffer->hor_stride;
-	priv->pic.iStride[2] = buffer->hor_stride;
-	priv->pic.pData[0] = (uint8_t *)buffer->ptrs[0];
-	priv->pic.pData[1] = (uint8_t *)buffer->ptrs[1];
-	priv->pic.pData[2] = (uint8_t *)buffer->ptrs[2];
+	priv->pic.iColorFormat = videoFormatI420;
+	priv->pic.iStride[0] = priv->linesize[0];
+	priv->pic.iStride[1] = priv->linesize[1];
+	priv->pic.iStride[2] = priv->linesize[2];
+	priv->pic.iStride[3] = priv->linesize[3];
+	priv->pic.pData[0] = priv->frame_data[0];
+	priv->pic.pData[1] = priv->frame_data[1];
+	priv->pic.pData[2] = priv->frame_data[2];
+	priv->pic.pData[3] = priv->frame_data[3];
 
 	int rv = (*priv->encoder)->EncodeFrame (priv->encoder, &priv->pic, &priv->info);
 	if (rv != cmResultSuccess) {

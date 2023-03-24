@@ -172,7 +172,7 @@ int __obj##_release(struct __obj##_object *obj)		\
 	return -1;										\
 }
 
-#define get_dev_ops(__type, __devs, __dev_name)		\
+#define GET_DEV_OPS(__type, __devs, __dev_name)		\
 ({													\
 	int idx;										\
 	struct __type *dev_ops = NULL;					\
@@ -188,4 +188,5 @@ int __obj##_release(struct __obj##_object *obj)		\
 	}												\
 	dev_ops; 										\
 })
+
 #endif

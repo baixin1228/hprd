@@ -27,7 +27,7 @@ struct display_object *display_dev_init(struct mem_pool *pool,
 
 	display_obj->buf_pool = pool;
 
-	dev_ops = get_dev_ops(display_dev_ops, dsp_devs, display_name);
+	dev_ops = GET_DEV_OPS(display_dev_ops, dsp_devs, display_name);
 
 	if(!dev_ops)
 	{

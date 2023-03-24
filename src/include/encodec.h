@@ -17,6 +17,7 @@ struct encodec_object
 struct encodec_ops
 {
 	char *name;
+	uint32_t priority;
 	int (* init)(struct encodec_object *obj);
 	int (* set_info)(struct encodec_object *obj, GHashTable *info);
 	int (* map_buffer)(struct encodec_object *obj, int buf_id);

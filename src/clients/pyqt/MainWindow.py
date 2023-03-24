@@ -159,13 +159,14 @@ class MainWindow(QMainWindow):
 		self._update_dsp_mode()
 
 	def processTrigger(self, q):
-		if q.text() == "Runing Info":
+		if q.text() == "Status Bar":
 			if q.isChecked():
 				self.statusBar.setVisible(True)
 				self._update_dsp_mode()
 			else:
 				self.statusBar.setVisible(False)
 				self._update_dsp_mode()
+
 		elif q.text() == "Adapt":
 			self._set_dsp_mode(1)
 		elif q.text() == "Stretch":

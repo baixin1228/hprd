@@ -27,7 +27,7 @@ def start_timer(app):
 
 def timer_set_interval(interval):
 	global timer
-	timer.setInterval(interval)
+	timer.setInterval(int(interval))
 
 """
 delay: delay frames to start

@@ -97,7 +97,7 @@ static int ffmpeg_enc_set_info(
         av_codec_ctx->pix_fmt = enc_data->capture_fb_fmt;
     }
 
-    av_codec_ctx->gop_size = 10;
+    av_codec_ctx->gop_size = 100;
     av_codec_ctx->max_b_frames = 0;
     av_codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
     av_codec_ctx->thread_count = 4;
@@ -261,7 +261,7 @@ static int ffmpeg_enc_release(struct encodec_object *obj) {
 }
 
 struct encodec_ops ffmpeg_enc_ops = {
-    .name               = "ffmpeg_encodec_dev",
+    .name               = "ffmpeg_encodec",
     .init               = ffmpeg_enc_init,
     .set_info           = ffmpeg_enc_set_info,
     .map_buffer         = ffmpeg_enc_map_buf,

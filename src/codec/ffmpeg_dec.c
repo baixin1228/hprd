@@ -492,7 +492,7 @@ static int ffmepg_dec_release(struct module_data *dev)
 
 struct decodec_ops dev_ops = 
 {
-    .name               = "ffmpeg_decoder_dev",
+    .name               = "ffmpeg_decodec",
     .init               = ffmpeg_dec_init,
     .put_pkt            = ffmepg_put_packet,
     .get_info 			= ,

@@ -8,10 +8,10 @@
 #include "frame_buffer.h"
 #include "dev_templete.h"
 
-extern struct display_dev_ops sdl_ops;
 extern struct display_dev_ops x11_renderer_ops;
+extern struct display_dev_ops sdl_ops;
 
-static struct display_dev_ops* devs[] = {
+static struct display_dev_ops* dsp_devs[] = {
 	&x11_renderer_ops,
 	&sdl_ops
 };
@@ -20,7 +20,6 @@ struct display_object *display_dev_init(struct mem_pool *pool,
 	char *display_name)
 {
 	int ret;
-	int dpy_idx = -1;
 	struct display_dev_ops *dev_ops;
 	struct display_object *display_obj;
 
@@ -28,24 +27,11 @@ struct display_object *display_dev_init(struct mem_pool *pool,
 
 	display_obj->buf_pool = pool;
 
-	if(display_name == NULL)
-	{
-		dpy_idx = 0;
-	}
-	for (int i = 0; i < sizeof(devs) / sizeof(struct display_dev_ops*); ++i)
-	{
-		if(strcmp(display_name, devs[i]->name) == 0)
-			dpy_idx = i;
-	}
-
-	dev_ops = devs[dpy_idx];
+	dev_ops = GET_DEV_OPS(display_dev_ops, dsp_devs, display_name);
 
 	if(!dev_ops)
 	{
-		char path_tmp[255];
-		getcwd(path_tmp, 255);
-		log_error("load libsdl_display.so fail. dir:%s\n", path_tmp);
-		exit(-1);
+		return NULL;
 	}
 
 	ret = dev_ops->init(display_obj);

@@ -2,7 +2,6 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
-#include <getopt.h>
 #include <pthread.h>
 #include <netinet/in.h>
 
@@ -25,9 +24,6 @@ void capture_on_frame(struct capture_object *obj)
 {
 	int ret;
 	int buf_id;
-
-	if(get_client_count() == 0)
-		return;
 
 	buf_id = capture_get_fb(cap_obj);
 	if(buf_id == -1)
@@ -57,64 +53,32 @@ void capture_on_frame(struct capture_object *obj)
 	}
 }
 
-void on_key(struct input_event *event)
-{
-	input_push_key(in_obj, event);
-}
-
-void on_setting(struct setting_event *event)
-{
-	switch(event->cmd)
-	{
-		case TARGET_BIT_RATE:
-		{
-			break;
-		}
-		case TARGET_FRAME_RATE:
-		{
-			capture_change_frame_rate(cap_obj, ntohl(event->value));
-			log_info("change frame rate.");
-			break;
-		}
-	}
-}
-
-void on_server_pkt(char *buf, size_t len) {
-	struct data_pkt *pkt = (struct data_pkt *)buf;
-	switch(pkt->cmd) {
-		case INPUT_EVENT: {
-			on_key((struct input_event *)pkt->data);
-			break;
-		}
-		case SETTING_EVENT: {
-			on_setting((struct setting_event *)pkt->data);
-			break;
-		}
-	}
-}
-
-int epfd = -1;
+FILE *fp = NULL;
+uint32_t frames = 0;
 void on_enc_package(char *buf, size_t len)
 {
-	if(epfd != -1)
-		server_bradcast_data_safe(epfd, buf, len);
+	if(fp)
+	{
+		log_info("write frame");
+		fwrite(buf, len, 1, fp);
+		frames++;
+		if(frames > 200)
+			exit(0);
+	}
 }
 
-int server_start(char *capture, char *encodec)
+int server_start()
 {
 	int ret;
 	int buf_id;
 	uint32_t frame_rate = 60;
 	uint32_t stream_ftm = STREAM_H264;
-	uint32_t bit_rate = 5 * 1024 * 1024;
+	uint32_t bit_rate = 10 * 1024 * 1024;
 
 	GHashTable *fb_info = g_hash_table_new(g_str_hash, g_str_equal);
 
-	if(encodec == NULL)
-		encodec = "ffmpeg_encodec";
-
 	cap_obj = capture_dev_init(&server_pool);
-	enc_obj = encodec_init(&server_pool, encodec);
+	enc_obj = encodec_init(&server_pool, "openh264_encodec");
 	in_obj = input_init();
 
 	for (int i = 0; i < 5; ++i)
@@ -163,55 +127,10 @@ int server_start(char *capture, char *encodec)
 	return 0;
 }
 
-struct option long_options[] =
+int main()
 {
-	{"help",  	no_argument,       NULL, 'h'},
-	{"capture", required_argument, NULL, 'c'},
-	{"encodec", required_argument, NULL, 'e'},
-	{NULL,		0,                 NULL,  0}
-};
-
-void print_help()
-{
-	printf("help\n");
-}
-
-int main(int argc, char* argv[])
-{
-    int ret = -1;
-    char *capture = NULL;
-    char *encodec = NULL;
-    int option_index = 0;
-
 	debug_info_regist();
-
-    while ((ret = getopt_long(argc, argv, "h", long_options, &option_index)) != -1)
-    {
-    	switch(ret)
-    	{
-    		case 0:
-    		case 'h':
-    		default:
-    		{
-    			print_help();
-    			exit(0);
-    			break;
-    		}
-    		case 1:
-    		case 'c':
-    		{
-    			capture = optarg;
-    			break;
-    		}
-    		case 2:
-    		case 'e':
-    		{
-    			encodec = optarg;
-    			break;
-    		}
-    	}
-    }
-
-	epfd = tcp_server_init("0.0.0.0", 9999);
-	server_start(capture, encodec);
+	log_info("start encodec test.");
+	fp = fopen("out.h264", "wb");
+	server_start();
 }

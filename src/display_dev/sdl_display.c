@@ -344,10 +344,10 @@ static int sdl_release(struct display_object *obj)
 	return 0;
 }
 
-
 struct display_dev_ops sdl_ops =
 {
 	.name				= "sdl_display",
+	.priority 			= 10,
 	.init				= sdl_dev_init,
 	.set_info			= sdl_set_info,
 	.map_buffer			= sdl_map_buffer,

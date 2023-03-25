@@ -171,6 +171,22 @@ int __obj##_release(struct __obj##_object *obj)		\
 													\
 	return -1;										\
 }
-#endif
 
-// #define REGIST_DEV(ops)
+#define GET_DEV_OPS(__type, __devs, __dev_name)		\
+({													\
+	int idx;										\
+	struct __type *dev_ops = NULL;					\
+													\
+	if(__dev_name != NULL)							\
+	{												\
+		for (int i = 0; i < sizeof(__devs) / sizeof(struct __type*); ++i)\
+		{											\
+			if(strcmp(__dev_name, __devs[i]->name) == 0)\
+				idx = i;							\
+		}											\
+		dev_ops = __devs[idx];						\
+	}												\
+	dev_ops; 										\
+})
+
+#endif

@@ -19,6 +19,7 @@ struct display_object
 struct display_dev_ops
 {
 	char * name;
+	uint32_t priority;
 	int (* init)(struct display_object *obj);
 	int (* set_info)(struct display_object *obj, GHashTable *info);
 	int (* map_buffer)(struct display_object *obj, int buf_id);

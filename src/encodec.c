@@ -8,8 +8,14 @@
 #include "dev_templete.h"
 
 extern struct encodec_ops ffmpeg_enc_ops;
+extern struct encodec_ops openh264_enc_ops;
 
-struct encodec_object *encodec_init(struct mem_pool *pool)
+static struct encodec_ops* encodec_devs[] = {
+	&ffmpeg_enc_ops,
+	&openh264_enc_ops
+};
+
+struct encodec_object *encodec_init(struct mem_pool *pool, char *encodec_name)
 {
 	int ret;
 	struct encodec_ops *dev_ops;
@@ -19,13 +25,11 @@ struct encodec_object *encodec_init(struct mem_pool *pool)
 
 	enc_obj->buf_pool = pool;
 
-	dev_ops = &ffmpeg_enc_ops;
+	dev_ops = GET_DEV_OPS(encodec_ops, encodec_devs, encodec_name);
 
 	if(!dev_ops)
 	{
-		char path_tmp[255];
-		getcwd(path_tmp, 255);
-		log_error("load libffmpegenc.so fail. dir:%s\n", path_tmp);
+		log_error("load encodec:%s fail.\n", encodec_name);
 		exit(-1);
 	}
 
@@ -34,7 +38,7 @@ struct encodec_object *encodec_init(struct mem_pool *pool)
 	{
 		enc_obj->ops = dev_ops;
 	}else{
-		log_error("libffmpegenc.so init fail.");
+		log_error("init encodec:%s fail.\n", encodec_name);
 		exit(-1);
 	}
 	

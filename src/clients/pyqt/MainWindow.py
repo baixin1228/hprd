@@ -124,8 +124,9 @@ class MainWindow(QMainWindow):
 		time_ms = int(round(time.time() * 1000))
 		time_sub = time_ms - self.time_ms
 		if self.statusBar.isVisible():
-			self.statusBar.showMessage("码流帧率:%d  码率:%s" %
-			(proxy().py_get_and_clean_frame() * 1000 / time_sub,
+			self.statusBar.showMessage("渲染帧率:%d  码流帧率:%d  码率:%s" %
+			(10 * 1000 / time_sub,
+			proxy().py_get_and_clean_frame() * 1000 / time_sub,
 			format_speed(proxy().py_get_and_clean_recv_sum() * 1000 / time_sub)), 0)
 		self.time_ms = time_ms
 
@@ -159,13 +160,14 @@ class MainWindow(QMainWindow):
 		self._update_dsp_mode()
 
 	def processTrigger(self, q):
-		if q.text() == "Runing Info":
+		if q.text() == "Status Bar":
 			if q.isChecked():
 				self.statusBar.setVisible(True)
 				self._update_dsp_mode()
 			else:
 				self.statusBar.setVisible(False)
 				self._update_dsp_mode()
+
 		elif q.text() == "Adapt":
 			self._set_dsp_mode(1)
 		elif q.text() == "Stretch":

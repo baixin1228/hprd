@@ -17,6 +17,7 @@ struct capture_object
 struct capture_dev_ops
 {
 	char * name;
+	uint32_t priority;
 	int (* init)(struct capture_object *obj);
 	int (* set_info)(struct capture_object *obj, GHashTable *info);
 	int (* get_info)(struct capture_object *obj, GHashTable *info);

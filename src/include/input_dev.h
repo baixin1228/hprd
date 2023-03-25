@@ -16,6 +16,7 @@ struct input_object
 struct input_dev_ops
 {
 	char * name;
+	uint32_t priority;
 	int (* init)(struct input_object *obj);
 	int (* set_info)(struct input_object *obj, GHashTable *info);
 	int (* push_key)(struct input_object *obj, struct input_event *event);

@@ -62,9 +62,6 @@ int py_on_frame()
 	int ret;
 	int buf_id;
 
-	if(tcp_recv_pkt(fd, _recv_buf, _on_client_pkt) == -1)
-		return 0;
-
 	buf_id = decodec_get_fb(dec_obj);
 	if(buf_id == -1)
 	{
@@ -109,9 +106,6 @@ int py_client_init_config(uint64_t winid)
 	uint32_t frame_rate = 61;
 	GHashTable *fb_info = g_hash_table_new(g_str_hash, g_str_equal);
 
-	if(tcp_recv_pkt(fd, _recv_buf, _on_client_pkt) == -1)
-		return -1;
-
 	if(decodec_get_info(dec_obj, fb_info) == -1)
 	{
 		log_info("client waiting dec info.");
@@ -131,10 +125,18 @@ END:
 	return ret;
 }
 
+void *recv_thread(void *oq)
+{
+	while(tcp_recv_pkt(fd, _recv_buf, _on_client_pkt) != -1);
+	log_warning("recv_thread exit.");
+	return NULL;
+}
+
 int py_client_connect(char *ip, uint16_t port)
 {
 	int ret;
 	int buf_id;
+	pthread_t p1;
 
 	debug_info_regist();
 	
@@ -169,6 +171,8 @@ int py_client_connect(char *ip, uint16_t port)
 		}
 	}
 
+	pthread_create(&p1, NULL, recv_thread, NULL);
+	pthread_detach(p1);
 	return 0;
 }
 

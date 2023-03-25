@@ -27,7 +27,7 @@ struct svc_dec_data
     struct dev_id_queue buf_q;
 };
 
-void _libopenh264_trace_callback(void *ctx, int level, const char *msg)
+static void _libopenh264_trace_callback(void *ctx, int level, const char *msg)
 {
     // log_info("[%p] %s", ctx, msg);
 }
@@ -311,7 +311,7 @@ static int svc_decode_release(struct decodec_object *obj)
 
 struct decodec_ops openh264_dec_ops =
 {
-    .name               = "libopenh264",
+    .name               = "openh264_decodec",
     .init               = svc_decode_init,
     .put_pkt            = svc_push_pkt,
     .get_info           = svc_get_info,

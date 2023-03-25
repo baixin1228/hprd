@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <getopt.h>
 #include <pthread.h>
 #include <netinet/in.h>
 
@@ -99,7 +100,7 @@ void on_enc_package(char *buf, size_t len)
 		server_bradcast_data_safe(epfd, buf, len);
 }
 
-int server_start()
+int server_start(char *capture, char *encodec)
 {
 	int ret;
 	int buf_id;
@@ -109,8 +110,11 @@ int server_start()
 
 	GHashTable *fb_info = g_hash_table_new(g_str_hash, g_str_equal);
 
+	if(encodec == NULL)
+		encodec = "ffmpeg_encodec";
+
 	cap_obj = capture_dev_init(&server_pool);
-	enc_obj = encodec_init(&server_pool, "openh264_encodec");
+	enc_obj = encodec_init(&server_pool, encodec);
 	in_obj = input_init();
 
 	for (int i = 0; i < 5; ++i)
@@ -159,9 +163,55 @@ int server_start()
 	return 0;
 }
 
-int main()
+struct option long_options[] =
 {
+	{"help",  	no_argument,       NULL, 'h'},
+	{"capture", required_argument, NULL, 'c'},
+	{"encodec", required_argument, NULL, 'e'},
+	{NULL,		0,                 NULL,  0}
+};
+
+void print_help()
+{
+	printf("help\n");
+}
+
+int main(int argc, char* argv[])
+{
+    int ret = -1;
+    char *capture = NULL;
+    char *encodec = NULL;
+    int option_index = 0;
+
 	debug_info_regist();
+
+    while ((ret = getopt_long(argc, argv, "h", long_options, &option_index)) != -1)
+    {
+    	switch(ret)
+    	{
+    		case 0:
+    		case 'h':
+    		default:
+    		{
+    			print_help();
+    			exit(0);
+    			break;
+    		}
+    		case 1:
+    		case 'c':
+    		{
+    			capture = optarg;
+    			break;
+    		}
+    		case 2:
+    		case 'e':
+    		{
+    			encodec = optarg;
+    			break;
+    		}
+    	}
+    }
+
 	epfd = tcp_server_init("0.0.0.0", 9999);
-	server_start();
+	server_start(capture, encodec);
 }

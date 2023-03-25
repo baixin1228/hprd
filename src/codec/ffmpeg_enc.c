@@ -97,7 +97,7 @@ static int ffmpeg_enc_set_info(
         av_codec_ctx->pix_fmt = enc_data->capture_fb_fmt;
     }
 
-    av_codec_ctx->gop_size = 10;
+    av_codec_ctx->gop_size = 100;
     av_codec_ctx->max_b_frames = 0;
     av_codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
     av_codec_ctx->thread_count = 4;

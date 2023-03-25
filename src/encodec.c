@@ -29,7 +29,7 @@ struct encodec_object *encodec_init(struct mem_pool *pool, char *encodec_name)
 
 	if(!dev_ops)
 	{
-		log_error("load libffmpegenc.so fail. dir:\n");
+		log_error("load encodec:%s fail.\n", encodec_name);
 		exit(-1);
 	}
 
@@ -38,7 +38,7 @@ struct encodec_object *encodec_init(struct mem_pool *pool, char *encodec_name)
 	{
 		enc_obj->ops = dev_ops;
 	}else{
-		log_error("libffmpegenc.so init fail.");
+		log_error("init encodec:%s fail.\n", encodec_name);
 		exit(-1);
 	}
 	

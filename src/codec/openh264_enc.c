@@ -123,6 +123,7 @@ static int openh264_enc_set_info(
 	priv->param.iPicWidth      = width;
 	priv->param.iPicHeight     = height;
 	priv->param.iTargetBitrate = bit_rate;
+	priv->param.iRCMode = RC_BITRATE_MODE;
 
 	// 日志级别
 	uint32_t log_level = WELS_LOG_ERROR;

@@ -9,4 +9,4 @@ if [ $? != 0 ]; then
 fi
 # meson test -C server_build -v hprd_server_test
 
-./server_build/src/server
+./server_build/src/server $*

@@ -27,6 +27,7 @@ class RenderWidget(QWidget):
 		self.setMouseTracking(True)
 		self.setFocusPolicy(Qt.StrongFocus)
 		self.mouse_key = 0
+		self.installEventFilter(self)
 
 	@CFUNCTYPE(None, py_object, c_uint, c_uint)
 	def _stream_size_cb(self, width, height):
@@ -106,6 +107,14 @@ class RenderWidget(QWidget):
 			self.old_width = self.width()
 			self.old_height = self.height()
 			proxy().py_client_resize(self.width(), int(self.height()))
+
+	def eventFilter(self, widget, event):
+		# avoid flickering
+		if event.type() == QEvent.FocusIn:
+			return True
+		if event.type() == QEvent.FocusOut:
+			return True
+		return False
 
 	def resizeEvent(self, event):
 		self.update_size()

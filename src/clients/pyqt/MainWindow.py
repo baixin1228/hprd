@@ -26,10 +26,10 @@ class MainWindow(QMainWindow):
 		self.menu_bar = self.menuBar()
 		file_menu = self.menu_bar.addMenu("File")
 		new_button = QAction("New Session", self)
-		new_button.setShortcut("Ctrl+N")
+		# new_button.setShortcut("Ctrl+N")
 		file_menu.addAction(new_button)
 		quit_button = QAction("Quit", self)
-		quit_button.setShortcut("Q")
+		# quit_button.setShortcut("Ctrl+Alt+Q")
 		file_menu.addAction(quit_button)
 		file_menu.triggered[QAction].connect(self.processTrigger)
 
@@ -118,14 +118,14 @@ class MainWindow(QMainWindow):
 
 		self.time_ms = int(round(time.time() * 1000))
 
-		add_task(1, 10, self._loop_10)
+		add_task(1, 20, self._loop_20)
 
-	def _loop_10(self, task):
+	def _loop_20(self, task):
 		time_ms = int(round(time.time() * 1000))
 		time_sub = time_ms - self.time_ms
 		if self.statusBar.isVisible():
 			self.statusBar.showMessage("渲染帧率:%d  码流帧率:%d  码率:%s" %
-			(10 * 1000 / time_sub,
+			(20 * 1000 / time_sub,
 			proxy().py_get_and_clean_frame() * 1000 / time_sub,
 			format_speed(proxy().py_get_and_clean_recv_sum() * 1000 / time_sub)), 0)
 		self.time_ms = time_ms

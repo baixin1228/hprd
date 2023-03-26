@@ -106,7 +106,7 @@ int server_start(char *capture, char *encodec)
 	int buf_id;
 	uint32_t frame_rate = 60;
 	uint32_t stream_ftm = STREAM_H264;
-	uint32_t bit_rate = 5 * 1024 * 1024;
+	uint32_t bit_rate = 1 * 1024 * 1024;
 
 	GHashTable *fb_info = g_hash_table_new(g_str_hash, g_str_equal);
 

@@ -26,10 +26,10 @@ class MainWindow(QMainWindow):
 		self.menu_bar = self.menuBar()
 		file_menu = self.menu_bar.addMenu("File")
 		new_button = QAction("New Session", self)
-		new_button.setShortcut("Ctrl+N")
+		# new_button.setShortcut("Ctrl+N")
 		file_menu.addAction(new_button)
 		quit_button = QAction("Quit", self)
-		quit_button.setShortcut("Q")
+		# quit_button.setShortcut("Ctrl+Alt+Q")
 		file_menu.addAction(quit_button)
 		file_menu.triggered[QAction].connect(self.processTrigger)
 

@@ -100,7 +100,7 @@ static int ffmpeg_enc_set_info(
     av_codec_ctx->gop_size = 100;
     av_codec_ctx->max_b_frames = 0;
     av_codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
-    av_codec_ctx->thread_count = 4;
+    av_codec_ctx->thread_count = 2;
 
     AVDictionary *param = 0;
 

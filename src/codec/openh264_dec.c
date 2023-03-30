@@ -229,7 +229,7 @@ static int svc_push_pkt(struct decodec_object *obj, char *buf, size_t len)
     }
     if (state != dsErrorFree)
     {
-        log_error("OpenH264: DecodeFrame failed:%p", state);
+        // log_error("OpenH264: DecodeFrame failed:%p", state);
         return -1;
     }
     if (svc_data->info.iBufferStatus != 1)

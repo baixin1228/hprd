@@ -31,7 +31,9 @@ struct input_event{
 
 enum setting_cmd
 {
-	TARGET_BIT_RATE = 1,
+	RET_SUCCESS = 1,
+	RET_FAIL,
+	TARGET_BIT_RATE,
 	TARGET_FRAME_RATE,
 };
 

@@ -18,8 +18,42 @@ struct mem_pool client_pool = {0};
 struct display_object *dsp_obj = NULL;
 struct decodec_object *dec_obj = NULL;
 
-void *resize_cb_oqu = NULL;
-void (* resize_cb_callback)(void *oqu, uint32_t width, uint32_t height) = NULL;
+void *resize_python_self = NULL;
+void (* resize_callback)(void *oqu, uint32_t width, uint32_t height) = NULL;
+
+void *net_cb_python_self = NULL;
+void (* net_callback)(void *oqu, uint32_t width, uint32_t height) = NULL;
+
+void _on_setting(int fd, struct setting_event *event)
+{
+	switch(event->cmd)
+	{
+		case RET_SUCCESS:
+		{
+			if(net_cb_python_self != NULL && net_callback != NULL)
+			{
+				net_callback(net_cb_python_self, 1, ntohl(event->value));
+				net_cb_python_self = NULL;
+				net_callback = NULL;
+			}else{
+				log_error("uncache success net ret.");
+			}
+			break;
+		}
+		case RET_FAIL:
+		{
+			if(net_cb_python_self != NULL && net_callback != NULL)
+			{
+				net_callback(net_cb_python_self, 0, ntohl(event->value));
+				net_cb_python_self = NULL;
+				net_callback = NULL;
+			}else{
+				log_error("uncache fail net ret.");
+			}
+			break;
+		}
+	}
+}
 
 static void _on_package(char *buf, size_t len) {
 	if(dec_obj) {
@@ -37,6 +71,10 @@ static void _on_client_pkt(int fd, char *buf, size_t len) {
 	switch(pkt->channel) {
 		case VIDEO_CHANNEL: {
 			_on_package(pkt->data, pkt->data_len);
+			break;
+		}
+		case SETTING_CHANNEL: {
+			_on_setting(fd, (struct setting_event *)pkt->data);
 			break;
 		}
 		default : {
@@ -104,8 +142,8 @@ int py_client_init_config(uint64_t winid) {
 	g_hash_table_insert(fb_info, "frame_rate", &frame_rate);
 	g_hash_table_insert(fb_info, "window", &winid);
 	display_set_info(dsp_obj, fb_info);
-	if(resize_cb_callback != NULL)
-		resize_cb_callback(resize_cb_oqu,
+	if(resize_callback != NULL)
+		resize_callback(resize_python_self,
 						   *(uint32_t *)g_hash_table_lookup(fb_info, "width"),
 						   *(uint32_t *)g_hash_table_lookup(fb_info, "height"));
 	ret = 0;
@@ -168,8 +206,8 @@ int py_client_resize(uint32_t width, uint32_t height) {
 
 int py_client_regist_stream_size_cb(void *oqu, void (*callback)(void *oqu,
 									uint32_t width, uint32_t height)) {
-	resize_cb_oqu = oqu;
-	resize_cb_callback = callback;
+	resize_python_self = oqu;
+	resize_callback = callback;
 	return 0;
 }
 
@@ -255,10 +293,19 @@ int py_key_event(int key, int down_or_up) {
 	return 0;
 }
 
-int py_change_frame_rate(uint32_t frame_rate) {
+int _send_setting_data(void *oqu, uint32_t type, uint32_t frame_rate,
+	void (*callback)(void *oqu, uint32_t ret, uint32_t value)) {
 	struct setting_event event;
 
-	event.cmd = TARGET_FRAME_RATE;
+	if(net_cb_python_self != NULL || net_callback != NULL)
+	{
+		log_error("net double invok.");
+		return -1;
+	}
+	net_cb_python_self = oqu;
+	net_callback = callback;
+
+	event.cmd = type;
 	event.value = htonl(frame_rate);
 
 	if(send_event(fd, SETTING_CHANNEL, (char *)&event, sizeof(event))
@@ -270,17 +317,12 @@ int py_change_frame_rate(uint32_t frame_rate) {
 	return 0;
 }
 
-int py_change_bit_rate(uint32_t bit_rate) {
-	struct setting_event event;
+int py_change_frame_rate(void *oqu, uint32_t frame_rate, void (*callback)
+	(void *oqu, uint32_t ret, uint32_t value)) {
+	return _send_setting_data(oqu, TARGET_FRAME_RATE, frame_rate, callback);
+}
 
-	event.cmd = TARGET_BIT_RATE;
-	event.value = htonl(bit_rate);
-
-	if(send_event(fd, SETTING_CHANNEL, (char *)&event, sizeof(event))
-			== -1) {
-		log_error("send_event fail.");
-		return -1;
-	}
-
-	return 0;
+int py_change_bit_rate(void *oqu, uint32_t bit_rate, void (*callback)
+	(void *oqu, uint32_t ret, uint32_t value)) {
+	return _send_setting_data(oqu, TARGET_BIT_RATE, bit_rate, callback);
 }

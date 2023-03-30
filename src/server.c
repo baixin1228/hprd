@@ -64,6 +64,8 @@ void on_key(struct input_event *event)
 
 void on_setting(int fd, struct setting_event *event)
 {
+	struct setting_event ret_event;
+
 	switch(event->cmd)
 	{
 		case TARGET_BIT_RATE:
@@ -73,9 +75,23 @@ void on_setting(int fd, struct setting_event *event)
 		case TARGET_FRAME_RATE:
 		{
 			capture_change_frame_rate(cap_obj, ntohl(event->value));
+			ret_event.cmd = RET_SUCCESS;
+			ret_event.value = event->value;
 			log_info("change frame rate.");
 			break;
 		}
+		default:
+		{
+			break;
+		}
+	}
+
+	if(ret_event.cmd != RET_SUCCESS)
+		ret_event.cmd = RET_FAIL;
+
+	if(send_event(fd, SETTING_CHANNEL, (char *)&ret_event, sizeof(ret_event))
+			== -1) {
+		log_error("send_event fail.");
 	}
 }
 

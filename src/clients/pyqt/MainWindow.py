@@ -8,6 +8,7 @@ import sys
 import sip
 import time
 from util import *
+from ctypes import *
 from pyqt_proxy import proxy
 from RenderWidget import RenderWidget
 
@@ -159,6 +160,10 @@ class MainWindow(QMainWindow):
 		self.dsp_mode = mode
 		self._update_dsp_mode()
 
+	@CFUNCTYPE(None, py_object, c_uint, c_uint)
+	def _on_fr_cb(self, ret, value):
+		print("frame rate setting:%s value:%u"%("success" if ret == 1 else "fail", value))
+
 	def processTrigger(self, q):
 		if q.text() == "Status Bar":
 			if q.isChecked():
@@ -176,16 +181,16 @@ class MainWindow(QMainWindow):
 			self._set_dsp_mode(3)
 
 		elif q.text() == "30fps":
-			proxy().py_change_frame_rate(28)
+			proxy().py_change_frame_rate(py_object(self), 28, self._on_fr_cb)
 			timer_set_interval(1000 / 30)
 		elif q.text() == "60fps":
-			proxy().py_change_frame_rate(58)
+			proxy().py_change_frame_rate(py_object(self), 58, self._on_fr_cb)
 			timer_set_interval(1000 / 60)
 		elif q.text() == "120fps":
-			proxy().py_change_frame_rate(118)
+			proxy().py_change_frame_rate(py_object(self), 118, self._on_fr_cb)
 			timer_set_interval(1000 / 120)
 		elif q.text() == "240fps":
-			proxy().py_change_frame_rate(238)
+			proxy().py_change_frame_rate(py_object(self), 238, self._on_fr_cb)
 			timer_set_interval(1000 / 240)
 
 		elif q.text() == "Quit":

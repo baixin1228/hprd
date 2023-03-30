@@ -18,7 +18,7 @@ struct decodec_object *dec_obj = NULL;
 
 static void on_event(struct display_object *obj, struct input_event *event)
 {
-	if(send_event(fd, INPUT_EVENT, (char *)event, sizeof(struct input_event))
+	if(send_event(fd, INPUT_CHANNEL, (char *)event, sizeof(struct input_event))
 		== -1)
 	{
 		log_error("send_event fail.");
@@ -116,16 +116,19 @@ void client_main()
 	display_main_loop(out_obj);
 }
 
-static void _on_client_pkt(char *buf, size_t len)
+static void _on_client_pkt(int fd, char *buf, size_t len)
 {
 	struct data_pkt *pkt = (struct data_pkt *)buf;
 	pkt->data_len = ntohl(pkt->data_len);
 
-	switch(pkt->cmd)
+	switch(pkt->channel)
 	{
-		case VIDEO_DATA:
+		case VIDEO_CHANNEL:
 		{
 			on_package(pkt->data, pkt->data_len);
+			break;
+		}
+		default: {
 			break;
 		}
 	}

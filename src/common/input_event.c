@@ -18,7 +18,7 @@ int send_event(int fd, uint32_t cmd, char *buf, size_t len)
 			sizeof(struct input_event));
 	}
 
-	event_pkt->cmd = cmd;
+	event_pkt->channel = cmd;
 	memcpy(event_pkt->data, buf, len);
 	event_pkt->data_len = htonl(len);
 

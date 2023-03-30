@@ -62,7 +62,7 @@ void on_key(struct input_event *event)
 	input_push_key(in_obj, event);
 }
 
-void on_setting(struct setting_event *event)
+void on_setting(int fd, struct setting_event *event)
 {
 	switch(event->cmd)
 	{
@@ -79,15 +79,18 @@ void on_setting(struct setting_event *event)
 	}
 }
 
-void on_server_pkt(char *buf, size_t len) {
+void on_server_pkt(int fd, char *buf, size_t len) {
 	struct data_pkt *pkt = (struct data_pkt *)buf;
-	switch(pkt->cmd) {
-		case INPUT_EVENT: {
+	switch(pkt->channel) {
+		case INPUT_CHANNEL: {
 			on_key((struct input_event *)pkt->data);
 			break;
 		}
-		case SETTING_EVENT: {
-			on_setting((struct setting_event *)pkt->data);
+		case SETTING_CHANNEL: {
+			on_setting(fd, (struct setting_event *)pkt->data);
+			break;
+		}
+		default: {
 			break;
 		}
 	}

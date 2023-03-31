@@ -76,8 +76,7 @@ int capture_main_loop(struct capture_object *capture_obj)
 	return -1;
 }
 
-int capture_change_frame_rate(struct capture_object *capture_obj,
-	uint32_t frate_rate)
+int capture_quit(struct capture_object *capture_obj)
 {
 	struct capture_dev_ops *dev_ops;
 
@@ -87,8 +86,8 @@ int capture_change_frame_rate(struct capture_object *capture_obj,
 	dev_ops = (struct capture_dev_ops *)capture_obj->ops;
 	if(dev_ops)
 	{
-		if(dev_ops->change_frame_rate)
-			return dev_ops->change_frame_rate(capture_obj, frate_rate);
+		if(dev_ops->quit)
+			return dev_ops->quit(capture_obj);
 	}
 
 	return -1;

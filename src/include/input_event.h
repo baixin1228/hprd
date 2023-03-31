@@ -33,8 +33,11 @@ enum setting_cmd
 {
 	RET_SUCCESS = 1,
 	RET_FAIL,
-	TARGET_BIT_RATE,
-	TARGET_FRAME_RATE,
+	SET_BIT_RATE,
+	SET_FRAME_RATE,
+
+	GET_BIT_RATE,
+	GET_FRAME_RATE,
 };
 
 struct setting_event{

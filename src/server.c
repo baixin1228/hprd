@@ -20,6 +20,7 @@ struct mem_pool server_pool = {0};
 struct encodec_object *enc_obj = NULL;
 struct capture_object *cap_obj = NULL;
 struct input_object *in_obj = NULL;
+pthread_mutex_t net_cb_lock = PTHREAD_MUTEX_INITIALIZER;
 
 void capture_on_frame(struct capture_object *obj)
 {
@@ -59,24 +60,40 @@ void capture_on_frame(struct capture_object *obj)
 
 void on_key(struct input_event *event)
 {
-	input_push_key(in_obj, event);
+	if(in_obj)
+		input_push_key(in_obj, event);
 }
 
+uint32_t frame_rate = 60;
+uint32_t stream_ftm = STREAM_H264;
+uint32_t bit_rate = 1 * 1024 * 1024;
 void on_setting(int fd, struct setting_event *event)
 {
 	struct setting_event ret_event;
 
 	switch(event->cmd)
 	{
-		case TARGET_BIT_RATE:
+		case SET_BIT_RATE:
 		{
 			break;
 		}
-		case TARGET_FRAME_RATE:
+		case SET_FRAME_RATE:
 		{
-			capture_change_frame_rate(cap_obj, ntohl(event->value));
+			frame_rate = ntohl(event->value);
+			capture_quit(cap_obj);
 			ret_event.cmd = RET_SUCCESS;
 			ret_event.value = event->value;
+			log_info("change frame rate.");
+			break;
+		}
+		case GET_BIT_RATE:
+		{
+			break;
+		}
+		case GET_FRAME_RATE:
+		{
+			ret_event.cmd = RET_SUCCESS;
+			ret_event.value = htonl(58);
 			log_info("change frame rate.");
 			break;
 		}
@@ -97,6 +114,7 @@ void on_setting(int fd, struct setting_event *event)
 
 void on_server_pkt(int fd, char *buf, size_t len) {
 	struct data_pkt *pkt = (struct data_pkt *)buf;
+	pthread_mutex_lock(&net_cb_lock);
 	switch(pkt->channel) {
 		case INPUT_CHANNEL: {
 			on_key((struct input_event *)pkt->data);
@@ -110,6 +128,7 @@ void on_server_pkt(int fd, char *buf, size_t len) {
 			break;
 		}
 	}
+	pthread_mutex_unlock(&net_cb_lock);
 }
 
 int epfd = -1;
@@ -123,10 +142,6 @@ int server_start(char *capture, char *encodec)
 {
 	int ret;
 	int buf_id;
-	uint32_t frame_rate = 60;
-	uint32_t stream_ftm = STREAM_H264;
-	uint32_t bit_rate = 1 * 1024 * 1024;
-
 	GHashTable *fb_info = g_hash_table_new(g_str_hash, g_str_equal);
 
 	if(encodec == NULL)
@@ -153,7 +168,7 @@ int server_start(char *capture, char *encodec)
 		ret = encodec_map_fb(enc_obj, buf_id);
 		if(ret != 0)
 		{
-			log_error("display_map_fb fail.");
+			log_error("encodec_map_fb fail.");
 			exit(-1);
 		}
 	}
@@ -179,6 +194,38 @@ int server_start(char *capture, char *encodec)
 	g_hash_table_destroy(fb_info);
 
 	capture_main_loop(cap_obj);
+
+	pthread_mutex_lock(&net_cb_lock);
+	for (int i = 0; i < 5; ++i)
+	{
+		buf_id = get_buffer(&server_pool);
+		if(buf_id == -1)
+		{
+			log_error("alloc_buffer fail.");
+			exit(-1);
+		}
+		ret = capture_unmap_fb(cap_obj, buf_id);
+		if(ret != 0)
+		{
+			log_error("capture_unmap_fb fail.");
+			exit(-1);
+		}
+		ret = encodec_unmap_fb(enc_obj, buf_id);
+		if(ret != 0)
+		{
+			log_error("encodec_unmap_fb fail.");
+			exit(-1);
+		}
+		release_buffer(&server_pool, buf_id);
+	}
+
+	input_release(in_obj);
+	encodec_release(enc_obj);
+	capture_release(cap_obj);
+	in_obj = NULL;
+	enc_obj = NULL;
+	cap_obj = NULL;
+	pthread_mutex_unlock(&net_cb_lock);
 	return 0;
 }
 
@@ -232,5 +279,9 @@ int main(int argc, char* argv[])
     }
 
 	epfd = tcp_server_init("0.0.0.0", 9999);
-	server_start(capture, encodec);
+	while(1)
+	{
+		server_start(capture, encodec);
+		log_info("restart server.");
+	}
 }

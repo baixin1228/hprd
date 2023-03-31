@@ -115,7 +115,7 @@ class MainWindow(QMainWindow):
 		self.dsp_mode = 1
 
 		self.b_10M.setChecked(True)
-		self.fps_60.setChecked(True)
+		proxy().py_get_frame_rate(py_object(self), self._on_fr_cb)
 
 		self.time_ms = int(round(time.time() * 1000))
 
@@ -124,6 +124,8 @@ class MainWindow(QMainWindow):
 	def _loop_20(self, task):
 		time_ms = int(round(time.time() * 1000))
 		time_sub = time_ms - self.time_ms
+		if(time_sub == 0):
+			time_sub = 1
 		if self.statusBar.isVisible():
 			self.statusBar.showMessage("渲染帧率:%d  码流帧率:%d  码率:%s" %
 			(20 * 1000 / time_sub,
@@ -167,6 +169,8 @@ class MainWindow(QMainWindow):
 	def _on_fr_cb(self, ret, value):
 		print("frame rate setting:%s value:%u"%("success" if ret == 1 else "fail", value))
 		add_task(1, False, self._reset_fr, value + 2);
+		if hasattr(self, f'fps_{ value + 2 }'):
+			getattr(self, f'fps_{ value + 2 }').setChecked(True)
 
 	def processTrigger(self, q):
 		if q.text() == "Status Bar":
@@ -185,13 +189,13 @@ class MainWindow(QMainWindow):
 			self._set_dsp_mode(3)
 
 		elif q.text() == "30fps":
-			proxy().py_change_frame_rate(py_object(self), 28, self._on_fr_cb)
+			proxy().py_set_frame_rate(py_object(self), 28, self._on_fr_cb)
 		elif q.text() == "60fps":
-			proxy().py_change_frame_rate(py_object(self), 58, self._on_fr_cb)
+			proxy().py_set_frame_rate(py_object(self), 58, self._on_fr_cb)
 		elif q.text() == "120fps":
-			proxy().py_change_frame_rate(py_object(self), 118, self._on_fr_cb)
+			proxy().py_set_frame_rate(py_object(self), 118, self._on_fr_cb)
 		elif q.text() == "240fps":
-			proxy().py_change_frame_rate(py_object(self), 238, self._on_fr_cb)
+			proxy().py_set_frame_rate(py_object(self), 238, self._on_fr_cb)
 
 		elif q.text() == "Quit":
 			sys.exit(0)

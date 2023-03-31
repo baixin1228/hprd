@@ -317,12 +317,20 @@ int _send_setting_data(void *oqu, uint32_t type, uint32_t frame_rate,
 	return 0;
 }
 
-int py_change_frame_rate(void *oqu, uint32_t frame_rate, void (*callback)
-	(void *oqu, uint32_t ret, uint32_t value)) {
-	return _send_setting_data(oqu, TARGET_FRAME_RATE, frame_rate, callback);
+int py_get_frame_rate(void *oqu, void (*callback)(void *oqu, uint32_t ret, uint32_t value)) {
+	return _send_setting_data(oqu, GET_FRAME_RATE, 0, callback);
 }
 
-int py_change_bit_rate(void *oqu, uint32_t bit_rate, void (*callback)
+int py_get_bit_rate(void *oqu, void (*callback)(void *oqu, uint32_t ret, uint32_t value)) {
+	return _send_setting_data(oqu, GET_BIT_RATE, 0, callback);
+}
+
+int py_set_frame_rate(void *oqu, uint32_t frame_rate, void (*callback)
 	(void *oqu, uint32_t ret, uint32_t value)) {
-	return _send_setting_data(oqu, TARGET_BIT_RATE, bit_rate, callback);
+	return _send_setting_data(oqu, SET_FRAME_RATE, frame_rate, callback);
+}
+
+int py_set_bit_rate(void *oqu, uint32_t bit_rate, void (*callback)
+	(void *oqu, uint32_t ret, uint32_t value)) {
+	return _send_setting_data(oqu, SET_BIT_RATE, bit_rate, callback);
 }

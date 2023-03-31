@@ -13,7 +13,7 @@ static inline int _tcp_recv_all(int fd, char *_recv_buf, size_t len)
 		recv_len = recv(fd, _recv_buf + sum_len, len, 0);
 		if(recv_len <= 0)
 		{
-			log_info("recv: close.");
+			log_info("recv: connect closed.");
 			return -1;
 		}
 

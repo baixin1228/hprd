@@ -191,6 +191,10 @@ static int ffmpeg_enc_map_buf(struct encodec_object *obj, int buf_id) {
     return 0;
 }
 
+static int ffmpeg_enc_unmap_buf(struct encodec_object *obj, int buf_id) {
+    return 0;
+}
+
 static int ffmpeg_frame_enc(struct encodec_object *obj, int buf_id) {
     struct raw_buffer *buffer;
     struct ffmpeg_enc_data *enc_data = obj->priv;
@@ -265,6 +269,7 @@ struct encodec_ops ffmpeg_enc_ops = {
     .init               = ffmpeg_enc_init,
     .set_info           = ffmpeg_enc_set_info,
     .map_buffer         = ffmpeg_enc_map_buf,
+    .unmap_buffer       = ffmpeg_enc_unmap_buf,
     .put_buffer         = ffmpeg_frame_enc,
     .get_buffer         = ffmpeg_enc_getbuf,
     .release            = ffmpeg_enc_release

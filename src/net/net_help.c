@@ -13,7 +13,7 @@ static inline int _tcp_recv_all(int fd, char *_recv_buf, size_t len)
 		recv_len = recv(fd, _recv_buf + sum_len, len, 0);
 		if(recv_len <= 0)
 		{
-			log_info("recv: close.");
+			log_info("recv: connect closed.");
 			return -1;
 		}
 
@@ -23,7 +23,7 @@ static inline int _tcp_recv_all(int fd, char *_recv_buf, size_t len)
 	return 0;
 }
 
-int tcp_recv_pkt(int fd, char *_recv_buf, void (*callback)(char *buf, size_t len))
+int tcp_recv_pkt(int fd, char *_recv_buf, void (*callback)(int fd, char *buf, size_t len))
 {
 	int pkt_len;
 
@@ -36,7 +36,7 @@ int tcp_recv_pkt(int fd, char *_recv_buf, void (*callback)(char *buf, size_t len
 		if(_tcp_recv_all(fd, _recv_buf, pkt_len) == -1)
 			return -1;
 
-		callback(_recv_buf, pkt_len);
+		callback(fd, _recv_buf, pkt_len);
 	}
 
 	return 0;

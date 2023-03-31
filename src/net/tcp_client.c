@@ -32,8 +32,3 @@ int client_connect(char *ip, uint16_t port)
 
 	return fd;
 }
-
-int client_send_pkt(int fd, char *buf, size_t len)
-{
-	return tcp_send_pkt(fd, buf, len);
-}

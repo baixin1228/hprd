@@ -31,12 +31,18 @@ struct input_event{
 
 enum setting_cmd
 {
-	TARGET_BIT_RATE = 1,
-	TARGET_FRAME_RATE,
+	RET_SUCCESS = 1,
+	RET_FAIL,
+	SET_BIT_RATE,
+	SET_FRAME_RATE,
+
+	GET_BIT_RATE,
+	GET_FRAME_RATE,
 };
 
 struct setting_event{
   uint8_t cmd;
+  uint32_t set_id;
   uint32_t value;
 };
 

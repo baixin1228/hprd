@@ -23,6 +23,7 @@ struct x11_extensions {
 	Window root_win;
 	XWindowAttributes windowattr;
 	Visual *visual;
+	bool quit;
 	uint32_t frame_rate;
 	uint32_t format;
 	uint32_t width;
@@ -71,8 +72,8 @@ static int xext_dev_init(struct capture_object *obj) {
 
 	priv->width = DisplayWidth(priv->display, priv->screen_num);
 	priv->height = DisplayHeight(priv->display, priv->screen_num);
-	log_info("x11 xext informations of screen:%d width:%d height:%d.", priv->screen_num
-			 , priv->width, priv->height);
+	log_info("x11 xext informations of screen:%d width:%d height:%d.",
+		priv->screen_num, priv->width, priv->height);
 
 	priv->format = ARGB8888;
 	priv->frame_rate = 33;
@@ -127,8 +128,7 @@ static int xext_map_buffer(struct capture_object *obj, int buf_id) {
 		return -1;
 	}
 
-	xext_buf->shm.shmid = shmget(IPC_PRIVATE,
-								 (size_t)xext_buf->ximg->bytes_per_line * xext_buf->ximg->height, IPC_CREAT | 0600);
+	xext_buf->shm.shmid = shmget(IPC_PRIVATE, (size_t)xext_buf->ximg->bytes_per_line * xext_buf->ximg->height, IPC_CREAT | 0600);
 
 	if (xext_buf->shm.shmid == -1) {
 		log_error("shmget failed.");
@@ -207,6 +207,7 @@ static int xext_put_frame_buffer(struct capture_object *obj, int buf_id) {
 }
 
 static int xext_unmap_buffer(struct capture_object *obj, int buf_id) {
+	int ret;
 	struct raw_buffer *raw_buf;
 	struct xext_buf *xext_buf;
 	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
@@ -215,10 +216,26 @@ static int xext_unmap_buffer(struct capture_object *obj, int buf_id) {
 		return -1;
 
 	xext_buf = &priv->xext_bufs[buf_id];
+	if (!XShmDetach(priv->display, &xext_buf->shm)) {
+		log_error("XShmDetach failed.");
+		exit(-1);
+	}
+	if((ret = shmdt(xext_buf->shm.shmaddr)))
+	{
+		log_error("shmdt failed:%d.", ret);
+		exit(-1);
+	}
+	if((ret = shmctl(xext_buf->shm.shmid, IPC_RMID, 0)))
+	{
+		log_error("shmctl failed:%d.", ret);
+		exit(-1);
+	}
+	if(!XDestroyImage(xext_buf->ximg))
+	{
+		log_error("XDestroyImage failed.");
+		exit(-1);
+	}
 	xext_buf->ximg = NULL;
-	shmdt(xext_buf->shm.shmaddr);
-	shmctl(xext_buf->shm.shmid, IPC_RMID, 0);
-	XDestroyImage(xext_buf->ximg);
 
 	raw_buf = get_raw_buffer(obj->buf_pool, buf_id);
 	raw_buf->width = 0;
@@ -226,17 +243,17 @@ static int xext_unmap_buffer(struct capture_object *obj, int buf_id) {
 	raw_buf->height = 0;
 	raw_buf->ver_stride = 0;
 	raw_buf->size = 0;
-	free(raw_buf->ptrs[0]);
 	raw_buf->ptrs[0] = NULL;
 	return 0;
 }
 
 static int xext_dev_release(struct capture_object *obj) {
 	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
-
+	log_info("xext_dev_release");
 	for (int i = 0; i < MAX_BUFFER_COUNT; ++i) {
 		xext_unmap_buffer(obj, i);
 	}
+	XSync(priv->display, False);
 	XCloseDisplay(priv->display);
 	free(priv);
 	return 0;
@@ -246,7 +263,7 @@ static int xcb_main_loop(struct capture_object *obj)
 {
 	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
 	uint64_t time_start, time_sub;
-	while(1)
+	while(!priv->quit)
 	{
 		time_start = get_time_us();
 		obj->on_frame(obj);
@@ -259,15 +276,11 @@ static int xcb_main_loop(struct capture_object *obj)
 	return 0;
 }
 
-static int xcb_change_frame_rate(struct capture_object *obj, uint32_t frame_rate)
+static int xcb_quit(struct capture_object *obj)
 {
 	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
 
-	if(frame_rate > 0)
-		priv->frame_rate = frame_rate;
-	else
-		log_error("frame_rate is invalid.");
-
+	priv->quit = true;
 	return 0;
 }
 
@@ -282,5 +295,5 @@ struct capture_dev_ops xcb_dev_ops = {
 	.unmap_buffer 		= xext_unmap_buffer,
 	.release 			= xext_dev_release,
 	.main_loop			= xcb_main_loop,
-	.change_frame_rate	= xcb_change_frame_rate
+	.quit				= xcb_quit
 };

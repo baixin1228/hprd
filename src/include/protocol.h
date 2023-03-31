@@ -3,18 +3,18 @@
 
 #include "common.h"
 
-enum CMD
+enum NET_CHANNEL
 {
-	VIDEO_DATA,
-	AUDIO_DATA,
-	INPUT_EVENT,
-	SETTING_EVENT,
-	USB_DATA,
+	VIDEO_CHANNEL,
+	AUDIO_CHANNEL,
+	INPUT_CHANNEL,
+	SETTING_CHANNEL,
+	USB_CHANNEL,
 };
 
 #pragma pack(push, 1)
 struct data_pkt{
-  uint8_t cmd;
+  enum NET_CHANNEL channel;
   uint32_t data_len;
   char data[0];
 };

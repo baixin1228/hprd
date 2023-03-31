@@ -26,7 +26,7 @@ struct capture_dev_ops
 	int (* get_buffer)(struct capture_object *obj);
 	int (* unmap_buffer)(struct capture_object *obj, int buf_id);
 	int (* main_loop)(struct capture_object *obj);
-	int (* change_frame_rate)(struct capture_object *obj, uint32_t frame_rate);
+	int (* quit)(struct capture_object *obj);
 	int (* release)(struct capture_object *obj);
 };
 
@@ -34,11 +34,12 @@ struct capture_object *capture_dev_init(struct mem_pool *pool);
 int capture_get_info(struct capture_object *capture_obj, GHashTable *fb_info);
 int capture_set_info(struct capture_object *capture_obj, GHashTable *fb_info);
 int capture_map_fb(struct capture_object *capture_obj, int buf_id);
+int capture_unmap_fb(struct capture_object *capture_obj, int buf_id);
 int capture_get_fb(struct capture_object *capture_obj);
 int capture_put_fb(struct capture_object *capture_obj, int buf_id);
 int capture_regist_event_callback(struct capture_object *capture_obj, void (* on_frame)(struct capture_object *obj));
 int capture_main_loop(struct capture_object *capture_obj);
-int capture_change_frame_rate(struct capture_object *capture_obj,
-	uint32_t frate_rate);
+int capture_release(struct capture_object *capture_obj);
+int capture_quit(struct capture_object *capture_obj);
 
 #endif

@@ -78,7 +78,7 @@ int __obj##_unmap_fb(struct __obj##_object *obj, int buf_id)\
 		if(dev_ops->unmap_buffer)					\
 			return dev_ops->unmap_buffer(obj, buf_id);\
 		else 										\
-			log_error(#__obj" dev not find func:map_buffer\n");\
+			log_error(#__obj" dev not find func:unmap_buffer\n");\
 	}												\
 													\
 	return -1;										\

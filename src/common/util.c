@@ -62,44 +62,44 @@ void _printf_stack(int dunno)
 	sprintf(dunno_str, "%d", dunno);
 	switch (dunno) {
 	case SIGHUP:
-		signal_str = "SIGHUP(1)";
+		signal_str = "[SIGHUP(1)]";
 		break;
 	case SIGINT:
-		signal_str = "SIGINT(2:CTRL_C)"; //CTRL_C
+		signal_str = "[SIGINT(2:CTRL_C)]"; //CTRL_C
 		break;
 	case SIGQUIT:
-		signal_str = "SIGQUIT(3)";
+		signal_str = "[SIGQUIT(3)]";
 		break;
 	case SIGILL:
-		signal_str = "非法指令";
+		signal_str = "[非法指令]";
 		print_stack(signal_str);
 		break;
 	case SIGABRT:
-		signal_str = "栈越界、double free";
+		signal_str = "[栈越界、double free]";
 		print_stack(signal_str);
 		break;
 	case SIGBUS:
-		signal_str = "总线错误，内存不对齐";
+		signal_str = "[总线错误，内存不对齐]";
 		print_stack(signal_str);
 		break;
 	case SIGFPE:
-		signal_str = "浮点异常";
+		signal_str = "[浮点异常]";
 		print_stack(signal_str);
 		break;
 	case SIGSEGV:
-		signal_str = "段错误：";
+		signal_str = "[段错误：]";
 		print_stack(signal_str);
 		break;
 	case SIGPIPE:
-		signal_str = "scoket err";
+		signal_str = "[scoket err]";
 		print_stack(signal_str);
 		break;
 	case SIGSTKFLT:
-	    signal_str = "超出内存";
+	    signal_str = "[超出内存]";
 	    print_stack(signal_str);
 	    break;
 	default:
-		signal_str = "OTHER";
+		signal_str = "[OTHER]";
 		break;
 	}
 }

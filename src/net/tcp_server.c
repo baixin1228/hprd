@@ -193,7 +193,7 @@ void callback_accept(int epfd, struct ep_event *ev) {
 	}
 }
 
-void on_server_pkt(char *buf, size_t len);
+void on_server_pkt(int fd, char *buf, size_t len);
 void callback_recvdata(int epfd, struct ep_event *ev) {
 	if(tcp_recv_pkt(ev->fd, ev->recv_buf, on_server_pkt) == -1) {
 		log_error("recv error.");
@@ -386,7 +386,7 @@ void server_bradcast_data_safe(int epfd, char *buf, uint32_t len) {
 	while(!bradcast_data.send_over);
 
 	video_pkt = (struct data_pkt *)bradcast_data.video_data;
-	video_pkt->cmd = VIDEO_DATA;
+	video_pkt->channel = VIDEO_CHANNEL;
 	video_pkt->data_len = htonl(len);
 	memcpy(video_pkt->data, buf, len);
 	bradcast_data.video_data_len = sizeof(struct data_pkt) + len;

@@ -42,6 +42,7 @@ enum setting_cmd
 
 struct setting_event{
   uint8_t cmd;
+  uint32_t set_id;
   uint32_t value;
 };
 

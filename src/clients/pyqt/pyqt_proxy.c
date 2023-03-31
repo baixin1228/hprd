@@ -21,38 +21,72 @@ struct decodec_object *dec_obj = NULL;
 void *resize_python_self = NULL;
 void (* resize_callback)(void *oqu, uint32_t width, uint32_t height) = NULL;
 
-void *net_cb_python_self = NULL;
-void (* net_callback)(void *oqu, uint32_t width, uint32_t height) = NULL;
+struct setting_request
+{
+	uint32_t set_id;
+	void *py_self;
+	void (* callback)(void *oqu, uint32_t width, uint32_t height);
+	struct setting_request *next;
+};
+
+pthread_mutex_t setting_lock = PTHREAD_MUTEX_INITIALIZER;
+struct setting_request *head = NULL;
+void add_setting_request(struct setting_request *node)
+{
+	pthread_mutex_lock(&setting_lock);
+	if(head == NULL)
+	{
+		head = node;
+	}else{
+		node->next = head;
+		head = node;
+	}
+	pthread_mutex_unlock(&setting_lock);
+}
+
+struct setting_request *get_del_setting_request(uint32_t set_id)
+{
+	pthread_mutex_lock(&setting_lock);
+	struct setting_request *ret = head;
+	struct setting_request *last = ret;
+	while(ret)
+	{
+		if(ret->set_id == set_id)
+		{
+			last->next = ret->next;
+			break;
+		}
+		last = ret;
+		ret = ret->next;
+	}
+	pthread_mutex_unlock(&setting_lock);
+	return ret;
+}
 
 void _on_setting(int fd, struct setting_event *event)
 {
+	int set_id = ntohl(event->set_id);
+	struct setting_request *req = get_del_setting_request(set_id);
+	if(!req)
+	{
+		log_error("[on_setting] not find set id:%d", set_id);
+		return;
+	}
+
 	switch(event->cmd)
 	{
 		case RET_SUCCESS:
 		{
-			if(net_cb_python_self != NULL && net_callback != NULL)
-			{
-				net_callback(net_cb_python_self, 1, ntohl(event->value));
-				net_cb_python_self = NULL;
-				net_callback = NULL;
-			}else{
-				log_error("uncache success net ret.");
-			}
+			req->callback(req->py_self, 1, ntohl(event->value));
 			break;
 		}
 		case RET_FAIL:
 		{
-			if(net_cb_python_self != NULL && net_callback != NULL)
-			{
-				net_callback(net_cb_python_self, 0, ntohl(event->value));
-				net_cb_python_self = NULL;
-				net_callback = NULL;
-			}else{
-				log_error("uncache fail net ret.");
-			}
+			req->callback(req->py_self, 0, ntohl(event->value));
 			break;
 		}
 	}
+	free(req);
 }
 
 static void _on_package(char *buf, size_t len) {
@@ -295,25 +329,42 @@ int py_key_event(int key, int down_or_up) {
 
 int _send_setting_data(void *oqu, uint32_t type, uint32_t frame_rate,
 	void (*callback)(void *oqu, uint32_t ret, uint32_t value)) {
+	static uint32_t set_id = 0;
 	struct setting_event event;
+	struct setting_request *set_req;
 
-	if(net_cb_python_self != NULL || net_callback != NULL)
+	if(oqu == NULL)
 	{
-		log_error("net double invok.");
+		log_error("_send_setting_data python self is none.");
 		return -1;
 	}
-	net_cb_python_self = oqu;
-	net_callback = callback;
+	if(callback == NULL)
+	{
+		log_error("_send_setting_data callback is none.");
+		return -1;
+	}
+	set_req = calloc(1, sizeof(*set_req));
+	if(!set_req)
+	{
+		log_error("_send_setting_data malloc fail.");
+		return -1;
+	}
+	set_req->py_self = oqu;
+	set_req->callback = callback;
+	set_req->set_id = set_id;
+	add_setting_request(set_req);
 
 	event.cmd = type;
+	event.set_id = htonl(set_id);
 	event.value = htonl(frame_rate);
-
 	if(send_event(fd, SETTING_CHANNEL, (char *)&event, sizeof(event))
 			== -1) {
 		log_error("send_event fail.");
+		set_req = get_del_setting_request(set_id);
+		free(set_req);
 		return -1;
 	}
-
+	set_id++;
 	return 0;
 }
 

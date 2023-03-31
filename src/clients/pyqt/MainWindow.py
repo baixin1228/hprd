@@ -76,20 +76,20 @@ class MainWindow(QMainWindow):
 		self.b_1M = QAction("1Mbps", self)
 		self.b_1M.setCheckable(True)
 		bitrate_button.addAction(self.b_1M)
+		self.b_3M = QAction("3Mbps", self)
+		self.b_3M.setCheckable(True)
+		bitrate_button.addAction(self.b_3M)
 		self.b_10M = QAction("10Mbps", self)
 		self.b_10M.setCheckable(True)
 		bitrate_button.addAction(self.b_10M)
-		self.b_100M = QAction("100Mbps", self)
-		self.b_100M.setCheckable(True)
-		bitrate_button.addAction(self.b_100M)
-		self.b_1000M = QAction("1000Mbps", self)
-		self.b_1000M.setCheckable(True)
-		bitrate_button.addAction(self.b_1000M)
+		self.b_30M = QAction("30Mbps", self)
+		self.b_30M.setCheckable(True)
+		bitrate_button.addAction(self.b_30M)
 		target_bit_group = QActionGroup(self);
 		target_bit_group.addAction(self.b_1M);
+		target_bit_group.addAction(self.b_3M);
 		target_bit_group.addAction(self.b_10M);
-		target_bit_group.addAction(self.b_100M);
-		target_bit_group.addAction(self.b_1000M);
+		target_bit_group.addAction(self.b_30M);
 		target_bit_group.setExclusive(True);
 
 		display_menu.triggered[QAction].connect(self.processTrigger)
@@ -114,7 +114,7 @@ class MainWindow(QMainWindow):
 		self.d_a_adapt.setChecked(True)
 		self.dsp_mode = 1
 
-		self.b_10M.setChecked(True)
+		proxy().py_get_bit_rate(py_object(self), self._on_bit_cb)
 		proxy().py_get_frame_rate(py_object(self), self._on_fr_cb)
 
 		self.time_ms = int(round(time.time() * 1000))
@@ -167,10 +167,17 @@ class MainWindow(QMainWindow):
 
 	@CFUNCTYPE(None, py_object, c_uint, c_uint)
 	def _on_fr_cb(self, ret, value):
-		print("frame rate setting:%s value:%u"%("success" if ret == 1 else "fail", value))
+		print("frame rate ret:%s value:%u"%("success" if ret == 1 else "fail", value))
 		add_task(1, False, self._reset_fr, value + 2);
 		if hasattr(self, f'fps_{ value + 2 }'):
 			getattr(self, f'fps_{ value + 2 }').setChecked(True)
+
+	@CFUNCTYPE(None, py_object, c_uint, c_uint)
+	def _on_bit_cb(self, ret, value):
+		value = int(value / 1024 / 1024)
+		print("bit rate ret:%s value:%u"%("success" if ret == 1 else "fail", value))
+		if hasattr(self, f'b_{ value }M'):
+			getattr(self, f'b_{ value }M').setChecked(True)
 
 	def processTrigger(self, q):
 		if q.text() == "Status Bar":
@@ -196,6 +203,15 @@ class MainWindow(QMainWindow):
 			proxy().py_set_frame_rate(py_object(self), 118, self._on_fr_cb)
 		elif q.text() == "240fps":
 			proxy().py_set_frame_rate(py_object(self), 238, self._on_fr_cb)
+
+		elif q.text() == "1Mbps":
+			proxy().py_set_bit_rate(py_object(self), 1 * 1024 * 1024, self._on_bit_cb)
+		elif q.text() == "3Mbps":
+			proxy().py_set_bit_rate(py_object(self), 3 * 1024 * 1024, self._on_bit_cb)
+		elif q.text() == "10Mbps":
+			proxy().py_set_bit_rate(py_object(self), 10 * 1024 * 1024, self._on_bit_cb)
+		elif q.text() == "30Mbps":
+			proxy().py_set_bit_rate(py_object(self), 30 * 1024 * 1024, self._on_bit_cb)
 
 		elif q.text() == "Quit":
 			sys.exit(0)

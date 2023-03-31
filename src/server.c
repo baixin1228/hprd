@@ -64,17 +64,26 @@ void on_key(struct input_event *event)
 		input_push_key(in_obj, event);
 }
 
-uint32_t frame_rate = 60;
+#define MIN_BIT_RATE (1 * 1024 * 1024)
+uint32_t frame_rate = 58;
 uint32_t stream_ftm = STREAM_H264;
-uint32_t bit_rate = 1 * 1024 * 1024;
+uint32_t bit_rate = MIN_BIT_RATE;
 void on_setting(int fd, struct setting_event *event)
 {
 	struct setting_event ret_event;
 
+	ret_event.set_id = event->set_id;
 	switch(event->cmd)
 	{
 		case SET_BIT_RATE:
 		{
+			bit_rate = ntohl(event->value);
+			if(bit_rate < MIN_BIT_RATE)
+				bit_rate = MIN_BIT_RATE;
+			capture_quit(cap_obj);
+			ret_event.cmd = RET_SUCCESS;
+			ret_event.value = event->value;
+			log_info("change bit rate.");
 			break;
 		}
 		case SET_FRAME_RATE:
@@ -88,17 +97,21 @@ void on_setting(int fd, struct setting_event *event)
 		}
 		case GET_BIT_RATE:
 		{
+			ret_event.cmd = RET_SUCCESS;
+			ret_event.value = htonl(bit_rate);
+			log_info("get bit rate.");
 			break;
 		}
 		case GET_FRAME_RATE:
 		{
 			ret_event.cmd = RET_SUCCESS;
-			ret_event.value = htonl(58);
-			log_info("change frame rate.");
+			ret_event.value = htonl(frame_rate);
+			log_info("get frame rate.");
 			break;
 		}
 		default:
 		{
+			log_warning("setting: unknow cmd.");
 			break;
 		}
 	}

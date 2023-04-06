@@ -188,7 +188,7 @@ END:
 }
 
 void *recv_thread(void *oq) {
-	while(tcp_recv_pkt(fd, _recv_buf, _on_client_pkt) != -1);
+	while(tcp_recv_pkt(fd, _recv_buf, BUFLEN, _on_client_pkt) != -1);
 	log_warning("recv_thread exit.");
 	return NULL;
 }

@@ -119,8 +119,7 @@ void on_setting(struct ep_event *ev, struct setting_event *event)
 	if(ret_event.cmd != RET_SUCCESS)
 		ret_event.cmd = RET_FAIL;
 
-	if(server_send_event(ev, SETTING_CHANNEL, (char *)&ret_event, sizeof(ret_event))
-			== -1) {
+	if(server_send_event(ev, SETTING_CHANNEL, (char *)&ret_event, sizeof(ret_event)) == -1) {
 		log_error("send_event fail.");
 	}
 }

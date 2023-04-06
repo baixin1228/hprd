@@ -30,16 +30,16 @@ int queue_get_int(struct int_queue *queue)
 	return -1;
 }
 
-int write_queue_data(struct data_queue *queue, uint8_t *buf, size_t len)
+int queue_append_data(struct data_queue *queue, uint8_t *buf, size_t len)
 {
 	if(queue == NULL)
 	{
-		return QUEUE_ERR;
+		return -1;
 	}
 	if(len > QUEUE_DATA_SIZE)
 	{
     	log_error("write size greater than buffer.");
-		return OVER_SIZE;
+		return -1;
 	}
 
 	if(len <= atomic_load(&queue->buffer_tail) + QUEUE_DATA_SIZE - atomic_load(&queue->buffer_head))
@@ -59,19 +59,19 @@ int write_queue_data(struct data_queue *queue, uint8_t *buf, size_t len)
 
 		return len;
 	}
-	return QUEUE_FULL;
+	return 0;
 }
 
-int read_queue_data(struct data_queue *queue, uint8_t *buf, size_t len)
+int pop_queue_data(struct data_queue *queue, uint8_t *buf, size_t len)
 {
 	if(queue == NULL)
 	{
-		return QUEUE_ERR;
+		return -1;
 	}
 	if(len > QUEUE_DATA_SIZE)
 	{
     	log_error("read size greater than buffer.");
-		return OVER_SIZE;
+		return -1;
 	}
 
 	if(len <= atomic_load(&queue->buffer_head) - atomic_load(&queue->buffer_tail))
@@ -91,12 +91,104 @@ int read_queue_data(struct data_queue *queue, uint8_t *buf, size_t len)
 
 		return len;
 	}
-	return QUEUE_NO_DATA;
+	return 0;
 }
 
-int get_queue_data_len(struct data_queue *queue)
+int queue_tail_point_forward(struct data_queue *queue, size_t len)
 {
 	if(queue == NULL)
-		return QUEUE_ERR;
+	{
+		return -1;
+	}
+	if(len > QUEUE_DATA_SIZE)
+	{
+    	log_error("read size greater than buffer.");
+		return -1;
+	}
+
+	if(len <= atomic_load(&queue->buffer_head) - atomic_load(&queue->buffer_tail))
+	{
+		queue->buffer_tail += len;
+		return len;
+	}
+	return 0;
+}
+
+int queue_head_point_forward(struct data_queue *queue, size_t len)
+{
+	if(queue == NULL)
+	{
+		return -1;
+	}
+	if(len > QUEUE_DATA_SIZE)
+	{
+    	log_error("write size greater than buffer.");
+		return -1;
+	}
+
+	if(len <= atomic_load(&queue->buffer_tail) + QUEUE_DATA_SIZE - atomic_load(&queue->buffer_head))
+	{
+		queue->buffer_head += len;
+		return len;
+	}
+	return 0;
+}
+
+char *queue_get_write_ptr(struct data_queue *queue)
+{
+	if(queue == NULL)
+	{
+		return NULL;
+	}
+	return queue->buffer_queue + (atomic_load(&queue->buffer_head) % QUEUE_DATA_SIZE);
+}
+
+char *queue_get_read_ptr(struct data_queue *queue)
+{
+	if(queue == NULL)
+	{
+		return NULL;
+	}
+	return queue->buffer_queue + (atomic_load(&queue->buffer_tail) % QUEUE_DATA_SIZE);
+}
+
+int queue_get_free_count(struct data_queue *queue)
+{
+	if(queue == NULL)
+		return -1;
+	return QUEUE_DATA_SIZE + atomic_load(&queue->buffer_tail) - atomic_load(&queue->buffer_head);
+}
+
+int get_queue_data_count(struct data_queue *queue)
+{
+	if(queue == NULL)
+		return -1;
 	return atomic_load(&queue->buffer_head) - atomic_load(&queue->buffer_tail);
+}
+
+int queue_get_end_data_count(struct data_queue *queue)
+{
+	int end_data_count;
+	int data_count;
+	if(queue == NULL)
+	{
+		return -1;
+	}
+	data_count = get_queue_data_count(queue);
+	end_data_count = QUEUE_DATA_SIZE - (atomic_load(&queue->buffer_tail) % QUEUE_DATA_SIZE);
+	return end_data_count < data_count ? end_data_count : data_count;
+}
+
+int queue_get_end_free_count(struct data_queue *queue)
+{
+	int direct_space;
+	int available_space;
+	if(queue == NULL)
+	{
+		return -1;
+	}
+	available_space = queue_get_free_count(queue);
+	direct_space = QUEUE_DATA_SIZE - (atomic_load(&queue->buffer_head) % QUEUE_DATA_SIZE);
+
+	return available_space < direct_space ? available_space : direct_space;
 }

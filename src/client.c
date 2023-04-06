@@ -147,7 +147,7 @@ void *tcp_client_net_thread(void *op)
 
 	while(1)
 	{
-		if(tcp_recv_pkt(fd, _recv_buf, _on_client_pkt) == -1)
+		if(tcp_recv_pkt(fd, _recv_buf, BUFLEN, _on_client_pkt) == -1)
 			break;
 	}
 	close(fd);

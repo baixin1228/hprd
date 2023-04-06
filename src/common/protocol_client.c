@@ -7,12 +7,12 @@
 #include "net_help.h"
 #include "protocol.h"
 #include "tcp_client.h"
-#include "input_event.h"
+#include "protocol.h"
 
-struct data_pkt *event_pkt = NULL;
 
 int send_event(int fd, uint32_t cmd, char *buf, size_t len)
 {
+	static struct data_pkt *event_pkt = NULL;
 	if(!event_pkt)
 	{
 		event_pkt = calloc(1, sizeof(struct data_pkt) +
@@ -31,12 +31,3 @@ int send_event(int fd, uint32_t cmd, char *buf, size_t len)
 
 	return 0;
 }
-
-// int release()
-// {
-// 	if(event_pkt)
-// 	{
-// 		free(event_pkt);
-// 		event_pkt = NULL;
-// 	}
-// }

@@ -8,7 +8,7 @@
 #include "gl_render.h"
 #include "display_dev.h"
 #include "buffer_pool.h"
-#include "input_event.h"
+#include "protocol.h"
 
 struct x11_renderer{
 	Display *x_display;

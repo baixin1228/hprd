@@ -37,6 +37,8 @@ int tcp_recv_pkt(int fd, char *_recv_buf, void (*callback)(int fd, char *buf, si
 			return -1;
 
 		callback(fd, _recv_buf, pkt_len);
+	}else{
+		log_error("recv len is invalid.");
 	}
 
 	return 0;

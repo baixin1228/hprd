@@ -68,7 +68,7 @@ void on_key(struct input_event *event)
 uint32_t frame_rate = 58;
 uint32_t stream_ftm = STREAM_H264;
 uint32_t bit_rate = MIN_BIT_RATE;
-void on_setting(int fd, struct setting_event *event)
+void on_setting(struct ep_event *ev, struct setting_event *event)
 {
 	struct setting_event ret_event;
 
@@ -119,13 +119,13 @@ void on_setting(int fd, struct setting_event *event)
 	if(ret_event.cmd != RET_SUCCESS)
 		ret_event.cmd = RET_FAIL;
 
-	if(send_event(fd, SETTING_CHANNEL, (char *)&ret_event, sizeof(ret_event))
+	if(server_send_event(ev, SETTING_CHANNEL, (char *)&ret_event, sizeof(ret_event))
 			== -1) {
 		log_error("send_event fail.");
 	}
 }
 
-void on_server_pkt(int fd, char *buf, size_t len) {
+void on_server_pkt(struct ep_event *ev, char *buf, size_t len) {
 	struct data_pkt *pkt = (struct data_pkt *)buf;
 	pthread_mutex_lock(&net_cb_lock);
 	switch(pkt->channel) {
@@ -134,7 +134,7 @@ void on_server_pkt(int fd, char *buf, size_t len) {
 			break;
 		}
 		case SETTING_CHANNEL: {
-			on_setting(fd, (struct setting_event *)pkt->data);
+			on_setting(ev, (struct setting_event *)pkt->data);
 			break;
 		}
 		default: {
@@ -144,11 +144,9 @@ void on_server_pkt(int fd, char *buf, size_t len) {
 	pthread_mutex_unlock(&net_cb_lock);
 }
 
-int epfd = -1;
 void on_enc_package(char *buf, size_t len)
 {
-	if(epfd != -1)
-		server_bradcast_data_safe(epfd, buf, len);
+	bradcast_video(buf, len);
 }
 
 int server_start(char *capture, char *encodec)
@@ -291,7 +289,7 @@ int main(int argc, char* argv[])
     	}
     }
 
-	epfd = tcp_server_init("0.0.0.0", 9999);
+	tcp_server_init("0.0.0.0", 9999);
 	while(1)
 	{
 		server_start(capture, encodec);

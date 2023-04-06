@@ -112,6 +112,7 @@ static void _on_client_pkt(int fd, char *buf, size_t len) {
 			break;
 		}
 		default : {
+			log_info("unknow channel.");
 			break;
 		}
 	}

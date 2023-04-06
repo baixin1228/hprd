@@ -10,7 +10,7 @@
 
 #include "util.h"
 #include "input_dev.h"
-#include "input_event.h"
+#include "protocol.h"
 
 #define DEFAULT_DISPLAY ":0"
 

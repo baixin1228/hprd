@@ -264,7 +264,10 @@ static int xext_dev_release(struct capture_object *obj) {
 static int xcb_main_loop(struct capture_object *obj)
 {
 	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
-	uint64_t time_start, time_sub;
+	static uint32_t times = 0;
+	static uint32_t time_sum;
+	uint64_t time_start, time_sub, time_perf_start;
+	time_perf_start = get_time_us();
 	while(!priv->quit)
 	{
 		time_start = get_time_us();
@@ -273,6 +276,15 @@ static int xcb_main_loop(struct capture_object *obj)
 
 		if(1000000 / priv->frame_rate > time_sub)
 			usleep(1000000 / priv->frame_rate - time_sub);
+
+		times++;
+		if(times > 100)
+		{
+			time_sum = get_time_us() - time_perf_start;
+			log_info("server fps:%d", 1000000 * times / time_sum);
+			times = 0;
+			time_perf_start = get_time_us();
+		}
 	}
 
 	return 0;

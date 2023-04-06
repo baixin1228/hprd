@@ -69,7 +69,7 @@ def get_key_code(code):
 		return 13
 
 	if code == Qt.Key_Enter:
-		return 13
+		return 108
 
 	if code == Qt.Key_Shift:
 		return 16

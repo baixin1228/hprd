@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <sys/socket.h>
 #include <sys/epoll.h>
-#include <arpa/inet.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
@@ -13,65 +12,22 @@
 #include "util.h"
 #include "protocol.h"
 #include "net_help.h"
-#include "input_event.h"
+#include "tcp_server.h"
+#include "protocol.h"
 
-#define MAX_EVENTS 1024
-#define BUFLEN 1024 * 1024 * 10
-
-#define ONLISTEN 1
-#define NOT_ACTIVE 0
-
-static inline void perr(int status, const char *func_info) {
-	if (status) {
-		perror(func_info);
-		exit(EXIT_FAILURE);
-	}
-}
-
-struct ep_event {
-	int fd;     //cfd listenfd
-	struct in_addr addr;
-	uint16_t port;
-	int events; //EPOLLIN  EPLLOUT
-	void (*callback_fn)(int epfd, void *ev);
-	int status;
-	char recv_buf[1024 * 1024];
-	char *send_buf;
-	uint32_t send_len;
-	uint32_t bradcast_idx;
-	time_t last_active;
-	struct ep_event *next;
-};
-
-void callback_recvdata(int epfd, struct ep_event *ev);
-void callback_accept(int epfd, struct ep_event *ev);
-void callback_senddata(int epfd, struct ep_event *ev);
-
-struct video_bradcast_data {
-	char video_data[BUFLEN];
-	size_t video_data_len;
-	uint32_t bradcast_idx;
-	bool need_send;
-	bool send_over;
-} bradcast_data = {0};
-
-static struct ep_event *client_event_head = NULL;
 static int client_events_len = 0;
+static struct ep_event *client_event_head = NULL;
 
 /* create and add to my_events */
-struct ep_event *create_ep_event(int fd, int events, void *callback_fn) {
+struct ep_event *create_ep_event(int fd, int events) {
 	struct ep_event *ev = calloc(1, sizeof(struct ep_event));
 
 	ev->fd = fd;
 	ev->events = events;
-	ev->callback_fn = (void (*)(int, void *))callback_fn;
-	ev->status = NOT_ACTIVE;
-	ev->send_buf = NULL;
-	ev->send_len = 0;
-	ev->bradcast_idx = bradcast_data.bradcast_idx;
 	ev->last_active = time(0);
 	ev->next = NULL;
-
+	pthread_mutex_init(&ev->send_buf_lock, NULL);
+	pthread_cond_init(&ev->send_buf_cond, NULL);
 	return ev;
 }
 
@@ -116,8 +72,7 @@ void remove_event(int epfd, struct ep_event *ev) {
 
 struct ep_event *new_client_ep_event(int epfd,
 									int new_fd,
-									int events,
-									void *callback_fn) {
+									int events) {
 
 	struct ep_event *ev;
 	struct ep_event *tmp;
@@ -127,7 +82,7 @@ struct ep_event *new_client_ep_event(int epfd,
 		return NULL;
 	}
 
-	ev = create_ep_event(new_fd, events, (void *)callback_recvdata);
+	ev = create_ep_event(new_fd, events);
 	add_event(epfd, ev);
 
 	if(client_event_head == NULL)
@@ -178,9 +133,13 @@ void callback_accept(int epfd, struct ep_event *ev) {
 
 	socklen_t len = sizeof(addr);
 	int new_fd = accept(ev->fd, (struct sockaddr *)&addr, &len);
-	perr(new_fd == -1, __func__);
-	// fcntl(new_fd, F_SETFL, O_NONBLOCK);
-	ev = new_client_ep_event(epfd, new_fd, EPOLLIN, (void *)callback_recvdata);
+	if(new_fd == -1)
+	{
+		log_perr("%s", __func__);
+		exit(EXIT_FAILURE);
+	}
+	fcntl(new_fd, F_SETFL, O_NONBLOCK);
+	ev = new_client_ep_event(epfd, new_fd, EPOLLIN);
 	ev->addr = addr.sin_addr;
 	ev->port = addr.sin_port;
 
@@ -193,37 +152,65 @@ void callback_accept(int epfd, struct ep_event *ev) {
 	}
 }
 
-void on_server_pkt(int fd, char *buf, size_t len);
+void on_server_pkt(struct ep_event *ev, char *buf, size_t len);
+int _check_recv_pkt(struct ep_event *ev)
+{
+	int pkt_len;
+	if(ev->recv_tail - ev->recv_head > 4)
+	{
+		pkt_len = ntohl(*(uint32_t *)(ev->recv_buf + (ev->recv_head % BUF_LEN)));
+		if(pkt_len > 0)
+		{
+			if(ev->recv_tail - ev->recv_head >= 4 + pkt_len)
+			{
+				on_server_pkt(ev, ev->recv_buf + (ev->recv_head % BUF_LEN) + 4,
+				pkt_len);
+				ev->recv_head += 4 + pkt_len;
+				return 0;
+			}
+		}else{
+			log_error("recv len is invalid.");
+		}
+	}
+	return -1;
+}
+
 void callback_recvdata(int epfd, struct ep_event *ev) {
-	if(tcp_recv_pkt(ev->fd, ev->recv_buf, on_server_pkt) == -1) {
+	int ret;
+	if((ret = recv(ev->fd, ev->recv_buf + (ev->recv_tail % BUF_LEN)
+		, BUF_LEN + ev->recv_head - ev->recv_tail, 0)) == 0) {
 		log_error("recv error.");
 		remove_client(epfd, ev);
 		return;
 	}
+	if(ret > 0)
+		ev->recv_tail += ret;
 
+	while(_check_recv_pkt(ev) == 0);
 	ev->last_active = time(0);
 }
 
 void callback_senddata(int epfd, struct ep_event *ev) {
-	if(ev->send_buf == NULL || ev->send_len == 0)
+	int ret;
+	pthread_mutex_lock(&ev->send_buf_lock);
+	if(ev->send_tail - ev->send_head == 0)
 		goto EXIT2;
 
-	if(tcp_send_pkt(ev->fd, ev->send_buf, ev->send_len) == -1) {
+	if((ret = send(ev->fd, ev->send_buf + (ev->send_head % BUF_LEN)
+		, ev->send_tail - ev->send_head, 0)) == 0) {
 		log_error("send error.");
 		remove_client(epfd, ev);
 		goto EXIT;
 	}
 
-	if(ev->bradcast_idx < bradcast_data.bradcast_idx)
-	{
-		ev->bradcast_idx++;
-	}
+	if(ret > 0)
+		ev->send_head += ret;
 
-	ev->send_buf = NULL;
-	ev->send_len = 0;
+	pthread_mutex_unlock(&ev->send_buf_lock);
+	if(ret > 0)
+		pthread_cond_signal(&ev->send_buf_cond);
 
 EXIT2:
-	ev->callback_fn = (void (*)(int, void *))callback_recvdata;
 	ev->events = EPOLLIN;
 	mod_event(epfd, ev);
 
@@ -233,7 +220,7 @@ EXIT:
 
 int create_ls_socket(char *ip, uint16_t port) {
 	int ls_fd = socket(AF_INET, SOCK_STREAM, 0);
-	// fcntl(ls_fd, F_SETFL, O_NONBLOCK);
+	fcntl(ls_fd, F_SETFL, O_NONBLOCK);
 	struct sockaddr_in ls_addr = {
 		.sin_family = AF_INET,
 		.sin_addr.s_addr = inet_addr(ip),
@@ -262,32 +249,16 @@ void check_active(int epfd) {
 
 void check_bradcast_data(int epfd) {
 	struct ep_event *tmp;
-	bool bradcast_over = true;
-
-	if(bradcast_data.need_send)
-	{
-		tmp = client_event_head;
-		while(tmp != NULL) {
-			tmp->callback_fn = (void (*)(int, void *))callback_senddata;
-			tmp->send_buf = bradcast_data.video_data;
-			tmp->send_len = bradcast_data.video_data_len;
-			tmp->events = EPOLLOUT;
-			mod_event(epfd, tmp);
-
-			tmp = tmp->next;
-		}
-
-		bradcast_data.need_send = false;
-	}
 
 	tmp = client_event_head;
 	while(tmp != NULL) {
-		if(tmp->bradcast_idx < bradcast_data.bradcast_idx)
-			bradcast_over = false;
-
+		if(tmp->send_tail > tmp->send_head) {
+			tmp->events = EPOLLOUT;
+			mod_event(epfd, tmp);
+		}
 		tmp = tmp->next;
 	}
-	bradcast_data.send_over = bradcast_over;
+
 }
 
 static struct server_info {
@@ -342,8 +313,7 @@ void process_event(struct epoll_event *event)
 void *tcp_server_thread(void *opaque) {
 	int nfd;
 	server_fd = create_ls_socket(ser_info.ip, ser_info.port);
-	accept_ep_event = create_ep_event(server_fd, EPOLLIN,
-									  (void *)callback_accept);
+	accept_ep_event = create_ep_event(server_fd, EPOLLIN);
 
 	add_event(ser_info.epfd, accept_ep_event);
 
@@ -351,7 +321,11 @@ void *tcp_server_thread(void *opaque) {
 	while (1) {
 		// check_active(ser_info.epfd);
 		nfd = epoll_wait(ser_info.epfd, events, MAX_EVENTS + 1, 10);
-		perr(nfd < 0, "epoll_wait");
+		if(nfd < 0)
+		{
+			log_perr("epoll_wait");
+			exit(EXIT_FAILURE);
+		}
 		for (int i = 0; i < nfd; i++) {
 			process_event(&events[i]);
 		}
@@ -367,8 +341,6 @@ int tcp_server_init(char *ip, uint16_t port) {
 	strcpy(ser_info.ip, ip);
 	ser_info.port = port;
 
-	bradcast_data.send_over = true;
-
 	pthread_create(&p1, NULL, tcp_server_thread, NULL);
 	pthread_detach(p1);
 	return epfd;
@@ -379,18 +351,52 @@ int get_client_count(void)
 	return client_events_len;
 }
 
-void server_bradcast_data_safe(int epfd, char *buf, uint32_t len) {
-	struct data_pkt *video_pkt;
-	// log_info("bradcast data:%d %d", sizeof(struct data_pkt), len);
+int _server_send_data(struct ep_event *ev, char *buf, uint32_t len)
+{
+	uint32_t *write_start;
 
-	while(!bradcast_data.send_over);
+	write_start = (uint32_t *)(ev->send_buf + (ev->send_tail % BUF_LEN));
+	*write_start = htonl(len);
+	memcpy((char *)(write_start + 1), buf, len);
+	ev->send_tail += (len + sizeof(*write_start));
+	return 0;
+}
 
-	video_pkt = (struct data_pkt *)bradcast_data.video_data;
-	video_pkt->channel = VIDEO_CHANNEL;
-	video_pkt->data_len = htonl(len);
-	memcpy(video_pkt->data, buf, len);
-	bradcast_data.video_data_len = sizeof(struct data_pkt) + len;
-	bradcast_data.bradcast_idx++;
-	bradcast_data.send_over = false;
-	bradcast_data.need_send = true;
+int server_send_data_unsafe(struct ep_event *ev, char *buf, uint32_t len)
+{
+	int ret = -1;
+
+	pthread_mutex_lock(&ev->send_buf_lock);
+	if(ev->send_tail + len + 4 >= ev->send_head + BUF_LEN) {
+		log_warning("send slow, w:%d e:%d skip.", len + 4, BUF_LEN);
+		goto OUT;
+	}
+	ret = _server_send_data(ev, buf, len);
+OUT:
+	pthread_mutex_unlock(&ev->send_buf_lock);
+	return ret;
+}
+
+int server_send_data_safe(struct ep_event *ev, char *buf, uint32_t len)
+{
+	int ret = -1;
+
+	pthread_mutex_lock(&ev->send_buf_lock);
+	while(ev->send_tail + len + 4 >= ev->send_head + BUF_LEN) {
+		log_warning("send slow, w:%d e:%d waiting.", len + 4, BUF_LEN);
+		pthread_cond_wait(&ev->send_buf_cond, &ev->send_buf_lock);
+	}
+	ret = _server_send_data(ev, buf, len);
+	pthread_mutex_unlock(&ev->send_buf_lock);
+	return ret;
+}
+
+void server_bradcast_data(char *buf, uint32_t len) {
+	struct ep_event *tmp;
+
+	tmp = client_event_head;
+	while(tmp != NULL) {
+		server_send_data_unsafe(tmp, buf, len);
+		tmp = tmp->next;
+	}
 }

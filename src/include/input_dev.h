@@ -2,7 +2,7 @@
 #define __INPUT_DEV_H__
 
 #include <glib.h>
-#include "input_event.h"
+#include "protocol.h"
 #include "buffer_pool.h"
 
 struct input_dev_ops;

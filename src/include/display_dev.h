@@ -3,7 +3,7 @@
 
 #include <glib.h>
 #include "frame_buffer.h"
-#include "input_event.h"
+#include "protocol.h"
 
 struct display_dev_ops;
 

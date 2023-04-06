@@ -10,7 +10,7 @@
 
 #include "util.h"
 #include "input_dev.h"
-#include "input_event.h"
+#include "protocol.h"
 
 #define DEFAULT_DISPLAY ":0"
 
@@ -45,7 +45,6 @@ static int xlib_set_info(struct input_object *obj, GHashTable *fb_info)
 
 static long get_xkeycode(int keycode)
 {
-	    	// printf("%ld\n", XStringToKeysym("BackSpace"));
 	switch(keycode)
 	{
 		case 8:
@@ -82,6 +81,8 @@ static long get_xkeycode(int keycode)
 			return XStringToKeysym("Right");
 		case 40:
 			return XStringToKeysym("Down");
+		case 108:
+			return XStringToKeysym("Enter");
 	}
 
 	if(keycode > 32 && keycode <= 222)

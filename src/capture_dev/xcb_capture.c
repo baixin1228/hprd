@@ -15,8 +15,6 @@
 #include "buffer_pool.h"
 #include "frame_buffer.h"
 
-#define DEFAULT_DISPLAY ":0"
-
 struct x11_extensions {
 	Display *display;
 	uint32_t screen_num;
@@ -39,6 +37,7 @@ struct x11_extensions {
 
 static int xext_dev_init(struct capture_object *obj) {
 	int ret = -1;
+	char * def_dpy = ":0.0";
 	struct x11_extensions *priv;
 
 	priv = calloc(1, sizeof(*priv));
@@ -46,12 +45,15 @@ static int xext_dev_init(struct capture_object *obj) {
 		log_error("calloc fail, check free memery.");
 		goto FAIL1;
 	}
+	
+	if(getenv("DISPLAY"))
+		def_dpy=getenv("DISPLAY");
 
-	priv->display = XOpenDisplay(DEFAULT_DISPLAY);
+	priv->display = XOpenDisplay(def_dpy);
 
 	if(priv->display == NULL) {
-		log_error("XOpenDisplay: cannot displayect to X server %s.",
-				  XDisplayName(DEFAULT_DISPLAY));
+		log_error("XOpenDisplay: cannot connect to X server %s.",
+				  XDisplayName(def_dpy));
 		goto FAIL2;
 	}
 	if(XShmQueryExtension(priv->display) == False) {

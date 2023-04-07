@@ -22,8 +22,8 @@ struct data_queue
 int queue_put_int(struct int_queue *queue, int id);
 int queue_get_int(struct int_queue *queue);
 
-int queue_append_data(struct data_queue *queue, void *p_buf, size_t len);
-int pop_queue_data(struct data_queue *queue, void *p_buf, size_t len);
+int enqueue_data(struct data_queue *queue, void *p_buf, size_t len);
+int dequeue_data(struct data_queue *queue, void *p_buf, size_t len);
 int queue_get_free_count(struct data_queue *queue);
 int get_queue_data_count(struct data_queue *queue);
 int copy_queue_data(struct data_queue *queue, uint8_t *buf, size_t len);

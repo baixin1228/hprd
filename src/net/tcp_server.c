@@ -360,7 +360,7 @@ int server_send_data_safe(struct ep_event *ev, char *buf, uint32_t len)
 
 	pthread_mutex_lock(&ev->send_buf_lock);
 	do{
-		ret = queue_append_data(&ev->send_queue, (uint8_t *)&net_len, 4);
+		ret = enqueue_data(&ev->send_queue, (uint8_t *)&net_len, 4);
 		if(ret == 0)
 		{
 			log_warning("send slow, w:%d e:%d waiting.", 4,
@@ -372,7 +372,7 @@ int server_send_data_safe(struct ep_event *ev, char *buf, uint32_t len)
 	}while(ret == 0);
 
 	do{
-		ret = queue_append_data(&ev->send_queue, (uint8_t *)buf, len);
+		ret = enqueue_data(&ev->send_queue, (uint8_t *)buf, len);
 		if(ret == 0)
 		{
 			log_warning("send slow, w:%d e:%d waiting.", len,

@@ -107,9 +107,9 @@ static void _decode_pkt() {
 	if(atomic_load(&client.recv_pkt_count) == 0)
 		return;
 
-	pop_queue_data(&client.recv_queue, (uint8_t *)client.recv_pkt, sizeof(* client.recv_pkt));
+	dequeue_data(&client.recv_queue, (uint8_t *)client.recv_pkt, sizeof(* client.recv_pkt));
 	client.recv_pkt->data_len = ntohl(client.recv_pkt->data_len);
-	pop_queue_data(&client.recv_queue, (uint8_t *)client.recv_pkt->data, client.recv_pkt->data_len);
+	dequeue_data(&client.recv_queue, (uint8_t *)client.recv_pkt->data, client.recv_pkt->data_len);
 
 	atomic_fetch_sub(&client.recv_pkt_count, 1);
 
@@ -201,7 +201,7 @@ END:
 
 static void _on_client_recv(int fd, char *buf, size_t len) {
 	int ret;
-	while((ret = queue_append_data(&client.recv_queue, buf, len)) == 0);
+	while((ret = enqueue_data(&client.recv_queue, buf, len)) == 0);
 	if(ret == -1)
 	{
 		log_error("enqueue fail.");

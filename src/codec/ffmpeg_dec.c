@@ -71,7 +71,7 @@ int fill_iobuffer(void * opaque, uint8_t *buf, int bufsize){
 
 	if(!data->pkt_eos_flag && !data->exit_flag)
 	{
-		ret = pop_queue_data(data->queue, buf, bufsize);
+		ret = dequeue_data(data->queue, buf, bufsize);
 		return ret;
 	}
 
@@ -346,7 +346,7 @@ static enum PUSH_STATUS ffmepg_put_packet(struct module_data *dev, struct common
 	struct ffmpeg_dec_data *data = dev->priv;
 	int ret;
 	if(buffer->ptr){
-		ret = queue_append_data(data->queue, buffer->ptr, buffer->size);
+		ret = enqueue_data(data->queue, buffer->ptr, buffer->size);
 	}else{
 		data->pkt_eos_flag = true;
 		data->put_count++;

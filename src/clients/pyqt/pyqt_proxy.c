@@ -14,12 +14,12 @@
 #include "protocol.h"
 #include "net_help.h"
 
-struct setting_request
+struct request_obj
 {
-	uint32_t set_id;
+	uint32_t id;
 	void *py_self;
 	void (* callback)(void *oqu, uint32_t width, uint32_t height);
-	struct setting_request *next;
+	struct request_obj *next;
 };
 
 struct client {
@@ -29,8 +29,8 @@ struct client {
 	struct decodec_object *dec_obj;
 	void *resize_python_self;
 	void (* resize_callback)(void *oqu, uint32_t width, uint32_t height);
-	struct setting_request *setting_head;
-	pthread_mutex_t setting_lock;
+	struct request_obj *req_obj_head;
+	pthread_mutex_t req_tab_lock;
 	struct data_queue recv_queue;
 	atomic_int recv_pkt_count;
 	struct data_pkt *recv_pkt;
@@ -39,27 +39,27 @@ struct client {
 	uint32_t recv_sum;
 } client = {0};
 
-void add_setting_request(struct setting_request *node)
+void add_request(struct request_obj *node)
 {
-	pthread_mutex_lock(&client.setting_lock);
-	if(client.setting_head == NULL)
+	pthread_mutex_lock(&client.req_tab_lock);
+	if(client.req_obj_head == NULL)
 	{
-		client.setting_head = node;
+		client.req_obj_head = node;
 	}else{
-		node->next = client.setting_head;
-		client.setting_head = node;
+		node->next = client.req_obj_head;
+		client.req_obj_head = node;
 	}
-	pthread_mutex_unlock(&client.setting_lock);
+	pthread_mutex_unlock(&client.req_tab_lock);
 }
 
-struct setting_request *get_del_setting_request(uint32_t set_id)
+struct request_obj *get_del_request(uint32_t id)
 {
-	pthread_mutex_lock(&client.setting_lock);
-	struct setting_request *ret = client.setting_head;
-	struct setting_request *last = ret;
+	pthread_mutex_lock(&client.req_tab_lock);
+	struct request_obj *ret = client.req_obj_head;
+	struct request_obj *last = ret;
 	while(ret)
 	{
-		if(ret->set_id == set_id)
+		if(ret->id == id)
 		{
 			last->next = ret->next;
 			break;
@@ -67,21 +67,21 @@ struct setting_request *get_del_setting_request(uint32_t set_id)
 		last = ret;
 		ret = ret->next;
 	}
-	pthread_mutex_unlock(&client.setting_lock);
+	pthread_mutex_unlock(&client.req_tab_lock);
 	return ret;
 }
 
-void _on_setting(int fd, struct setting_event *event)
+void _on_response(int fd, struct response_event *event)
 {
-	int set_id = ntohl(event->set_id);
-	struct setting_request *req = get_del_setting_request(set_id);
+	int id = ntohl(event->id);
+	struct request_obj *req = get_del_request(id);
 	if(!req)
 	{
-		log_error("[on_setting] not find set id:%d", set_id);
+		log_error("[on_setting] not find set id:%d", id);
 		return;
 	}
 
-	switch(event->cmd)
+	switch(event->ret)
 	{
 		case RET_SUCCESS:
 		{
@@ -118,8 +118,8 @@ static void _decode_pkt() {
 			_on_video(client.recv_pkt->data, client.recv_pkt->data_len);
 			break;
 		}
-		case SETTING_CHANNEL: {
-			_on_setting(client.fd, (struct setting_event *)client.recv_pkt->data);
+		case RESPONSE_CHANNEL: {
+			_on_response(client.fd, (struct response_event *)client.recv_pkt->data);
 			break;
 		}
 		default : {
@@ -232,7 +232,7 @@ int py_client_connect(char *ip, uint16_t port) {
 		return -1;
 	}
 
-	pthread_mutex_init(&client.setting_lock, NULL);
+	pthread_mutex_init(&client.req_tab_lock, NULL);
 	atomic_init(&client.recv_pkt_count, 0);
 
 	client.recv_pkt = calloc(BUFLEN, 1);
@@ -359,61 +359,66 @@ int py_key_event(int key, int down_or_up) {
 	return 0;
 }
 
-int _send_setting_data(void *oqu, uint32_t type, uint32_t frame_rate,
+int _send_request_data(void *oqu, uint32_t type, uint32_t frame_rate,
 	void (*callback)(void *oqu, uint32_t ret, uint32_t value)) {
-	static uint32_t set_id = 0;
-	struct setting_event event;
-	struct setting_request *set_req;
+	static uint32_t id = 0;
+	struct request_event event;
+	struct request_obj *set_req;
 
 	if(oqu == NULL)
 	{
-		log_error("_send_setting_data python self is none.");
+		log_error("_send_request_data python self is none.");
 		return -1;
 	}
 	if(callback == NULL)
 	{
-		log_error("_send_setting_data callback is none.");
+		log_error("_send_request_data callback is none.");
 		return -1;
 	}
 	set_req = calloc(1, sizeof(*set_req));
 	if(!set_req)
 	{
-		log_error("_send_setting_data malloc fail.");
+		log_error("_send_request_data malloc fail.");
 		return -1;
 	}
 	set_req->py_self = oqu;
 	set_req->callback = callback;
-	set_req->set_id = set_id;
-	add_setting_request(set_req);
+	set_req->id = id;
+	add_request(set_req);
 
 	event.cmd = type;
-	event.set_id = htonl(set_id);
+	event.id = htonl(id);
 	event.value = htonl(frame_rate);
-	if(send_event(client.fd, SETTING_CHANNEL, (char *)&event, sizeof(event))
+	if(send_event(client.fd, REQUEST_CHANNEL, (char *)&event, sizeof(event))
 			== -1) {
 		log_error("send_event fail.");
-		set_req = get_del_setting_request(set_id);
+		set_req = get_del_request(id);
 		free(set_req);
 		return -1;
 	}
-	set_id++;
+	id++;
 	return 0;
 }
 
 int py_get_frame_rate(void *oqu, void (*callback)(void *oqu, uint32_t ret, uint32_t value)) {
-	return _send_setting_data(oqu, GET_FRAME_RATE, 0, callback);
+	return _send_request_data(oqu, GET_FRAME_RATE, 0, callback);
 }
 
 int py_get_bit_rate(void *oqu, void (*callback)(void *oqu, uint32_t ret, uint32_t value)) {
-	return _send_setting_data(oqu, GET_BIT_RATE, 0, callback);
+	return _send_request_data(oqu, GET_BIT_RATE, 0, callback);
 }
 
 int py_set_frame_rate(void *oqu, uint32_t frame_rate, void (*callback)
 	(void *oqu, uint32_t ret, uint32_t value)) {
-	return _send_setting_data(oqu, SET_FRAME_RATE, frame_rate, callback);
+	return _send_request_data(oqu, SET_FRAME_RATE, frame_rate, callback);
 }
 
 int py_set_bit_rate(void *oqu, uint32_t bit_rate, void (*callback)
 	(void *oqu, uint32_t ret, uint32_t value)) {
-	return _send_setting_data(oqu, SET_BIT_RATE, bit_rate, callback);
+	return _send_request_data(oqu, SET_BIT_RATE, bit_rate, callback);
+}
+
+int py_get_remote_fps(void *oqu, void (*callback)
+	(void *oqu, uint32_t ret, uint32_t value)) {
+	return _send_request_data(oqu, GET_FPS, 0, callback);
 }

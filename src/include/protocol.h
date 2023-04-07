@@ -9,7 +9,8 @@ enum NET_CHANNEL
 	VIDEO_CHANNEL,
 	AUDIO_CHANNEL,
 	INPUT_CHANNEL,
-	SETTING_CHANNEL,
+	REQUEST_CHANNEL,
+	RESPONSE_CHANNEL,
 	USB_CHANNEL,
 };
 
@@ -48,20 +49,27 @@ struct input_event{
   uint32_t y;
 };
 
-enum setting_cmd
+#define RET_SUCCESS 1
+#define RET_FAIL 2
+enum request_cmd
 {
-	RET_SUCCESS = 1,
-	RET_FAIL,
 	SET_BIT_RATE,
 	SET_FRAME_RATE,
 
 	GET_BIT_RATE,
 	GET_FRAME_RATE,
+	GET_FPS
 };
 
-struct setting_event{
+struct request_event{
   uint8_t cmd;
-  uint32_t set_id;
+  uint32_t id;
+  uint32_t value;
+};
+
+struct response_event{
+  uint8_t ret;
+  uint32_t id;
   uint32_t value;
 };
 

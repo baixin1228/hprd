@@ -281,7 +281,7 @@ static int xcb_main_loop(struct capture_object *obj)
 		if(times > 100)
 		{
 			time_sum = get_time_us() - time_perf_start;
-			log_info("xcb fps:%d", 1000000 * times / time_sum);
+			obj->fps = 1000000 * times / time_sum;
 			times = 0;
 			time_perf_start = get_time_us();
 		}

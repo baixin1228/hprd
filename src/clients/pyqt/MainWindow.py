@@ -120,20 +120,20 @@ class MainWindow(QMainWindow):
 
 		self.time_ms = int(round(time.time() * 1000))
 
-		add_task(1, 20, self._loop_20)
+		add_task(1, 30, self._loop_30)
 
-	def _loop_20(self, task):
+	def _loop_30(self, task):
 		time_ms = int(round(time.time() * 1000))
 		time_sub = time_ms - self.time_ms
 		if(time_sub == 0):
 			time_sub = 1
 		if self.statusBar.isVisible():
 			self.statusBar.showMessage("渲染帧率:%d  码流帧率:%d  服务端帧率:%d 码率:%s" %
-			(20 * 1000 / time_sub,
+			(30 * 1000 / time_sub,
 			proxy().py_get_and_clean_frame() * 1000 / time_sub,
 			self.remote_fps,
 			format_speed(proxy().py_get_and_clean_recv_sum() * 1000 / time_sub)), 0)
-			proxy().py_get_frame_rate(py_object(self), self._on_fps_cb)
+			proxy().py_get_remote_fps(py_object(self), self._on_fps_cb)
 
 		self.time_ms = time_ms
 

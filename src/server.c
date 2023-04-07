@@ -109,6 +109,12 @@ void on_request(struct ep_event *ev, struct request_event *event)
 			log_info("get frame rate.");
 			break;
 		}
+		case GET_FPS:
+		{
+			ret_event.ret = RET_SUCCESS;
+			ret_event.value = htonl((uint32_t)capture_get_fps(cap_obj));
+			break;
+		}
 		default:
 		{
 			log_warning("setting: unknow cmd.");

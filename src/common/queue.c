@@ -30,8 +30,9 @@ int queue_get_int(struct int_queue *queue)
 	return -1;
 }
 
-int queue_append_data(struct data_queue *queue, uint8_t *buf, size_t len)
+int queue_append_data(struct data_queue *queue, void *p_buf, size_t len)
 {
+	char *buf = (char *)p_buf;
 	if(queue == NULL)
 	{
 		return -1;
@@ -62,8 +63,9 @@ int queue_append_data(struct data_queue *queue, uint8_t *buf, size_t len)
 	return 0;
 }
 
-int pop_queue_data(struct data_queue *queue, uint8_t *buf, size_t len)
+int pop_queue_data(struct data_queue *queue, void *p_buf, size_t len)
 {
+	char *buf = (char *)p_buf;
 	if(queue == NULL)
 	{
 		return -1;

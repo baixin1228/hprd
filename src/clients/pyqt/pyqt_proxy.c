@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <stdatomic.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
@@ -30,6 +31,12 @@ struct client {
 	void (* resize_callback)(void *oqu, uint32_t width, uint32_t height);
 	struct setting_request *setting_head;
 	pthread_mutex_t setting_lock;
+	struct data_queue recv_queue;
+	atomic_int recv_pkt_count;
+	struct data_pkt *recv_pkt;
+
+	uint32_t frame_sum;
+	uint32_t recv_sum;
 } client = {0};
 
 void add_setting_request(struct setting_request *node)
@@ -90,26 +97,29 @@ void _on_setting(int fd, struct setting_event *event)
 	free(req);
 }
 
-static void _on_package(char *buf, size_t len) {
+static void _on_video(char *buf, size_t len) {
 	if(client.dec_obj) {
 		decodec_put_pkt(client.dec_obj, buf, len);
 	}
 }
 
-uint32_t recv_sum = 0;
-static void _on_client_pkt(int fd, char *buf, size_t len) {
-	struct data_pkt *pkt = (struct data_pkt *)buf;
-	pkt->data_len = ntohl(pkt->data_len);
+static void _decode_pkt() {
+	if(atomic_load(&client.recv_pkt_count) == 0)
+		return;
 
-	recv_sum += len;
+	pop_queue_data(&client.recv_queue, (uint8_t *)client.recv_pkt, sizeof(* client.recv_pkt));
+	client.recv_pkt->data_len = ntohl(client.recv_pkt->data_len);
+	pop_queue_data(&client.recv_queue, (uint8_t *)client.recv_pkt->data, client.recv_pkt->data_len);
 
-	switch(pkt->channel) {
+	atomic_fetch_sub(&client.recv_pkt_count, 1);
+
+	switch(client.recv_pkt->channel) {
 		case VIDEO_CHANNEL: {
-			_on_package(pkt->data, pkt->data_len);
+			_on_video(client.recv_pkt->data, client.recv_pkt->data_len);
 			break;
 		}
 		case SETTING_CHANNEL: {
-			_on_setting(client.fd, (struct setting_event *)pkt->data);
+			_on_setting(client.fd, (struct setting_event *)client.recv_pkt->data);
 			break;
 		}
 		default : {
@@ -120,17 +130,16 @@ static void _on_client_pkt(int fd, char *buf, size_t len) {
 }
 
 uint32_t py_get_and_clean_recv_sum() {
-	uint32_t ret = recv_sum;
-	recv_sum = 0;
+	uint32_t ret = client.recv_sum;
+	client.recv_sum = 0;
 	return ret;
 }
 
-#define BUFLEN 1024 * 1024 * 10
-static char _recv_buf[BUFLEN];
-uint32_t frame_sum = 0;
 int py_on_frame() {
 	int ret;
 	int buf_id;
+
+	_decode_pkt();
 
 	buf_id = decodec_get_fb(client.dec_obj);
 	if(buf_id == -1) {
@@ -154,14 +163,14 @@ int py_on_frame() {
 		return -1;
 	}
 
-	frame_sum++;
+	client.frame_sum++;
 
 	return 0;
 }
 
 uint32_t py_get_and_clean_frame() {
-	uint32_t ret = frame_sum;
-	frame_sum = 0;
+	uint32_t ret = client.frame_sum;
+	client.frame_sum = 0;
 	return ret;
 }
 
@@ -169,6 +178,8 @@ int py_client_init_config(uint64_t winid) {
 	int ret = -2;
 	uint32_t frame_rate = 61;
 	GHashTable *fb_info = g_hash_table_new(g_str_hash, g_str_equal);
+
+	_decode_pkt();
 
 	if(decodec_get_info(client.dec_obj, fb_info) == -1) {
 		log_info("client waiting dec info.");
@@ -188,12 +199,22 @@ END:
 	return ret;
 }
 
-// static void _on_client_recv(int fd, char *buf, size_t len) {
+static void _on_client_recv(int fd, char *buf, size_t len) {
+	int ret;
+	while((ret = queue_append_data(&client.recv_queue, buf, len)) == 0);
+	if(ret == -1)
+	{
+		log_error("enqueue fail.");
+		exit(-1);
+	}
+	client.recv_sum += len;
+	atomic_fetch_add(&client.recv_pkt_count, 1);
+}
 
-// }
-
+#define BUFLEN 1024 * 1024 * 10
+static char _recv_buf[BUFLEN];
 void *recv_thread(void *oq) {
-	while(tcp_recv_pkt(client.fd, _recv_buf, BUFLEN, _on_client_pkt) != -1);
+	while(tcp_recv_pkt(client.fd, _recv_buf, BUFLEN, _on_client_recv) != -1);
 	log_warning("recv_thread exit.");
 	return NULL;
 }
@@ -212,6 +233,9 @@ int py_client_connect(char *ip, uint16_t port) {
 	}
 
 	pthread_mutex_init(&client.setting_lock, NULL);
+	atomic_init(&client.recv_pkt_count, 0);
+
+	client.recv_pkt = calloc(BUFLEN, 1);
 
 	client.dec_obj = decodec_init(&client.client_pool);
 	client.dsp_obj = display_dev_init(&client.client_pool, "x11_renderer");

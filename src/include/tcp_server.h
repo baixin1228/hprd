@@ -3,20 +3,17 @@
 #include <pthread.h>
 #include <arpa/inet.h>
 
+#include "queue.h"
+
 #define MAX_EVENTS 1024
-#define BUF_LEN (10 * 1024 * 1024)
 
 struct ep_event {
 	int fd;     //cfd listenfd
 	struct in_addr addr;
 	uint16_t port;
 	int events; //EPOLLIN  EPLLOUT
-	char recv_buf[BUF_LEN];
-	uint64_t recv_head;
-	uint64_t recv_tail;
-	char send_buf[BUF_LEN];
-	uint64_t send_head;
-	uint64_t send_tail;
+	struct data_queue recv_queue;
+	struct data_queue send_queue;
 	pthread_mutex_t send_buf_lock;
 	pthread_cond_t send_buf_cond;
 	time_t last_active;

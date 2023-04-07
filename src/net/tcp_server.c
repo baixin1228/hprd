@@ -156,16 +156,17 @@ void on_server_pkt(struct ep_event *ev, char *buf, size_t len);
 int _check_recv_pkt(struct ep_event *ev)
 {
 	int pkt_len;
-	if(ev->recv_tail - ev->recv_head > 4)
+	char *buf_ptr;
+	buf_ptr = queue_get_read_ptr(&ev->recv_queue);
+	if(get_queue_data_count(&ev->recv_queue) > 4)
 	{
-		pkt_len = ntohl(*(uint32_t *)(ev->recv_buf + (ev->recv_head % BUF_LEN)));
+		pkt_len = ntohl(*(uint32_t *)(buf_ptr));
 		if(pkt_len > 0)
 		{
-			if(ev->recv_tail - ev->recv_head >= 4 + pkt_len)
+			if(get_queue_data_count(&ev->recv_queue) >= 4 + pkt_len)
 			{
-				on_server_pkt(ev, ev->recv_buf + (ev->recv_head % BUF_LEN) + 4,
-				pkt_len);
-				ev->recv_head += 4 + pkt_len;
+				on_server_pkt(ev, buf_ptr + 4, pkt_len);
+				queue_tail_point_forward(&ev->recv_queue, 4 + pkt_len);
 				return 0;
 			}
 		}else{
@@ -177,14 +178,15 @@ int _check_recv_pkt(struct ep_event *ev)
 
 void callback_recvdata(int epfd, struct ep_event *ev) {
 	int ret;
-	if((ret = recv(ev->fd, ev->recv_buf + (ev->recv_tail % BUF_LEN)
-		, BUF_LEN + ev->recv_head - ev->recv_tail, 0)) == 0) {
+	char *buf_ptr;
+	buf_ptr = queue_get_write_ptr(&ev->recv_queue);
+	if((ret = recv(ev->fd, buf_ptr, queue_get_end_free_count(&ev->recv_queue), 0)) == 0) {
 		log_error("recv error.");
 		remove_client(epfd, ev);
 		return;
 	}
 	if(ret > 0)
-		ev->recv_tail += ret;
+		queue_head_point_forward(&ev->recv_queue, ret);
 
 	while(_check_recv_pkt(ev) == 0);
 	ev->last_active = time(0);
@@ -192,25 +194,25 @@ void callback_recvdata(int epfd, struct ep_event *ev) {
 
 void callback_senddata(int epfd, struct ep_event *ev) {
 	int ret;
+	char *buf_ptr;
+	static int time = 0;
 	pthread_mutex_lock(&ev->send_buf_lock);
-	if(ev->send_tail - ev->send_head == 0)
-		goto EXIT2;
+	buf_ptr = queue_get_read_ptr(&ev->send_queue);
 
-	if((ret = send(ev->fd, ev->send_buf + (ev->send_head % BUF_LEN)
-		, ev->send_tail - ev->send_head, 0)) == 0) {
+	if((ret = send(ev->fd, buf_ptr, queue_get_end_data_count(&ev->send_queue), 0)) == 0) {
 		log_error("send error.");
 		remove_client(epfd, ev);
 		goto EXIT;
 	}
 
 	if(ret > 0)
-		ev->send_head += ret;
+		queue_tail_point_forward(&ev->send_queue, ret);
 
 	pthread_mutex_unlock(&ev->send_buf_lock);
-	if(ret > 0)
+	if(ret > 0 && time < 10)
 		pthread_cond_signal(&ev->send_buf_cond);
 
-EXIT2:
+	time++;
 	ev->events = EPOLLIN;
 	mod_event(epfd, ev);
 
@@ -247,12 +249,12 @@ void check_active(int epfd) {
 	}
 }
 
-void check_bradcast_data(int epfd) {
+void check_need_send(int epfd) {
 	struct ep_event *tmp;
 
 	tmp = client_event_head;
 	while(tmp != NULL) {
-		if(tmp->send_tail > tmp->send_head) {
+		if(get_queue_data_count(&tmp->send_queue) > 0) {
 			tmp->events = EPOLLOUT;
 			mod_event(epfd, tmp);
 		}
@@ -329,7 +331,7 @@ void *tcp_server_thread(void *opaque) {
 		for (int i = 0; i < nfd; i++) {
 			process_event(&events[i]);
 		}
-		check_bradcast_data(ser_info.epfd);
+		check_need_send(ser_info.epfd);
 	}
 }
 
@@ -351,44 +353,50 @@ int get_client_count(void)
 	return client_events_len;
 }
 
-int _server_send_data(struct ep_event *ev, char *buf, uint32_t len)
+int server_send_data_safe(struct ep_event *ev, char *buf, uint32_t len)
 {
-	uint32_t *write_start;
+	int ret = -1;
+	uint32_t net_len = htonl(len);
 
-	write_start = (uint32_t *)(ev->send_buf + (ev->send_tail % BUF_LEN));
-	*write_start = htonl(len);
-	memcpy((char *)(write_start + 1), buf, len);
-	ev->send_tail += (len + sizeof(*write_start));
+	pthread_mutex_lock(&ev->send_buf_lock);
+	do{
+		ret = enqueue_data(&ev->send_queue, (uint8_t *)&net_len, 4);
+		if(ret == 0)
+		{
+			log_warning("send slow, w:%d e:%d waiting.", 4,
+				queue_get_free_count(&ev->send_queue));
+			pthread_cond_wait(&ev->send_buf_cond, &ev->send_buf_lock);
+		}
+		if(ret == -1)
+			return -1;
+	}while(ret == 0);
+
+	do{
+		ret = enqueue_data(&ev->send_queue, (uint8_t *)buf, len);
+		if(ret == 0)
+		{
+			log_warning("send slow, w:%d e:%d waiting.", len,
+				queue_get_free_count(&ev->send_queue));
+			pthread_cond_wait(&ev->send_buf_cond, &ev->send_buf_lock);
+		}
+		if(ret == -1)
+			return -1;
+	}while(ret == 0);
+
+	pthread_mutex_unlock(&ev->send_buf_lock);
 	return 0;
 }
 
 int server_send_data_unsafe(struct ep_event *ev, char *buf, uint32_t len)
 {
-	int ret = -1;
-
-	pthread_mutex_lock(&ev->send_buf_lock);
-	if(ev->send_tail + len + 4 >= ev->send_head + BUF_LEN) {
-		log_warning("send slow, w:%d e:%d skip.", len + 4, BUF_LEN);
-		goto OUT;
+	if(queue_get_free_count(&ev->send_queue) < len + 4)
+	{
+		log_warning("send slow, w:%d e:%d skip.", len,
+			queue_get_free_count(&ev->send_queue));
+		return -1;
 	}
-	ret = _server_send_data(ev, buf, len);
-OUT:
-	pthread_mutex_unlock(&ev->send_buf_lock);
-	return ret;
-}
 
-int server_send_data_safe(struct ep_event *ev, char *buf, uint32_t len)
-{
-	int ret = -1;
-
-	pthread_mutex_lock(&ev->send_buf_lock);
-	while(ev->send_tail + len + 4 >= ev->send_head + BUF_LEN) {
-		log_warning("send slow, w:%d e:%d waiting.", len + 4, BUF_LEN);
-		pthread_cond_wait(&ev->send_buf_cond, &ev->send_buf_lock);
-	}
-	ret = _server_send_data(ev, buf, len);
-	pthread_mutex_unlock(&ev->send_buf_lock);
-	return ret;
+	return server_send_data_safe(ev, buf, len);
 }
 
 void server_bradcast_data(char *buf, uint32_t len) {

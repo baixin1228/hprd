@@ -68,11 +68,11 @@ void on_key(struct input_event *event)
 uint32_t frame_rate = 58;
 uint32_t stream_ftm = STREAM_H264;
 uint32_t bit_rate = MIN_BIT_RATE;
-void on_setting(struct ep_event *ev, struct setting_event *event)
+void on_request(struct ep_event *ev, struct request_event *event)
 {
-	struct setting_event ret_event;
+	struct response_event ret_event;
 
-	ret_event.set_id = event->set_id;
+	ret_event.id = event->id;
 	switch(event->cmd)
 	{
 		case SET_BIT_RATE:
@@ -81,7 +81,7 @@ void on_setting(struct ep_event *ev, struct setting_event *event)
 			if(bit_rate < MIN_BIT_RATE)
 				bit_rate = MIN_BIT_RATE;
 			capture_quit(cap_obj);
-			ret_event.cmd = RET_SUCCESS;
+			ret_event.ret = RET_SUCCESS;
 			ret_event.value = event->value;
 			log_info("change bit rate.");
 			break;
@@ -90,21 +90,21 @@ void on_setting(struct ep_event *ev, struct setting_event *event)
 		{
 			frame_rate = ntohl(event->value);
 			capture_quit(cap_obj);
-			ret_event.cmd = RET_SUCCESS;
+			ret_event.ret = RET_SUCCESS;
 			ret_event.value = event->value;
 			log_info("change frame rate.");
 			break;
 		}
 		case GET_BIT_RATE:
 		{
-			ret_event.cmd = RET_SUCCESS;
+			ret_event.ret = RET_SUCCESS;
 			ret_event.value = htonl(bit_rate);
 			log_info("get bit rate.");
 			break;
 		}
 		case GET_FRAME_RATE:
 		{
-			ret_event.cmd = RET_SUCCESS;
+			ret_event.ret = RET_SUCCESS;
 			ret_event.value = htonl(frame_rate);
 			log_info("get frame rate.");
 			break;
@@ -116,11 +116,10 @@ void on_setting(struct ep_event *ev, struct setting_event *event)
 		}
 	}
 
-	if(ret_event.cmd != RET_SUCCESS)
-		ret_event.cmd = RET_FAIL;
+	if(ret_event.ret != RET_SUCCESS)
+		ret_event.ret = RET_FAIL;
 
-	if(server_send_event(ev, SETTING_CHANNEL, (char *)&ret_event, sizeof(ret_event))
-			== -1) {
+	if(server_send_event(ev, RESPONSE_CHANNEL, (char *)&ret_event, sizeof(ret_event)) == -1) {
 		log_error("send_event fail.");
 	}
 }
@@ -133,8 +132,8 @@ void on_server_pkt(struct ep_event *ev, char *buf, size_t len) {
 			on_key((struct input_event *)pkt->data);
 			break;
 		}
-		case SETTING_CHANNEL: {
-			on_setting(ev, (struct setting_event *)pkt->data);
+		case REQUEST_CHANNEL: {
+			on_request(ev, (struct request_event *)pkt->data);
 			break;
 		}
 		default: {

@@ -59,6 +59,14 @@ int capture_regist_event_callback(struct capture_object *capture_obj, void (* on
 	return 0;
 }
 
+int capture_get_fps(struct capture_object *capture_obj)
+{
+	if(!capture_obj)
+		return -1;
+
+	return capture_obj->fps;
+}
+
 int capture_main_loop(struct capture_object *capture_obj)
 {
 	struct capture_dev_ops *dev_ops;

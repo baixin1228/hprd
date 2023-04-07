@@ -23,14 +23,20 @@ static inline int _tcp_recv_all(int fd, char *_recv_buf, size_t len)
 	return 0;
 }
 
-int tcp_recv_pkt(int fd, char *_recv_buf, void (*callback)(int fd, char *buf, size_t len))
+int tcp_recv_pkt(int fd, char *_recv_buf, size_t buf_len, void (*callback)(int fd, char *buf, size_t len))
 {
-	int pkt_len;
+	uint32_t pkt_len;
+	static int count = 0;
 
 	if(_tcp_recv_all(fd, _recv_buf, 4) == -1)
 		return -1;
 
 	pkt_len = ntohl(*(uint32_t *)_recv_buf);
+	if(pkt_len > buf_len)
+	{
+		log_error("pkt_len is too big:%d %d", pkt_len, count);
+		exit(-1);
+	}
 	if(pkt_len > 0)
 	{
 		if(_tcp_recv_all(fd, _recv_buf, pkt_len) == -1)
@@ -40,7 +46,7 @@ int tcp_recv_pkt(int fd, char *_recv_buf, void (*callback)(int fd, char *buf, si
 	}else{
 		log_error("recv len is invalid.");
 	}
-
+	count++;
 	return 0;
 }
 

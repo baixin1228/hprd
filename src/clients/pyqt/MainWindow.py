@@ -113,6 +113,7 @@ class MainWindow(QMainWindow):
 
 		self.d_a_adapt.setChecked(True)
 		self.dsp_mode = 1
+		self.remote_fps = 0
 
 		proxy().py_get_bit_rate(py_object(self), self._on_bit_cb)
 		proxy().py_get_frame_rate(py_object(self), self._on_fr_cb)
@@ -127,10 +128,13 @@ class MainWindow(QMainWindow):
 		if(time_sub == 0):
 			time_sub = 1
 		if self.statusBar.isVisible():
-			self.statusBar.showMessage("渲染帧率:%d  码流帧率:%d  码率:%s" %
+			self.statusBar.showMessage("渲染帧率:%d  码流帧率:%d  服务端帧率:%d 码率:%s" %
 			(20 * 1000 / time_sub,
 			proxy().py_get_and_clean_frame() * 1000 / time_sub,
+			self.remote_fps,
 			format_speed(proxy().py_get_and_clean_recv_sum() * 1000 / time_sub)), 0)
+			proxy().py_get_frame_rate(py_object(self), self._on_fps_cb)
+
 		self.time_ms = time_ms
 
 	def _on_render_show(self):
@@ -166,18 +170,25 @@ class MainWindow(QMainWindow):
 		timer_set_interval(1000 / value)
 
 	@CFUNCTYPE(None, py_object, c_uint, c_uint)
+	def _on_fps_cb(self, ret, value):
+		if ret == 1:
+			self.remote_fps = value
+
+	@CFUNCTYPE(None, py_object, c_uint, c_uint)
 	def _on_fr_cb(self, ret, value):
 		print("frame rate ret:%s value:%u"%("success" if ret == 1 else "fail", value))
-		add_task(1, False, self._reset_fr, value + 2);
-		if hasattr(self, f'fps_{ value + 2 }'):
-			getattr(self, f'fps_{ value + 2 }').setChecked(True)
+		if ret == 1:
+			add_task(1, False, self._reset_fr, value + 2);
+			if hasattr(self, f'fps_{ value + 2 }'):
+				getattr(self, f'fps_{ value + 2 }').setChecked(True)
 
 	@CFUNCTYPE(None, py_object, c_uint, c_uint)
 	def _on_bit_cb(self, ret, value):
 		value = int(value / 1024 / 1024)
 		print("bit rate ret:%s value:%u"%("success" if ret == 1 else "fail", value))
-		if hasattr(self, f'b_{ value }M'):
-			getattr(self, f'b_{ value }M').setChecked(True)
+		if ret == 1:
+			if hasattr(self, f'b_{ value }M'):
+				getattr(self, f'b_{ value }M').setChecked(True)
 
 	def processTrigger(self, q):
 		if q.text() == "Status Bar":

@@ -114,6 +114,8 @@ class MainWindow(QMainWindow):
 		self.d_a_adapt.setChecked(True)
 		self.dsp_mode = 1
 		self.remote_fps = 0
+		self.render_fps = 30
+		self.interval = int(1000 / self.render_fps)
 
 		proxy().py_get_bit_rate(py_object(self), self._on_bit_cb)
 		proxy().py_get_frame_rate(py_object(self), self._on_fr_cb)
@@ -121,21 +123,36 @@ class MainWindow(QMainWindow):
 		self.time_ms = int(round(time.time() * 1000))
 
 		add_task(1, 30, self._loop_30)
+		add_task(1, 1, self._render_monitor)
 
 	def _loop_30(self, task):
 		time_ms = int(round(time.time() * 1000))
 		time_sub = time_ms - self.time_ms
 		if(time_sub == 0):
 			time_sub = 1
+
 		if self.statusBar.isVisible():
-			self.statusBar.showMessage("渲染帧率:%d  码流帧率:%d  服务端帧率:%d 码率:%s" %
+			self.statusBar.showMessage("渲染帧率:%d  码流帧率:%d  服务端帧率:%d 码率:%s 缓冲区长度:%u" %
 			(30 * 1000 / time_sub,
 			proxy().py_get_and_clean_frame() * 1000 / time_sub,
 			self.remote_fps,
-			format_speed(proxy().py_get_and_clean_recv_sum() * 1000 / time_sub)), 0)
+			format_speed(proxy().py_get_recv_count() * 1000 / time_sub),
+			proxy().py_get_queue_len()), 0)
 			proxy().py_get_remote_fps(py_object(self), self._on_fps_cb)
 
 		self.time_ms = time_ms
+
+	def _render_monitor(self, task):
+		if proxy().py_get_queue_len() > self.render_fps * 2 and timer_get_interval() == self.interval:
+			interval = int(self.interval / 4)
+			add_task(1, False, self._reset_fr, interval if interval > 0 else 1)
+
+		if proxy().py_get_queue_len() > self.render_fps / 2 and timer_get_interval() == self.interval:
+			interval = int(self.interval / 2)
+			add_task(1, False, self._reset_fr, interval if interval > 0 else 1)
+
+		if proxy().py_get_queue_len() < self.render_fps / 4 and timer_get_interval() != self.interval:
+			add_task(1, False, self._reset_fr, self.interval)
 
 	def _on_render_show(self):
 		render_size = self.centralwidget.get_stream_size()
@@ -167,7 +184,7 @@ class MainWindow(QMainWindow):
 		self._update_dsp_mode()
 
 	def _reset_fr(self, task, value):
-		timer_set_interval(1000 / value)
+		timer_set_interval(value)
 
 	@CFUNCTYPE(None, py_object, c_uint, c_uint)
 	def _on_fps_cb(self, ret, value):
@@ -178,9 +195,11 @@ class MainWindow(QMainWindow):
 	def _on_fr_cb(self, ret, value):
 		print("frame rate ret:%s value:%u"%("success" if ret == 1 else "fail", value))
 		if ret == 1:
-			add_task(1, False, self._reset_fr, value + 2);
-			if hasattr(self, f'fps_{ value + 2 }'):
-				getattr(self, f'fps_{ value + 2 }').setChecked(True)
+			self.render_fps = value + 2
+			self.interval = int(1000 / self.render_fps)
+			add_task(1, False, self._reset_fr, self.interval);
+			if hasattr(self, f'fps_{ self.render_fps }'):
+				getattr(self, f'fps_{ self.render_fps }').setChecked(True)
 
 	@CFUNCTYPE(None, py_object, c_uint, c_uint)
 	def _on_bit_cb(self, ret, value):

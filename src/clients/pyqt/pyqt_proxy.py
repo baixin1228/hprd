@@ -37,8 +37,11 @@ clib.py_key_event.restype = c_int
 clib.py_client_resize.argtypes = [c_uint, c_uint]
 clib.py_client_resize.restype = c_int
 
-clib.py_get_and_clean_recv_sum.argtypes = []
-clib.py_get_and_clean_recv_sum.restype = c_uint
+clib.py_get_recv_count.argtypes = []
+clib.py_get_recv_count.restype = c_uint
+
+clib.py_get_queue_len.argtypes = []
+clib.py_get_queue_len.restype = c_uint
 
 clib.py_get_and_clean_frame.argtypes = []
 clib.py_get_and_clean_frame.restype = c_uint

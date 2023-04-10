@@ -104,35 +104,41 @@ static void _on_video(char *buf, size_t len) {
 }
 
 static void _decode_pkt() {
-	if(atomic_load(&client.recv_pkt_count) == 0)
-		return;
+	while(atomic_load(&client.recv_pkt_count) > 0)
+	{
+		dequeue_data(&client.recv_queue, (uint8_t *)client.recv_pkt, sizeof(* client.recv_pkt));
+		client.recv_pkt->data_len = ntohl(client.recv_pkt->data_len);
+		dequeue_data(&client.recv_queue, (uint8_t *)client.recv_pkt->data, client.recv_pkt->data_len);
 
-	dequeue_data(&client.recv_queue, (uint8_t *)client.recv_pkt, sizeof(* client.recv_pkt));
-	client.recv_pkt->data_len = ntohl(client.recv_pkt->data_len);
-	dequeue_data(&client.recv_queue, (uint8_t *)client.recv_pkt->data, client.recv_pkt->data_len);
+		atomic_fetch_sub(&client.recv_pkt_count, 1);
 
-	atomic_fetch_sub(&client.recv_pkt_count, 1);
-
-	switch(client.recv_pkt->channel) {
-		case VIDEO_CHANNEL: {
-			_on_video(client.recv_pkt->data, client.recv_pkt->data_len);
-			break;
-		}
-		case RESPONSE_CHANNEL: {
-			_on_response(client.fd, (struct response_event *)client.recv_pkt->data);
-			break;
-		}
-		default : {
-			log_info("unknow channel.");
-			break;
+		switch(client.recv_pkt->channel) {
+			case VIDEO_CHANNEL: {
+				_on_video(client.recv_pkt->data, client.recv_pkt->data_len);
+				goto END;
+			}
+			case RESPONSE_CHANNEL: {
+				_on_response(client.fd, (struct response_event *)client.recv_pkt->data);
+				break;
+			}
+			default : {
+				log_info("unknow channel.");
+				break;
+			}
 		}
 	}
+END:
+	return;
 }
 
-uint32_t py_get_and_clean_recv_sum() {
+uint32_t py_get_recv_count() {
 	uint32_t ret = client.recv_sum;
 	client.recv_sum = 0;
 	return ret;
+}
+
+uint32_t py_get_queue_len() {
+	return atomic_load(&client.recv_pkt_count);
 }
 
 int py_on_frame() {

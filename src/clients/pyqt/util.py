@@ -19,16 +19,22 @@ def on_timer():
 			task["_interval"] = task["_interval"] - 1
 
 timer = None
+interval = 1
 def start_timer(app):
-	global timer
+	global timer, interval
+	interval = int(1000 / 60)
 	timer = QTimer(app)
 	timer.timeout.connect(on_timer)
-	timer.start(int(1000 / 60))
+	timer.start(interval)
 
-def timer_set_interval(interval):
-	global timer
-	timer.setInterval(int(interval))
+def timer_set_interval(p_interval):
+	global timer, interval
+	interval = p_interval
+	timer.setInterval(interval)
 
+def timer_get_interval():
+	global interval
+	return interval
 """
 delay: delay frames to start
 interval: loop interval，0 is not loop

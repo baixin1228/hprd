@@ -2,21 +2,38 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
+from pyqt_proxy import proxy
 
+tasklock = proxy().alloc_spinlock()
 tasks = []
 def on_timer():
-	global tasks
-	for i in range(len(tasks) - 1, -1, -1):
-		task = tasks[i]
+	global tasks, tasklock
+	_rm_list = []
+	proxy().spinlock_lock(tasklock)
+	_tasks = []
+	for item in tasks:
+		_tasks.append(item)
+	proxy().spinlock_unlock(tasklock)
+
+	for i in range(len(_tasks) - 1, -1, -1):
+		task = _tasks[i]
 		if task["_interval"] == 0:
 			task["callback"](*task["params"])
 			if task["interval"] == 0:
-				tasks.remove(task)
+				_rm_list.append(task)
 			else:
 				task["_interval"] = task["interval"]
 
 		if task["_interval"] > 0:
 			task["_interval"] = task["_interval"] - 1
+
+	del _tasks
+
+	proxy().spinlock_lock(tasklock)
+	for item in _rm_list:
+		if item in tasks:
+			tasks.remove(item)
+	proxy().spinlock_unlock(tasklock)
 
 timer = None
 interval = 1
@@ -42,13 +59,15 @@ callback: callback func
 *params: callback params
 """
 def add_task(delay, interval, callback, *params):
-	global tasks
+	global tasks, tasklock
+	proxy().spinlock_lock(tasklock)
 	task = {}
 	task["_interval"] = delay
 	task["interval"] = interval
 	task["callback"] = callback
 	task["params"] = (task, *params)
 	tasks.append(task)
+	proxy().spinlock_unlock(tasklock)
 
 def stop_task(task):
 	task["interval"] = 0

@@ -428,3 +428,67 @@ int py_get_remote_fps(void *oqu, void (*callback)
 	(void *oqu, uint32_t ret, uint32_t value)) {
 	return _send_request_data(oqu, GET_FPS, 0, callback);
 }
+
+void* alloc_mutex()
+{
+	pthread_mutex_t *mutex;
+	mutex = malloc(sizeof(*mutex));
+	if(mutex == NULL)
+	{
+		log_error("%s malloc fail.", __func__);
+		return NULL;
+	}
+	pthread_mutex_init(mutex, NULL);
+	return mutex;
+}
+
+void free_mutex(void* opaque)
+{
+	free(opaque);
+}
+
+void mutex_lock(void* opaque)
+{
+	pthread_mutex_t *mutex = (pthread_mutex_t *)opaque;
+	pthread_mutex_lock(mutex);
+}
+
+void mutex_unlock(void* opaque)
+{
+	pthread_mutex_t *mutex = (pthread_mutex_t *)opaque;
+	pthread_mutex_unlock(mutex);
+}
+
+typedef struct {
+	pthread_spinlock_t lock;
+} spinlock_proxy;
+
+void* alloc_spinlock()
+{
+	spinlock_proxy *spinlock;
+	spinlock = malloc(sizeof(*spinlock));
+	if(spinlock == NULL)
+	{
+		log_error("%s malloc fail.", __func__);
+		return NULL;
+	}
+	pthread_spin_init(&spinlock->lock, PTHREAD_PROCESS_SHARED);
+	return spinlock;
+}
+
+void free_spinlock(void* opaque)
+{
+	free(opaque);
+}
+
+void spinlock_lock(void* opaque)
+{
+	spinlock_proxy *spinlock = (spinlock_proxy *)opaque;
+	pthread_spin_lock(&spinlock->lock);
+}
+
+void spinlock_unlock(void* opaque)
+{
+	spinlock_proxy *spinlock = (spinlock_proxy *)opaque;
+	pthread_spin_unlock(&spinlock->lock);
+}

@@ -4,16 +4,16 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from pyqt_proxy import proxy
 
-tasklock = proxy().alloc_spinlock()
+tasklock = proxy().alloc_mutex()
 tasks = []
 def on_timer():
 	global tasks, tasklock
 	_rm_list = []
-	proxy().spinlock_lock(tasklock)
+	proxy().mutex_lock(tasklock)
 	_tasks = []
 	for item in tasks:
 		_tasks.append(item)
-	proxy().spinlock_unlock(tasklock)
+	proxy().mutex_unlock(tasklock)
 
 	for i in range(len(_tasks) - 1, -1, -1):
 		task = _tasks[i]
@@ -29,11 +29,11 @@ def on_timer():
 
 	del _tasks
 
-	proxy().spinlock_lock(tasklock)
+	proxy().mutex_lock(tasklock)
 	for item in _rm_list:
 		if item in tasks:
 			tasks.remove(item)
-	proxy().spinlock_unlock(tasklock)
+	proxy().mutex_unlock(tasklock)
 
 timer = None
 interval = 1
@@ -60,14 +60,14 @@ callback: callback func
 """
 def add_task(delay, interval, callback, *params):
 	global tasks, tasklock
-	proxy().spinlock_lock(tasklock)
+	proxy().mutex_lock(tasklock)
 	task = {}
 	task["_interval"] = delay
 	task["interval"] = interval
 	task["callback"] = callback
 	task["params"] = (task, *params)
 	tasks.append(task)
-	proxy().spinlock_unlock(tasklock)
+	proxy().mutex_unlock(tasklock)
 
 def stop_task(task):
 	task["interval"] = 0

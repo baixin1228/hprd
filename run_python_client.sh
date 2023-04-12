@@ -9,4 +9,4 @@ if [ $? != 0 ]; then
 fi
 
 cd src/clients/pyqt
-./main.py $*
+python3 ./main.py $*

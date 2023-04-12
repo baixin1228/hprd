@@ -37,8 +37,11 @@ clib.py_key_event.restype = c_int
 clib.py_client_resize.argtypes = [c_uint, c_uint]
 clib.py_client_resize.restype = c_int
 
-clib.py_get_and_clean_recv_sum.argtypes = []
-clib.py_get_and_clean_recv_sum.restype = c_uint
+clib.py_get_recv_count.argtypes = []
+clib.py_get_recv_count.restype = c_uint
+
+clib.py_get_queue_len.argtypes = []
+clib.py_get_queue_len.restype = c_uint
 
 clib.py_get_and_clean_frame.argtypes = []
 clib.py_get_and_clean_frame.restype = c_uint
@@ -60,6 +63,24 @@ clib.py_get_remote_fps.restype = c_int
 
 clib.py_client_regist_stream_size_cb.argtypes = [py_object, c_void_p] 
 clib.py_client_regist_stream_size_cb.restype = c_int
+
+clib.alloc_mutex.argtypes = [] 
+clib.alloc_mutex.restype = c_void_p
+
+clib.free_mutex.argtypes = [c_void_p] 
+
+clib.mutex_lock.argtypes = [c_void_p] 
+
+clib.mutex_unlock.argtypes = [c_void_p] 
+
+clib.alloc_spinlock.argtypes = [] 
+clib.alloc_spinlock.restype = c_void_p
+
+clib.free_spinlock.argtypes = [c_void_p] 
+
+clib.spinlock_lock.argtypes = [c_void_p] 
+
+clib.spinlock_unlock.argtypes = [c_void_p] 
 
 def proxy():
 	global clib

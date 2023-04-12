@@ -2,33 +2,56 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
+from pyqt_proxy import proxy
 
+tasklock = proxy().alloc_mutex()
 tasks = []
 def on_timer():
-	global tasks
-	for i in range(len(tasks) - 1, -1, -1):
-		task = tasks[i]
+	global tasks, tasklock
+	_rm_list = []
+	proxy().mutex_lock(tasklock)
+	_tasks = []
+	for item in tasks:
+		_tasks.append(item)
+	proxy().mutex_unlock(tasklock)
+
+	for i in range(len(_tasks) - 1, -1, -1):
+		task = _tasks[i]
 		if task["_interval"] == 0:
 			task["callback"](*task["params"])
 			if task["interval"] == 0:
-				tasks.remove(task)
+				_rm_list.append(task)
 			else:
 				task["_interval"] = task["interval"]
 
 		if task["_interval"] > 0:
 			task["_interval"] = task["_interval"] - 1
 
+	del _tasks
+
+	proxy().mutex_lock(tasklock)
+	for item in _rm_list:
+		if item in tasks:
+			tasks.remove(item)
+	proxy().mutex_unlock(tasklock)
+
 timer = None
+interval = 1
 def start_timer(app):
-	global timer
+	global timer, interval
+	interval = int(1000 / 60)
 	timer = QTimer(app)
 	timer.timeout.connect(on_timer)
-	timer.start(int(1000 / 60))
+	timer.start(interval)
 
-def timer_set_interval(interval):
-	global timer
-	timer.setInterval(int(interval))
+def timer_set_interval(p_interval):
+	global timer, interval
+	interval = p_interval
+	timer.setInterval(interval)
 
+def timer_get_interval():
+	global interval
+	return interval
 """
 delay: delay frames to start
 interval: loop interval，0 is not loop
@@ -36,13 +59,15 @@ callback: callback func
 *params: callback params
 """
 def add_task(delay, interval, callback, *params):
-	global tasks
+	global tasks, tasklock
+	proxy().mutex_lock(tasklock)
 	task = {}
 	task["_interval"] = delay
 	task["interval"] = interval
 	task["callback"] = callback
 	task["params"] = (task, *params)
 	tasks.append(task)
+	proxy().mutex_unlock(tasklock)
 
 def stop_task(task):
 	task["interval"] = 0

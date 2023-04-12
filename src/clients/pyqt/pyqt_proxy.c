@@ -104,35 +104,41 @@ static void _on_video(char *buf, size_t len) {
 }
 
 static void _decode_pkt() {
-	if(atomic_load(&client.recv_pkt_count) == 0)
-		return;
+	while(atomic_load(&client.recv_pkt_count) > 0)
+	{
+		dequeue_data(&client.recv_queue, (uint8_t *)client.recv_pkt, sizeof(* client.recv_pkt));
+		client.recv_pkt->data_len = ntohl(client.recv_pkt->data_len);
+		dequeue_data(&client.recv_queue, (uint8_t *)client.recv_pkt->data, client.recv_pkt->data_len);
 
-	dequeue_data(&client.recv_queue, (uint8_t *)client.recv_pkt, sizeof(* client.recv_pkt));
-	client.recv_pkt->data_len = ntohl(client.recv_pkt->data_len);
-	dequeue_data(&client.recv_queue, (uint8_t *)client.recv_pkt->data, client.recv_pkt->data_len);
+		atomic_fetch_sub(&client.recv_pkt_count, 1);
 
-	atomic_fetch_sub(&client.recv_pkt_count, 1);
-
-	switch(client.recv_pkt->channel) {
-		case VIDEO_CHANNEL: {
-			_on_video(client.recv_pkt->data, client.recv_pkt->data_len);
-			break;
-		}
-		case RESPONSE_CHANNEL: {
-			_on_response(client.fd, (struct response_event *)client.recv_pkt->data);
-			break;
-		}
-		default : {
-			log_info("unknow channel.");
-			break;
+		switch(client.recv_pkt->channel) {
+			case VIDEO_CHANNEL: {
+				_on_video(client.recv_pkt->data, client.recv_pkt->data_len);
+				goto END;
+			}
+			case RESPONSE_CHANNEL: {
+				_on_response(client.fd, (struct response_event *)client.recv_pkt->data);
+				break;
+			}
+			default : {
+				log_info("unknow channel.");
+				break;
+			}
 		}
 	}
+END:
+	return;
 }
 
-uint32_t py_get_and_clean_recv_sum() {
+uint32_t py_get_recv_count() {
 	uint32_t ret = client.recv_sum;
 	client.recv_sum = 0;
 	return ret;
+}
+
+uint32_t py_get_queue_len() {
+	return atomic_load(&client.recv_pkt_count);
 }
 
 int py_on_frame() {
@@ -421,4 +427,68 @@ int py_set_bit_rate(void *oqu, uint32_t bit_rate, void (*callback)
 int py_get_remote_fps(void *oqu, void (*callback)
 	(void *oqu, uint32_t ret, uint32_t value)) {
 	return _send_request_data(oqu, GET_FPS, 0, callback);
+}
+
+void* alloc_mutex()
+{
+	pthread_mutex_t *mutex;
+	mutex = malloc(sizeof(*mutex));
+	if(mutex == NULL)
+	{
+		log_error("%s malloc fail.", __func__);
+		return NULL;
+	}
+	pthread_mutex_init(mutex, NULL);
+	return mutex;
+}
+
+void free_mutex(void* opaque)
+{
+	free(opaque);
+}
+
+void mutex_lock(void* opaque)
+{
+	pthread_mutex_t *mutex = (pthread_mutex_t *)opaque;
+	pthread_mutex_lock(mutex);
+}
+
+void mutex_unlock(void* opaque)
+{
+	pthread_mutex_t *mutex = (pthread_mutex_t *)opaque;
+	pthread_mutex_unlock(mutex);
+}
+
+typedef struct {
+	pthread_spinlock_t lock;
+} spinlock_proxy;
+
+void* alloc_spinlock()
+{
+	spinlock_proxy *spinlock;
+	spinlock = malloc(sizeof(*spinlock));
+	if(spinlock == NULL)
+	{
+		log_error("%s malloc fail.", __func__);
+		return NULL;
+	}
+	pthread_spin_init(&spinlock->lock, PTHREAD_PROCESS_SHARED);
+	return spinlock;
+}
+
+void free_spinlock(void* opaque)
+{
+	free(opaque);
+}
+
+void spinlock_lock(void* opaque)
+{
+	spinlock_proxy *spinlock = (spinlock_proxy *)opaque;
+	pthread_spin_lock(&spinlock->lock);
+}
+
+void spinlock_unlock(void* opaque)
+{
+	spinlock_proxy *spinlock = (spinlock_proxy *)opaque;
+	pthread_spin_unlock(&spinlock->lock);
 }

@@ -305,16 +305,17 @@ static int openh264_frame_enc(struct encodec_object *obj, int buf_id) {
 	while(queue_put_int(&priv->id_queue, buf_id) != 0)
 		log_warning("queue_put_int fail.");
 
-	// if(priv->frame_count % priv->gop_size == 0)
-	// {
-	// 	rv = (*priv->encoder)->ForceIntraFrame(priv->encoder, true);
-	// 	if (rv != cmResultSuccess) {
-	// 		log_error("encodec frame fail.");
-	// 		return -1;
-	// 	}
-	// }
-
 	priv->frame_count++;
+	return 0;
+}
+
+static int openh264_force_i_frame(struct encodec_object *obj) {
+	struct openh264_enc_data *priv = obj->priv;
+	
+	if ((*priv->encoder)->ForceIntraFrame(priv->encoder, true) != cmResultSuccess) {
+		log_error("ForceIntraFrame fail.");
+		return -1;
+	}
 	return 0;
 }
 
@@ -336,12 +337,13 @@ static int openh264_enc_release(struct encodec_object *obj) {
 }
 
 struct encodec_ops openh264_enc_ops = {
-	.name               = "openh264_encodec",
-	.init               = openh264_enc_init,
-	.set_info           = openh264_enc_set_info,
-	.map_buffer         = openh264_enc_map_buf,
-	.unmap_buffer       = openh264_enc_unmap_buf,
-	.put_buffer         = openh264_frame_enc,
-	.get_buffer         = openh264_enc_getbuf,
-	.release            = openh264_enc_release
+	.name				= "openh264_encodec",
+	.init				= openh264_enc_init,
+	.set_info			= openh264_enc_set_info,
+	.map_buffer			= openh264_enc_map_buf,
+	.unmap_buffer		= openh264_enc_unmap_buf,
+	.force_i			= openh264_force_i_frame,
+	.put_buffer			= openh264_frame_enc,
+	.get_buffer			= openh264_enc_getbuf,
+	.release			= openh264_enc_release
 };

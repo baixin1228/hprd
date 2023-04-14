@@ -149,6 +149,13 @@ void on_server_pkt(struct ep_event *ev, char *buf, size_t len) {
 	pthread_mutex_unlock(&net_cb_lock);
 }
 
+void on_client_connect(struct ep_event *ev) {
+	if(enc_obj)
+	{
+		encodec_force_i(enc_obj);
+	}
+}
+
 void on_enc_package(char *buf, size_t len)
 {
 	bradcast_video(buf, len);

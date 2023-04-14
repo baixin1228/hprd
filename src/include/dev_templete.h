@@ -124,6 +124,26 @@ int __obj##_put_fb(struct __obj##_object *obj, int buf_id)\
 	return -1;										\
 }
 
+#define DEV_FORCE_I(__obj, __obj_ops)				\
+int __obj##_force_i(struct __obj##_object *obj)		\
+{													\
+	struct __obj_ops *dev_ops;						\
+													\
+	if(!obj)										\
+		return -1;									\
+													\
+	dev_ops = (struct __obj_ops *)obj->ops;			\
+	if(dev_ops)										\
+	{												\
+		if(dev_ops->force_i)						\
+			return dev_ops->force_i(obj);			\
+		else 										\
+			log_error(#__obj" dev not find func:force_i\n");\
+	}												\
+													\
+	return -1;										\
+}
+
 #define DEV_RESIZE(__obj, __obj_ops)				\
 int __obj##_resize(struct __obj##_object *obj,		\
 	uint32_t width, uint32_t height)				\

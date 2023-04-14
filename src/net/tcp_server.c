@@ -128,6 +128,7 @@ int remove_client(int epfd, struct ep_event *ev) {
 	return -1;
 }
 
+void on_client_connect(struct ep_event *ev);
 void callback_accept(int epfd, struct ep_event *ev) {
 	struct sockaddr_in addr;
 
@@ -147,6 +148,7 @@ void callback_accept(int epfd, struct ep_event *ev) {
 		log_info("[建立错误] addr:%s:%d\n", inet_ntoa(addr.sin_addr),
 				 ntohs(addr.sin_port));
 	} else {
+		on_client_connect(ev);
 		log_info("[建立连接] addr:%s:%d new_fd:%d\n", inet_ntoa(addr.sin_addr),
 				 ntohs(addr.sin_port), new_fd);
 	}

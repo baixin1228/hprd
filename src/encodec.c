@@ -57,8 +57,9 @@ int encodec_regist_event_callback(struct encodec_object *enc_obj,
 }
 
 DEV_SET_INFO(encodec, encodec_ops)
-DEV_MAP_FB(encodec, encodec_ops)
-DEV_UNMAP_FB(encodec, encodec_ops)
-DEV_GET_FB(encodec, encodec_ops)
-DEV_PUT_FB(encodec, encodec_ops)
+DEV_FUNC_2(encodec, map_fb)
+DEV_FUNC_2(encodec, unmap_fb)
+DEV_FUNC_1(encodec, get_fb)
+DEV_FUNC_2(encodec, put_fb)
+DEV_FUNC_1(encodec, force_i)
 DEV_RELEASE(encodec, encodec_ops)

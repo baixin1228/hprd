@@ -150,7 +150,7 @@ static int xlib_dev_release(struct input_object *obj) {
 	return 0;
 }
 
-struct input_dev_ops xlib_input_dev_ops = {
+struct input_ops xlib_input_ops = {
 	.name 				= "xlib_input_dev",
 	.init 				= xlib_dev_init,
 	.set_info			= xlib_set_info,

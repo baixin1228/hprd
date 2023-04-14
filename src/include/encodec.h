@@ -20,10 +20,11 @@ struct encodec_ops
 	uint32_t priority;
 	int (* init)(struct encodec_object *obj);
 	int (* set_info)(struct encodec_object *obj, GHashTable *info);
-	int (* map_buffer)(struct encodec_object *obj, int buf_id);
-	int (* put_buffer)(struct encodec_object *obj, int buf_id);
-	int (* get_buffer)(struct encodec_object *obj);
-	int (* unmap_buffer)(struct encodec_object *obj, int buf_id);
+	int (* map_fb)(struct encodec_object *obj, int buf_id);
+	int (* put_fb)(struct encodec_object *obj, int buf_id);
+	int (* get_fb)(struct encodec_object *obj);
+	int (* unmap_fb)(struct encodec_object *obj, int buf_id);
+	int (* force_i)(struct encodec_object *obj);
 	int (* release)(struct encodec_object *obj);
 };
 
@@ -33,6 +34,7 @@ int encodec_map_fb(struct encodec_object *encodec_obj, int buf_id);
 int encodec_unmap_fb(struct encodec_object *encodec_obj, int buf_id);
 int encodec_get_fb(struct encodec_object *encodec_obj);
 int encodec_put_fb(struct encodec_object *encodec_obj, int buf_id);
+int encodec_force_i(struct encodec_object *encodec_obj);
 int encodec_regist_event_callback(struct encodec_object *obj,
 	void ( *callback)(char *buf, size_t len));
 int encodec_release(struct encodec_object *encodec_obj);

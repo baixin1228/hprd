@@ -4,7 +4,7 @@
 #include <glib.h>
 #include "frame_buffer.h"
 
-struct capture_dev_ops;
+struct capture_ops;
 
 struct capture_object
 {
@@ -12,20 +12,20 @@ struct capture_object
 	int fps;
 	struct mem_pool *buf_pool;
 	void (* on_frame)(struct capture_object *obj);
-	struct capture_dev_ops *ops;
+	struct capture_ops *ops;
 };
 
-struct capture_dev_ops
+struct capture_ops
 {
 	char * name;
 	uint32_t priority;
 	int (* init)(struct capture_object *obj);
 	int (* set_info)(struct capture_object *obj, GHashTable *info);
 	int (* get_info)(struct capture_object *obj, GHashTable *info);
-	int (* map_buffer)(struct capture_object *obj, int buf_id);
-	int (* put_buffer)(struct capture_object *obj, int buf_id);
-	int (* get_buffer)(struct capture_object *obj);
-	int (* unmap_buffer)(struct capture_object *obj, int buf_id);
+	int (* map_fb)(struct capture_object *obj, int buf_id);
+	int (* put_fb)(struct capture_object *obj, int buf_id);
+	int (* get_fb)(struct capture_object *obj);
+	int (* unmap_fb)(struct capture_object *obj, int buf_id);
 	int (* main_loop)(struct capture_object *obj);
 	int (* get_fps)(struct capture_object *obj);
 	int (* quit)(struct capture_object *obj);

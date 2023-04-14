@@ -149,6 +149,13 @@ void on_server_pkt(struct ep_event *ev, char *buf, size_t len) {
 	pthread_mutex_unlock(&net_cb_lock);
 }
 
+void on_client_connect(struct ep_event *ev) {
+	if(enc_obj)
+	{
+		encodec_force_i(enc_obj);
+	}
+}
+
 void on_enc_package(char *buf, size_t len)
 {
 	bradcast_video(buf, len);
@@ -214,7 +221,7 @@ int server_start(char *capture, char *encodec)
 	pthread_mutex_lock(&net_cb_lock);
 	for (int i = 0; i < 5; ++i)
 	{
-		buf_id = get_buffer(&server_pool);
+		buf_id = get_fb(&server_pool);
 		if(buf_id == -1)
 		{
 			log_error("alloc_buffer fail.");

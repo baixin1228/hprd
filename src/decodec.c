@@ -59,8 +59,8 @@ int decodec_put_pkt(struct decodec_object *dec_obj, char *buf, size_t len)
 }
 
 DEV_GET_INFO(decodec, decodec_ops)
-DEV_MAP_FB(decodec, decodec_ops)
-DEV_UNMAP_FB(decodec, decodec_ops)
-DEV_GET_FB(decodec, decodec_ops)
-DEV_PUT_FB(decodec, decodec_ops)
+DEV_FUNC_2(decodec, map_fb)
+DEV_FUNC_2(decodec, unmap_fb)
+DEV_FUNC_1(decodec, get_fb)
+DEV_FUNC_2(decodec, put_fb)
 DEV_RELEASE(decodec, decodec_ops)

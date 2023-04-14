@@ -93,7 +93,7 @@ FAIL1:
 //     return 0;
 // }
 
-static int svc_map_buffer(struct decodec_object *obj, int buf_id)
+static int svc_map_fb(struct decodec_object *obj, int buf_id)
 {
     struct raw_buffer *raw_buf;
     struct svc_dec_data *svc_data = (struct svc_dec_data *)obj->priv;
@@ -290,7 +290,7 @@ static int svc_put_fb(struct decodec_object *obj, int buf_id)
     return 0;
 }
 
-static int svc_unmap_buffer(struct decodec_object *obj, int buf_id)
+static int svc_unmap_fb(struct decodec_object *obj, int buf_id)
 {
     struct svc_dec_data *svc_data = obj->priv;
 
@@ -315,9 +315,9 @@ struct decodec_ops openh264_dec_ops =
     .init               = svc_decode_init,
     .put_pkt            = svc_push_pkt,
     .get_info           = svc_get_info,
-    .map_buffer         = svc_map_buffer,
-    .get_buffer         = svc_get_fb,
-    .put_buffer         = svc_put_fb,
-    .unmap_buffer       = svc_unmap_buffer,
+    .map_fb         = svc_map_fb,
+    .get_fb         = svc_get_fb,
+    .put_fb         = svc_put_fb,
+    .unmap_fb       = svc_unmap_fb,
     .release            = svc_decode_release
 };

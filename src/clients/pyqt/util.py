@@ -30,9 +30,13 @@ def on_timer():
 	del _tasks
 
 	proxy().mutex_lock(tasklock)
-	for item in _rm_list:
+	for i in range(len(_rm_list) - 1, -1, -1):
+		item = _rm_list[i]
 		if item in tasks:
 			tasks.remove(item)
+			del item
+
+	del _rm_list
 	proxy().mutex_unlock(tasklock)
 
 timer = None

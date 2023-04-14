@@ -224,12 +224,12 @@ static int openh264_enc_set_info(
 
 	// 空间层
 	SSpatialLayerConfig *spaticalLayerCfg = &(priv->paramExt.sSpatialLayers[SPATIAL_LAYER_0]);
-	spaticalLayerCfg->iVideoWidth = width;
-	spaticalLayerCfg->iVideoHeight = height;
-	spaticalLayerCfg->fFrameRate = frame_rate;
-	spaticalLayerCfg->iSpatialBitrate = priv->paramExt.iTargetBitrate;
-	spaticalLayerCfg->iMaxSpatialBitrate = priv->paramExt.iMaxBitrate;
-	spaticalLayerCfg->uiProfileIdc= PRO_BASELINE;
+	spaticalLayerCfg->iVideoWidth			= width;
+	spaticalLayerCfg->iVideoHeight			= height;
+	spaticalLayerCfg->fFrameRate			= frame_rate;
+	spaticalLayerCfg->iSpatialBitrate		= priv->paramExt.iTargetBitrate;
+	spaticalLayerCfg->iMaxSpatialBitrate	= priv->paramExt.iMaxBitrate;
+	spaticalLayerCfg->uiProfileIdc			= PRO_BASELINE;
 	
 	// 单slice，有的解码器无法解码多slice
 	spaticalLayerCfg->sSliceArgument.uiSliceMode = SM_SINGLE_SLICE;
@@ -277,14 +277,14 @@ static int openh264_frame_enc(struct encodec_object *obj, int buf_id) {
 	priv->pic.iPicHeight = buffer->height;
 
 	priv->pic.iColorFormat = videoFormatI420;
-	priv->pic.iStride[0] = priv->linesize[0];
-	priv->pic.iStride[1] = priv->linesize[1];
-	priv->pic.iStride[2] = priv->linesize[2];
-	priv->pic.iStride[3] = priv->linesize[3];
-	priv->pic.pData[0] = priv->frame_data[0];
-	priv->pic.pData[1] = priv->frame_data[1];
-	priv->pic.pData[2] = priv->frame_data[2];
-	priv->pic.pData[3] = priv->frame_data[3];
+	priv->pic.iStride[0]	= priv->linesize[0];
+	priv->pic.iStride[1]	= priv->linesize[1];
+	priv->pic.iStride[2]	= priv->linesize[2];
+	priv->pic.iStride[3]	= priv->linesize[3];
+	priv->pic.pData[0]		= priv->frame_data[0];
+	priv->pic.pData[1]		= priv->frame_data[1];
+	priv->pic.pData[2]		= priv->frame_data[2];
+	priv->pic.pData[3]		= priv->frame_data[3];
 
 	int rv = (*priv->encoder)->EncodeFrame(priv->encoder, &priv->pic, &priv->info);
 	if (rv != cmResultSuccess) {

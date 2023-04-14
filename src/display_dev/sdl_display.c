@@ -248,18 +248,18 @@ static int sdl_set_info(struct display_object *obj, GHashTable *fb_info)
 	return 0;
 }
 
-static int sdl_map_buffer(struct display_object *obj, int buf_id)
+static int sdl_map_fb(struct display_object *obj, int buf_id)
 {
 	return 0;
 }
 
-static int sdl_get_buffer(struct display_object *obj)
+static int sdl_get_fb(struct display_object *obj)
 {
 	struct sdl_fd_out *priv = (struct sdl_fd_out *)obj->priv;
 	return priv->cur_buf_id;
 }
 
-static int sdl_put_buffer(struct display_object *obj,
+static int sdl_put_fb(struct display_object *obj,
 						  int buf_id)
 {
 	struct raw_buffer *buffer;
@@ -344,15 +344,15 @@ static int sdl_release(struct display_object *obj)
 	return 0;
 }
 
-struct display_dev_ops sdl_ops =
+struct display_ops sdl_ops =
 {
 	.name				= "sdl_display",
 	.priority 			= 10,
 	.init				= sdl_dev_init,
 	.set_info			= sdl_set_info,
-	.map_buffer			= sdl_map_buffer,
-	.get_buffer			= sdl_get_buffer,
-	.put_buffer			= sdl_put_buffer,
+	.map_fb			= sdl_map_fb,
+	.get_fb			= sdl_get_fb,
+	.put_fb			= sdl_put_fb,
 	.main_loop			= sdl_main_loop,
 	.release			= sdl_release,
 };

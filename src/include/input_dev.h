@@ -5,15 +5,15 @@
 #include "protocol.h"
 #include "buffer_pool.h"
 
-struct input_dev_ops;
+struct input_ops;
 
 struct input_object
 {
 	void *priv;
-	struct input_dev_ops *ops;
+	struct input_ops *ops;
 };
 
-struct input_dev_ops
+struct input_ops
 {
 	char * name;
 	uint32_t priority;

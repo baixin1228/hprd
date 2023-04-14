@@ -167,14 +167,14 @@ FAIL1:
 	return -1;
 }
 
-static int x11_renderer_map_buffer(struct display_object *obj, int buf_id) {
+static int x11_renderer_map_fb(struct display_object *obj, int buf_id) {
 	struct x11_renderer *priv = (struct x11_renderer *)obj->priv;
 
 	priv->share_mem = false;
 	return 0;
 }
 
-static int x11_renderer_get_buffer(struct display_object *obj) {
+static int x11_renderer_get_fb(struct display_object *obj) {
 	struct x11_renderer *priv = (struct x11_renderer *)obj->priv;
 	return priv->cur_buf_id;
 }
@@ -190,7 +190,7 @@ static int __init_pbo(struct x11_renderer *priv, struct raw_buffer *buffer) {
 	return 0;
 }
 
-static int x11_renderer_put_buffer(struct display_object *obj,
+static int x11_renderer_put_fb(struct display_object *obj,
 								   int buf_id) {
 	struct raw_buffer *buffer;
 	struct x11_renderer *priv = (struct x11_renderer *)obj->priv;
@@ -261,13 +261,13 @@ static int x11_renderer_release(struct display_object *obj) {
 	return 0;
 }
 
-struct display_dev_ops x11_renderer_ops = {
+struct display_ops x11_renderer_ops = {
 	.name			= "x11_renderer",
 	.init			= x11_renderer_init,
 	.set_info		= x11_renderer_set_info,
-	.map_buffer		= x11_renderer_map_buffer,
-	.get_buffer		= x11_renderer_get_buffer,
-	.put_buffer		= x11_renderer_put_buffer,
+	.map_fb		= x11_renderer_map_fb,
+	.get_fb		= x11_renderer_get_fb,
+	.put_fb		= x11_renderer_put_fb,
 	.resize			= x11_renderer_resize,
 	.release		= x11_renderer_release,
 };

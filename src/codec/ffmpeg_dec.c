@@ -496,9 +496,9 @@ struct decodec_ops dev_ops =
     .init               = ffmpeg_dec_init,
     .put_pkt            = ffmepg_put_packet,
     .get_info 			= ,
-    .map_buffer 		= ,
-    .get_buffer 		= ffmepg_get_frame,
-    .put_buffer	        = ,
-    .unmap_buffer 		= ,
+    .map_fb 		= ,
+    .get_fb 		= ffmepg_get_frame,
+    .put_fb	        = ,
+    .unmap_fb 		= ,
     .release            = ffmepg_dec_release
 };

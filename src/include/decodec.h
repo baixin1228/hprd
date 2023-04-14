@@ -18,11 +18,11 @@ struct decodec_ops
 	char * name;
 	int (* init)(struct decodec_object *obj);
 	int (* get_info)(struct decodec_object *obj, GHashTable *info);
-	int (* map_buffer)(struct decodec_object *obj, int buf_id);
-	int (* put_buffer)(struct decodec_object *obj, int buf_id);
-	int (* get_buffer)(struct decodec_object *obj);
+	int (* map_fb)(struct decodec_object *obj, int buf_id);
+	int (* put_fb)(struct decodec_object *obj, int buf_id);
+	int (* get_fb)(struct decodec_object *obj);
 	int (* put_pkt)(struct decodec_object *obj, char *buf, size_t len);
-	int (* unmap_buffer)(struct decodec_object *obj, int buf_id);
+	int (* unmap_fb)(struct decodec_object *obj, int buf_id);
 	int (* release)(struct decodec_object *obj);
 };
 

@@ -7,12 +7,12 @@
 #include "frame_buffer.h"
 #include "dev_templete.h"
 
-extern struct display_dev_ops sdl_ops;
+extern struct display_ops sdl_ops;
 
 struct display_object *display_dev_init(void)
 {
 	int ret;
-	struct display_dev_ops *dev_ops;
+	struct display_ops *dev_ops;
 	struct display_object *display_obj;
 
 	display_obj = calloc(1, sizeof(struct display_object));
@@ -39,12 +39,12 @@ struct display_object *display_dev_init(void)
 	return display_obj;
 }
 
-DEV_SET_INFO(display, display_dev_ops)
-DEV_MAP_FB(display, display_dev_ops)
-DEV_UNMAP_FB(display, display_dev_ops)
-DEV_GET_FB(display, display_dev_ops)
-DEV_PUT_FB(display, display_dev_ops)
-DEV_RELEASE(display, display_dev_ops)
+DEV_SET_INFO(display, display_ops)
+DEV_FUNC_2(display, map_fb)
+DEV_FUNC_2(display, unmap_fb)
+DEV_FUNC_1(display, get_fb)
+DEV_FUNC_2(display, put_fb)
+DEV_RELEASE(display, display_ops)
 
 int display_regist_event_callback(struct display_object *display_obj, void (* on_frame)(struct display_object *obj))
 {
@@ -58,12 +58,12 @@ int display_regist_event_callback(struct display_object *display_obj, void (* on
 
 int display_main_loop(struct display_object *display_obj)
 {
-	struct display_dev_ops *dev_ops;
+	struct display_ops *dev_ops;
 
 	if(!display_obj)
 		return -1;
 
-	dev_ops = (struct display_dev_ops *)display_obj->ops;
+	dev_ops = (struct display_ops *)display_obj->ops;
 	if(dev_ops)
 	{
 		if(dev_ops->main_loop)

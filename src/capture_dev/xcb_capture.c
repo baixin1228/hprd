@@ -112,7 +112,7 @@ static int xext_get_fb_info(struct capture_object *obj, GHashTable *fb_info) {
 	return 0;
 }
 
-static int xext_map_buffer(struct capture_object *obj, int buf_id) {
+static int xext_map_fb(struct capture_object *obj, int buf_id) {
 	struct raw_buffer *raw_buf;
 	struct xext_buf *xext_buf;
 	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
@@ -181,9 +181,9 @@ static int xext_get_frame_buffer(struct capture_object *obj) {
 	struct xext_buf *xext_buf;
 	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
 
-	buf_id = get_buffer(obj->buf_pool);
+	buf_id = get_fb(obj->buf_pool);
 	if(buf_id < 0) {
-		log_error("get_buffer fail.");
+		log_error("get_fb fail.");
 		exit(-1);
 	}
 
@@ -201,14 +201,14 @@ static int xext_put_frame_buffer(struct capture_object *obj, int buf_id) {
 	if(priv->xext_bufs[buf_id].ximg == NULL)
 		return -1;
 
-	if(put_buffer(obj->buf_pool, buf_id) != 0) {
-		log_error("put_buffer fail.");
+	if(put_fb(obj->buf_pool, buf_id) != 0) {
+		log_error("put_fb fail.");
 		exit(-1);
 	}
 	return 0;
 }
 
-static int xext_unmap_buffer(struct capture_object *obj, int buf_id) {
+static int xext_unmap_fb(struct capture_object *obj, int buf_id) {
 	int ret;
 	struct raw_buffer *raw_buf;
 	struct xext_buf *xext_buf;
@@ -253,7 +253,7 @@ static int xext_dev_release(struct capture_object *obj) {
 	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
 	log_info("xext_dev_release");
 	for (int i = 0; i < MAX_BUFFER_COUNT; ++i) {
-		xext_unmap_buffer(obj, i);
+		xext_unmap_fb(obj, i);
 	}
 	XSync(priv->display, False);
 	XCloseDisplay(priv->display);
@@ -298,15 +298,15 @@ static int xcb_quit(struct capture_object *obj)
 	return 0;
 }
 
-struct capture_dev_ops xcb_dev_ops = {
+struct capture_ops xcb_dev_ops = {
 	.name 				= "x11_extensions_capture_dev",
 	.init 				= xext_dev_init,
 	.set_info			= xext_set_info,
 	.get_info			= xext_get_fb_info,
-	.map_buffer 		= xext_map_buffer,
-	.get_buffer 		= xext_get_frame_buffer,
-	.put_buffer 		= xext_put_frame_buffer,
-	.unmap_buffer 		= xext_unmap_buffer,
+	.map_fb 		= xext_map_fb,
+	.get_fb 		= xext_get_frame_buffer,
+	.put_fb 		= xext_put_frame_buffer,
+	.unmap_fb 		= xext_unmap_fb,
 	.release 			= xext_dev_release,
 	.main_loop			= xcb_main_loop,
 	.quit				= xcb_quit

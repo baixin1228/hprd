@@ -29,7 +29,7 @@ int __checkout_buf_id(struct raw_buffer** __buffers, int buf_id)
 	return 0;
 }
 
-int get_buffer(struct mem_pool *pool)
+int get_fb(struct mem_pool *pool)
 {
 	for (int i = 0; i < MAX_BUFFER_COUNT; ++i)
 	{
@@ -42,7 +42,7 @@ int get_buffer(struct mem_pool *pool)
 	return -1;
 }
 
-int put_buffer(struct mem_pool *pool, int buf_id)
+int put_fb(struct mem_pool *pool, int buf_id)
 {
 	if(__checkout_buf_id(pool->__buffers, buf_id) != 0)
 		return -1;

@@ -8,8 +8,8 @@ struct mem_pool
 };
 
 int alloc_buffer(struct mem_pool *pool);
-int get_buffer(struct mem_pool *pool);
-int put_buffer(struct mem_pool *pool, int buf_id);
+int get_fb(struct mem_pool *pool);
+int put_fb(struct mem_pool *pool, int buf_id);
 int release_buffer(struct mem_pool *pool, int buf_id);
 int release_all_buffer(struct mem_pool *pool);
 struct raw_buffer* get_raw_buffer(struct mem_pool *pool, int buf_id);

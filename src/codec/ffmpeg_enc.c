@@ -268,9 +268,9 @@ struct encodec_ops ffmpeg_enc_ops = {
     .name               = "ffmpeg_encodec",
     .init               = ffmpeg_enc_init,
     .set_info           = ffmpeg_enc_set_info,
-    .map_buffer         = ffmpeg_enc_map_buf,
-    .unmap_buffer       = ffmpeg_enc_unmap_buf,
-    .put_buffer         = ffmpeg_frame_enc,
-    .get_buffer         = ffmpeg_enc_getbuf,
+    .map_fb         = ffmpeg_enc_map_buf,
+    .unmap_fb       = ffmpeg_enc_unmap_buf,
+    .put_fb         = ffmpeg_frame_enc,
+    .get_fb         = ffmpeg_enc_getbuf,
     .release            = ffmpeg_enc_release
 };

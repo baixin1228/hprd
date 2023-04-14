@@ -340,10 +340,10 @@ struct encodec_ops openh264_enc_ops = {
 	.name				= "openh264_encodec",
 	.init				= openh264_enc_init,
 	.set_info			= openh264_enc_set_info,
-	.map_buffer			= openh264_enc_map_buf,
-	.unmap_buffer		= openh264_enc_unmap_buf,
+	.map_fb			= openh264_enc_map_buf,
+	.unmap_fb		= openh264_enc_unmap_buf,
 	.force_i			= openh264_force_i_frame,
-	.put_buffer			= openh264_frame_enc,
-	.get_buffer			= openh264_enc_getbuf,
+	.put_fb			= openh264_frame_enc,
+	.get_fb			= openh264_enc_getbuf,
 	.release			= openh264_enc_release
 };

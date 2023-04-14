@@ -221,7 +221,7 @@ int server_start(char *capture, char *encodec)
 	pthread_mutex_lock(&net_cb_lock);
 	for (int i = 0; i < 5; ++i)
 	{
-		buf_id = get_buffer(&server_pool);
+		buf_id = get_fb(&server_pool);
 		if(buf_id == -1)
 		{
 			log_error("alloc_buffer fail.");

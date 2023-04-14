@@ -46,10 +46,10 @@ static int ffmpeg_swsacle_put_puffer(struct convert_object *obj, int buf_id) {
 	struct raw_buffer *out_buffer;
 	struct ffmpeg_swscale_data *sws_data = obj->priv;
 
-	new_buf_id = get_buffer(obj->buf_pool);
+	new_buf_id = get_fb(obj->buf_pool);
 	if(new_buf_id < 0)
 	{
-		log_error("get_buffer fail.");
+		log_error("get_fb fail.");
 		exit(-1);
 	}
 
@@ -62,12 +62,12 @@ static int ffmpeg_swsacle_put_puffer(struct convert_object *obj, int buf_id) {
 	sws_scale(sws_data->sws_ctx, in_buffer->ptrs, inlinesize, 0, in_height,
 		out_buffer->ptrs, outlinesize);
 
-	put_buffer(obj->buf_pool, buf_id);
+	put_fb(obj->buf_pool, buf_id);
 	sws_data->buf_id = new_buf_id;
 	return 0;
 }
 
-static int ffmpeg_swsacle_get_buffer(struct convert_object *obj) {
+static int ffmpeg_swsacle_get_fb(struct convert_object *obj) {
 	struct ffmpeg_swscale_data *sws_data = obj->priv;
 	return sws_data->buf_id;
 }

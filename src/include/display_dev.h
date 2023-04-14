@@ -5,7 +5,7 @@
 #include "frame_buffer.h"
 #include "protocol.h"
 
-struct display_dev_ops;
+struct display_ops;
 
 struct display_object
 {
@@ -13,20 +13,20 @@ struct display_object
 	struct mem_pool *buf_pool;
 	void (* on_event)(struct display_object *obj, struct input_event *event);
 	void (* on_frame)(struct display_object *obj);
-	struct display_dev_ops *ops;
+	struct display_ops *ops;
 };
 
-struct display_dev_ops
+struct display_ops
 {
 	char * name;
 	uint32_t priority;
 	int (* init)(struct display_object *obj);
 	int (* set_info)(struct display_object *obj, GHashTable *info);
-	int (* map_buffer)(struct display_object *obj, int buf_id);
-	int (* put_buffer)(struct display_object *obj, int buf_id);
-	int (* get_buffer)(struct display_object *obj);
+	int (* map_fb)(struct display_object *obj, int buf_id);
+	int (* put_fb)(struct display_object *obj, int buf_id);
+	int (* get_fb)(struct display_object *obj);
 	int (* resize)(struct display_object *obj, uint32_t width, uint32_t height);
-	int (* unmap_buffer)(struct display_object *obj, int buf_id);
+	int (* unmap_fb)(struct display_object *obj, int buf_id);
 	int (* main_loop)(struct display_object *obj);
 	int (* release)(struct display_object *obj);
 };

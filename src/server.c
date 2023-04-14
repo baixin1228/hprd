@@ -12,7 +12,6 @@
 #include "protocol.h"
 #include "capture_dev.h"
 #include "input_dev.h"
-#include "tcp_server.h"
 #include "buffer_pool.h"
 
 struct mem_pool server_pool = {0};
@@ -271,6 +270,7 @@ int main(int argc, char* argv[])
     char *capture = NULL;
     char *encodec = NULL;
     int option_index = 0;
+	struct server_net *ser_net;
 
 	debug_info_regist();
 
@@ -301,10 +301,19 @@ int main(int argc, char* argv[])
     	}
     }
 
-	tcp_server_init("0.0.0.0", 9999);
+	ser_net = calloc(sizeof(*ser_net), 1);
+	if(ser_net == NULL)
+	{
+		log_error("[%s] calloc error.", __func__);
+		exit(-1);
+	}
+	ser_net->on_package = on_server_pkt;
+	server_net_init(ser_net);
 	while(1)
 	{
 		server_start(capture, encodec);
 		log_info("restart server.");
 	}
+	server_net_release(ser_net);
+	free(ser_net);
 }

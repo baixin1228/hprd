@@ -135,7 +135,7 @@ class MainWindow(QMainWindow):
 			time_sub = 1
 
 		if self.statusBar.isVisible():
-			self.statusBar.showMessage("渲染帧率:%-3d  码流帧率:%-3d  服务端帧率:%-3d 码率:%-8s 渲染速度:%s  缓冲区长度:%-3d" % (
+			self.statusBar.showMessage("渲染帧率:%-3d  码流帧率:%-3d  服务端帧率:%-3d 码率:%-8s 渲染速度:%-4s  缓冲区长度:%-3d" % (
 				int(30 * 1000 / time_sub),
 				int(proxy().py_get_and_clean_frame() * 1000 / time_sub),
 				self.remote_fps,
@@ -147,17 +147,19 @@ class MainWindow(QMainWindow):
 		self.time_ms = time_ms
 
 	def _render_monitor(self, task):
-		if proxy().py_get_queue_len() > self.render_fps * 2 and timer_get_interval() == self.interval:
+		if proxy().py_get_queue_len() > self.render_fps and timer_get_interval() == self.interval:
+			self.render_speed = "x4"
+			interval = int(self.interval / 4)
+			add_task(1, False, self._reset_interval, interval if interval > 0 else 1)
+			return
+
+		if proxy().py_get_queue_len() > self.render_fps / 5 and timer_get_interval() == self.interval:
 			self.render_speed = "x2"
 			interval = int(self.interval / 2)
 			add_task(1, False, self._reset_interval, interval if interval > 0 else 1)
+			return
 
-		if proxy().py_get_queue_len() > self.render_fps / 4 and timer_get_interval() == self.interval:
-			self.render_speed = "x1.5"
-			interval = int(self.interval / 3 * 2)
-			add_task(1, False, self._reset_interval, interval if interval > 0 else 1)
-
-		if proxy().py_get_queue_len() < self.render_fps / 4 and timer_get_interval() != self.interval:
+		if proxy().py_get_queue_len() < self.render_fps / 5 and timer_get_interval() != self.interval:
 			self.render_speed = "x1"
 			add_task(1, False, self._reset_interval, self.interval)
 

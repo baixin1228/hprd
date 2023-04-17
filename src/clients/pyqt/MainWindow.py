@@ -13,8 +13,9 @@ from pyqt_proxy import proxy
 from RenderWidget import RenderWidget
 
 class MainWindow(QMainWindow):
-	def __init__(self):
+	def __init__(self, enable_kcp):
 		super(MainWindow, self).__init__()
+		self.enable_kcp = enable_kcp
 		self.setup_ui()
 		self.init_ui()
 		set_win_center(self)
@@ -122,6 +123,8 @@ class MainWindow(QMainWindow):
 
 		proxy().py_get_bit_rate(py_object(self), self._on_bit_cb)
 		proxy().py_get_frame_rate(py_object(self), self._on_fr_cb)
+		if self.enable_kcp:
+			proxy().py_get_client_id(py_object(self), self._on_client_id)
 
 		self.time_ms = int(round(time.time() * 1000))
 
@@ -217,6 +220,14 @@ class MainWindow(QMainWindow):
 		if ret == 1:
 			if hasattr(self, f'b_{ value }M'):
 				getattr(self, f'b_{ value }M').setChecked(True)
+
+	@CFUNCTYPE(None, py_object, c_uint, c_uint)
+	def _on_client_id(self, ret, value):
+		print("client id ret:%s value:%u"%("success" if ret == 1 else "fail", 
+			value))
+		if ret == 1:
+			self.kcp_client_id = value
+			proxy().py_kcp_connect(value)
 
 	def processTrigger(self, q):
 		if q.text() == "Status Bar":

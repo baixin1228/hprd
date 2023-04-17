@@ -7,11 +7,11 @@
 struct int_queue
 {
 	int buffer_queue[QUEUE_SIZE];
-	uint32_t buffer_head;
-	uint32_t buffer_tail;
+	volatile uint32_t buffer_head;
+	volatile uint32_t buffer_tail;
 };
 
-#define QUEUE_DATA_SIZE (8*1024*1024)
+#define QUEUE_DATA_SIZE (10 * 1024 * 1024)
 struct data_queue
 {
 	char buffer_queue[QUEUE_DATA_SIZE];

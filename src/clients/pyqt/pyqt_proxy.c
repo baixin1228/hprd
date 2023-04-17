@@ -8,11 +8,12 @@
 #include "util.h"
 #include "codec.h"
 #include "decodec.h"
-#include "tcp_client.h"
+#include "protocol.h"
 #include "display_dev.h"
 #include "buffer_pool.h"
-#include "protocol.h"
-#include "net_help.h"
+#include "net/net_util.h"
+#include "net/tcp_client.h"
+#include "net/net_client.h"
 
 struct request_obj
 {
@@ -23,7 +24,8 @@ struct request_obj
 };
 
 struct client {
-	int fd;
+	char ip[24];
+	uint16_t port;
 	struct mem_pool client_pool;
 	struct display_object *dsp_obj;
 	struct decodec_object *dec_obj;
@@ -71,7 +73,7 @@ struct request_obj *get_del_request(uint32_t id)
 	return ret;
 }
 
-void _on_response(int fd, struct response_event *event)
+void _on_response(struct response_event *event)
 {
 	int id = ntohl(event->id);
 	struct request_obj *req = get_del_request(id);
@@ -118,7 +120,7 @@ static void _decode_pkt() {
 				goto END;
 			}
 			case RESPONSE_CHANNEL: {
-				_on_response(client.fd, (struct response_event *)client.recv_pkt->data);
+				_on_response((struct response_event *)client.recv_pkt->data);
 				break;
 			}
 			default : {
@@ -182,13 +184,16 @@ uint32_t py_get_and_clean_frame() {
 
 int py_client_init_config(uint64_t winid) {
 	int ret = -2;
+	static bool first = true;
 	uint32_t frame_rate = 61;
 	GHashTable *fb_info = g_hash_table_new(g_str_hash, g_str_equal);
 
 	_decode_pkt();
 
 	if(decodec_get_info(client.dec_obj, fb_info) == -1) {
-		log_info("client waiting dec info.");
+		if(first)
+			log_info("client waiting dec info.");
+		first = false;
 		goto END;
 	}
 
@@ -205,7 +210,7 @@ END:
 	return ret;
 }
 
-static void _on_client_recv(int fd, char *buf, size_t len) {
+static void _on_client_recv(char *buf, size_t len) {
 	int ret;
 	while((ret = enqueue_data(&client.recv_queue, buf, len)) == 0);
 	if(ret == -1)
@@ -217,27 +222,20 @@ static void _on_client_recv(int fd, char *buf, size_t len) {
 	atomic_fetch_add(&client.recv_pkt_count, 1);
 }
 
-#define BUFLEN 1024 * 1024 * 10
-static char _recv_buf[BUFLEN];
-void *recv_thread(void *oq) {
-	while(tcp_recv_pkt(client.fd, _recv_buf, BUFLEN, _on_client_recv) != -1);
-	log_warning("recv_thread exit.");
-	return NULL;
-}
-
 int py_client_connect(char *ip, uint16_t port) {
 	int ret;
 	int buf_id;
-	pthread_t p1;
 
 	debug_info_regist();
 
-	client.fd = client_connect(ip, port);
-
-	if (client.fd == -1) {
+	strcpy(client.ip, ip);
+	client.port = port;
+	ret = client_net_init(ip, port);
+	if (ret == -1) {
 		return -1;
 	}
-
+	client_net_bind_pkg_cb(_on_client_recv);
+	
 	pthread_mutex_init(&client.req_tab_lock, NULL);
 	atomic_init(&client.recv_pkt_count, 0);
 
@@ -264,9 +262,16 @@ int py_client_connect(char *ip, uint16_t port) {
 		}
 	}
 
-	pthread_create(&p1, NULL, recv_thread, NULL);
-	pthread_detach(p1);
 	return 0;
+}
+
+int py_kcp_connect(uint32_t kcp_id) {
+	int ret;
+	ret = client_kcp_connect(client.ip, client.port, kcp_id);
+	if (ret == -1) {
+		log_error("kcp connect fail.");
+	}
+	return ret;
 }
 
 int py_client_resize(uint32_t width, uint32_t height) {
@@ -284,11 +289,7 @@ int py_client_regist_stream_size_cb(void *oqu, void (*callback)(void *oqu,
 }
 
 int py_client_close() {
-	if(client.fd != -1) {
-		close(client.fd);
-		client.fd = -1;
-	}
-
+	client_net_release();
 	return 0;
 }
 
@@ -299,7 +300,7 @@ int py_mouse_move(int x, int y) {
 	event.x = x;
 	event.y = y;
 
-	if(send_event(client.fd, INPUT_CHANNEL, (char *)&event, sizeof(event))
+	if(send_event(INPUT_CHANNEL, (char *)&event, sizeof(event))
 			== -1) {
 		log_error("send_event fail.");
 		return -1;
@@ -321,7 +322,7 @@ int py_mouse_click(int x, int y, int key, int down_or_up) {
 	event.x = x;
 	event.y = y;
 
-	if(send_event(client.fd, INPUT_CHANNEL, (char *)&event, sizeof(event))
+	if(send_event(INPUT_CHANNEL, (char *)&event, sizeof(event))
 			== -1) {
 		log_error("send_event fail.");
 		return -1;
@@ -336,7 +337,7 @@ int py_wheel_event(int key) {
 	event.type = MOUSE_WHEEL;
 	event.key_code = key;
 
-	if(send_event(client.fd, INPUT_CHANNEL, (char *)&event, sizeof(event))
+	if(send_event(INPUT_CHANNEL, (char *)&event, sizeof(event))
 			== -1) {
 		log_error("send_event fail.");
 		return -1;
@@ -356,7 +357,7 @@ int py_key_event(int key, int down_or_up) {
 
 	event.key_code = key;
 
-	if(send_event(client.fd, INPUT_CHANNEL, (char *)&event, sizeof(event))
+	if(send_event(INPUT_CHANNEL, (char *)&event, sizeof(event))
 			== -1) {
 		log_error("send_event fail.");
 		return -1;
@@ -395,7 +396,7 @@ int _send_request_data(void *oqu, uint32_t type, uint32_t frame_rate,
 	event.cmd = type;
 	event.id = htonl(id);
 	event.value = htonl(frame_rate);
-	if(send_event(client.fd, REQUEST_CHANNEL, (char *)&event, sizeof(event))
+	if(send_event(REQUEST_CHANNEL, (char *)&event, sizeof(event))
 			== -1) {
 		log_error("send_event fail.");
 		set_req = get_del_request(id);
@@ -427,6 +428,11 @@ int py_set_bit_rate(void *oqu, uint32_t bit_rate, void (*callback)
 int py_get_remote_fps(void *oqu, void (*callback)
 	(void *oqu, uint32_t ret, uint32_t value)) {
 	return _send_request_data(oqu, GET_FPS, 0, callback);
+}
+
+int py_get_client_id(void *oqu, void (*callback)
+	(void *oqu, uint32_t ret, uint32_t value)) {
+	return _send_request_data(oqu, GET_CLIENT_ID, 0, callback);
 }
 
 void* alloc_mutex()

@@ -4,12 +4,11 @@
 
 #include "util.h"
 #include "common.h"
-#include "net_help.h"
 #include "protocol.h"
-#include "tcp_client.h"
 #include "protocol.h"
+#include "net/net_server.h"
 
-int server_send_event(struct ep_event *ev, uint32_t cmd, char *buf, size_t len)
+int server_send_event(struct server_client *client, uint32_t cmd, char *buf, size_t len)
 {
 	static struct data_pkt *event_pkt = NULL;
 	if(!event_pkt)
@@ -22,7 +21,7 @@ int server_send_event(struct ep_event *ev, uint32_t cmd, char *buf, size_t len)
 	memcpy(event_pkt->data, buf, len);
 	event_pkt->data_len = htonl(len);
 
-	if(server_send_data_safe(ev, (char *)event_pkt, sizeof(struct data_pkt) +
+	if(server_send_data(client, (char *)event_pkt, sizeof(struct data_pkt) +
 		len) == -1)
 	{
 		return -1;

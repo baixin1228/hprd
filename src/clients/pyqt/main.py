@@ -25,11 +25,13 @@ class LoginWindow(QMainWindow):
 	def init_args(self):
 		# parser = argparse.ArgumentParser(description='hprd')
 		parser = argparse.ArgumentParser()
-		parser.add_argument('-a', '--ip', dest='ip', type=str, metavar='', required=False, help='Remote server ip addr')
-		parser.add_argument('-s', '--silent', dest='silent', action='store_true', required=False, help='Silent mode, Direct connect')
+		parser.add_argument('-a', '--ip', dest='ip', type=str, metavar='', required=False, help='Remote server ip addr.')
+		parser.add_argument('-k', '--kcp', dest='kcp', action='store_true', required=False, help='Enable kcp protocol.')
+		parser.add_argument('-s', '--silent', dest='silent', action='store_true', required=False, help='Silent mode, Direct connect.')
 
 		args = parser.parse_args()
 		self.ip = args.ip
+		self.kcp = 1 if args.kcp else 0
 		self.silent = args.silent
 
 
@@ -77,7 +79,7 @@ class LoginWindow(QMainWindow):
 		self.conn_button.clicked.connect(self.on_connect)  # 登录
 
 	def main_win_show(self, task):
-		self.main_win = MainWindow()
+		self.main_win = MainWindow(self.kcp)
 		self.main_win.show()
 		self.close()
 

@@ -13,6 +13,7 @@
 #include "capture_dev.h"
 #include "input_dev.h"
 #include "buffer_pool.h"
+#include "net/net_server.h"
 
 struct mem_pool server_pool = {0};
 
@@ -21,7 +22,7 @@ struct capture_object *cap_obj = NULL;
 struct input_object *in_obj = NULL;
 pthread_mutex_t net_cb_lock = PTHREAD_MUTEX_INITIALIZER;
 
-void capture_on_frame(struct capture_object *obj)
+static void capture_on_frame(struct capture_object *obj)
 {
 	int ret;
 	int buf_id;
@@ -57,7 +58,7 @@ void capture_on_frame(struct capture_object *obj)
 	}
 }
 
-void on_key(struct input_event *event)
+static void on_key(struct input_event *event)
 {
 	if(in_obj)
 		input_push_key(in_obj, event);
@@ -67,88 +68,105 @@ void on_key(struct input_event *event)
 uint32_t frame_rate = 58;
 uint32_t stream_ftm = STREAM_H264;
 uint32_t bit_rate = MIN_BIT_RATE;
-void on_request(struct ep_event *ev, struct request_event *event)
+static void on_request(struct server_client *client, struct request_event *event)
 {
 	struct response_event ret_event;
 
 	ret_event.id = event->id;
 	switch(event->cmd)
 	{
-		case SET_BIT_RATE:
+	case SET_BIT_RATE:
+	{
+		bit_rate = ntohl(event->value);
+		if(bit_rate < MIN_BIT_RATE)
+			bit_rate = MIN_BIT_RATE;
+		capture_quit(cap_obj);
+		ret_event.ret = RET_SUCCESS;
+		ret_event.value = event->value;
+		log_info("change bit rate.");
+		break;
+	}
+	case SET_FRAME_RATE:
+	{
+		frame_rate = ntohl(event->value);
+		capture_quit(cap_obj);
+		ret_event.ret = RET_SUCCESS;
+		ret_event.value = event->value;
+		log_info("change frame rate.");
+		break;
+	}
+	case GET_BIT_RATE:
+	{
+		ret_event.ret = RET_SUCCESS;
+		ret_event.value = htonl(bit_rate);
+		log_info("get bit rate.");
+		break;
+	}
+	case GET_FRAME_RATE:
+	{
+		ret_event.ret = RET_SUCCESS;
+		ret_event.value = htonl(frame_rate);
+		log_info("get frame rate.");
+		break;
+	}
+	case GET_FPS:
+	{
+		ret_event.ret = RET_SUCCESS;
+		ret_event.value = htonl((uint32_t)capture_get_fps(cap_obj));
+		break;
+	}
+	case GET_CLIENT_ID:
+	{
+		if(server_client_getid(client) != 0)
 		{
-			bit_rate = ntohl(event->value);
-			if(bit_rate < MIN_BIT_RATE)
-				bit_rate = MIN_BIT_RATE;
-			capture_quit(cap_obj);
 			ret_event.ret = RET_SUCCESS;
-			ret_event.value = event->value;
-			log_info("change bit rate.");
-			break;
+			ret_event.value = htonl(server_client_getid(client));
 		}
-		case SET_FRAME_RATE:
-		{
-			frame_rate = ntohl(event->value);
-			capture_quit(cap_obj);
-			ret_event.ret = RET_SUCCESS;
-			ret_event.value = event->value;
-			log_info("change frame rate.");
-			break;
-		}
-		case GET_BIT_RATE:
-		{
-			ret_event.ret = RET_SUCCESS;
-			ret_event.value = htonl(bit_rate);
-			log_info("get bit rate.");
-			break;
-		}
-		case GET_FRAME_RATE:
-		{
-			ret_event.ret = RET_SUCCESS;
-			ret_event.value = htonl(frame_rate);
-			log_info("get frame rate.");
-			break;
-		}
-		case GET_FPS:
-		{
-			ret_event.ret = RET_SUCCESS;
-			ret_event.value = htonl((uint32_t)capture_get_fps(cap_obj));
-			break;
-		}
-		default:
-		{
-			log_warning("setting: unknow cmd.");
-			break;
-		}
+		log_info("get frame rate.");
+		break;
+	}
+	default:
+	{
+		log_warning("setting: unknow cmd.");
+		break;
+	}
 	}
 
 	if(ret_event.ret != RET_SUCCESS)
 		ret_event.ret = RET_FAIL;
 
-	if(server_send_event(ev, RESPONSE_CHANNEL, (char *)&ret_event, sizeof(ret_event)) == -1) {
+	if(server_send_event(client, RESPONSE_CHANNEL, (char *)&ret_event, sizeof(ret_event)) == -1)
+	{
 		log_error("send_event fail.");
 	}
 }
 
-void on_server_pkt(struct ep_event *ev, char *buf, size_t len) {
+static void on_server_pkt(struct server_client *client, char *buf, size_t len)
+{
 	struct data_pkt *pkt = (struct data_pkt *)buf;
 	pthread_mutex_lock(&net_cb_lock);
-	switch(pkt->channel) {
-		case INPUT_CHANNEL: {
-			on_key((struct input_event *)pkt->data);
-			break;
-		}
-		case REQUEST_CHANNEL: {
-			on_request(ev, (struct request_event *)pkt->data);
-			break;
-		}
-		default: {
-			break;
-		}
+	switch(pkt->channel)
+	{
+	case INPUT_CHANNEL:
+	{
+		on_key((struct input_event *)pkt->data);
+		break;
+	}
+	case REQUEST_CHANNEL:
+	{
+		on_request(client, (struct request_event *)pkt->data);
+		break;
+	}
+	default:
+	{
+		break;
+	}
 	}
 	pthread_mutex_unlock(&net_cb_lock);
 }
 
-void on_client_connect(struct ep_event *ev) {
+void on_client_connect(struct server_client *client)
+{
 	if(enc_obj)
 	{
 		encodec_force_i(enc_obj);
@@ -253,10 +271,11 @@ int server_start(char *capture, char *encodec)
 
 struct option long_options[] =
 {
-	{"help",  	no_argument,       NULL, 'h'},
-	{"capture", required_argument, NULL, 'c'},
-	{"encodec", required_argument, NULL, 'e'},
-	{NULL,		0,                 NULL,  0}
+	{"help",  	no_argument,        NULL, 'h'},
+	{"capture", required_argument,  NULL, 'c'},
+	{"encodec", required_argument,  NULL, 'e'},
+	{"kcp",     no_argument,        NULL, 'k'},
+	{NULL,		0,                  NULL,  0}
 };
 
 void print_help()
@@ -264,56 +283,71 @@ void print_help()
 	printf("help\n");
 }
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
-    int ret = -1;
-    char *capture = NULL;
-    char *encodec = NULL;
-    int option_index = 0;
-	struct server_net *ser_net;
+	int ret = -1;
+	char *capture = NULL;
+	char *encodec = NULL;
+	int option_index = 0;
+	bool enable_kcp = false;
 
 	debug_info_regist();
 
-    while ((ret = getopt_long(argc, argv, "h", long_options, &option_index)) != -1)
-    {
-    	switch(ret)
-    	{
-    		case 0:
-    		case 'h':
-    		default:
-    		{
-    			print_help();
-    			exit(0);
-    			break;
-    		}
-    		case 1:
-    		case 'c':
-    		{
-    			capture = optarg;
-    			break;
-    		}
-    		case 2:
-    		case 'e':
-    		{
-    			encodec = optarg;
-    			break;
-    		}
-    	}
-    }
-
-	ser_net = calloc(sizeof(*ser_net), 1);
-	if(ser_net == NULL)
+	while ((ret = getopt_long(argc, argv, "h", long_options, &option_index)) != -1)
 	{
-		log_error("[%s] calloc error.", __func__);
+		switch(ret)
+		{
+		case 0:
+		case 'h':
+		default:
+		{
+			print_help();
+			exit(0);
+			break;
+		}
+		case 1:
+		case 'c':
+		{
+			capture = optarg;
+			break;
+		}
+		case 2:
+		case 'e':
+		{
+			encodec = optarg;
+			break;
+		}
+		case 3:
+		case 'k':
+		{
+			enable_kcp = true;
+			break;
+		}
+		}
+	}
+
+	ret = server_net_init("0.0.0.0", 9999, enable_kcp);
+	if(ret != 0)
+	{
+		log_error("server_net_init fail.");
 		exit(-1);
 	}
-	ser_net->on_package = on_server_pkt;
-	server_net_init(ser_net);
+	ret = server_net_bind_pkg_cb(on_server_pkt);
+	if(ret != 0)
+	{
+		log_error("server_net_bind_pkg_cb fail.");
+		exit(-1);
+	}
+	ret = server_net_bind_connect_cb(on_client_connect);
+	if(ret != 0)
+	{
+		log_error("server_net_bind_connect_cb fail.");
+		exit(-1);
+	}
 	while(1)
 	{
 		server_start(capture, encodec);
 		log_info("restart server.");
 	}
-	server_net_release(ser_net);
-	free(ser_net);
+	server_net_release();
 }

@@ -48,14 +48,14 @@ int enqueue_data(struct data_queue *queue, void *p_buf, size_t len)
 		if(len <= QUEUE_DATA_SIZE - (queue->buffer_head % QUEUE_DATA_SIZE))
 		{
 			memcpy(&queue->buffer_queue[queue->buffer_head % QUEUE_DATA_SIZE], buf, len);
-			queue->buffer_head += len;
+			atomic_fetch_add(&queue->buffer_head, len);
 		}else{
 			size_t len_tmp = QUEUE_DATA_SIZE - (queue->buffer_head % QUEUE_DATA_SIZE);
 			memcpy(&queue->buffer_queue[queue->buffer_head % QUEUE_DATA_SIZE], buf, len_tmp);
-			queue->buffer_head += len_tmp;
+			atomic_fetch_add(&queue->buffer_head, len_tmp);
 			buf += len_tmp;
 			memcpy(&queue->buffer_queue[queue->buffer_head % QUEUE_DATA_SIZE], buf, len - len_tmp);
-			queue->buffer_head += (len - len_tmp);
+			atomic_fetch_add(&queue->buffer_head, (len - len_tmp));
 		}
 
 		return len;
@@ -81,14 +81,14 @@ int dequeue_data(struct data_queue *queue, void *p_buf, size_t len)
 		if(len <= QUEUE_DATA_SIZE - (queue->buffer_tail % QUEUE_DATA_SIZE))
 		{
 			memcpy(buf, &queue->buffer_queue[queue->buffer_tail % QUEUE_DATA_SIZE], len);
-			queue->buffer_tail += len;
+			atomic_fetch_add(&queue->buffer_tail, len);
 		}else{
 			size_t len_tmp = QUEUE_DATA_SIZE - (queue->buffer_tail % QUEUE_DATA_SIZE);
 			memcpy(buf, &queue->buffer_queue[queue->buffer_tail % QUEUE_DATA_SIZE], len_tmp);
-			queue->buffer_tail += len_tmp;
+			atomic_fetch_add(&queue->buffer_tail, len_tmp);
 			buf += len_tmp;
 			memcpy(buf, &queue->buffer_queue[queue->buffer_tail % QUEUE_DATA_SIZE], len - len_tmp);
-			queue->buffer_tail += (len - len_tmp);
+			atomic_fetch_add(&queue->buffer_tail, (len - len_tmp));
 		}
 
 		return len;
@@ -104,13 +104,13 @@ int queue_tail_point_forward(struct data_queue *queue, size_t len)
 	}
 	if(len > QUEUE_DATA_SIZE)
 	{
-    	log_error("read size greater than buffer.");
+    	log_error("[%s] read size greater than buffer.", __func__);
 		return -1;
 	}
 
 	if(len <= atomic_load(&queue->buffer_head) - atomic_load(&queue->buffer_tail))
 	{
-		queue->buffer_tail += len;
+		atomic_fetch_add(&queue->buffer_tail, len);
 		return len;
 	}
 	return 0;
@@ -124,13 +124,13 @@ int queue_head_point_forward(struct data_queue *queue, size_t len)
 	}
 	if(len > QUEUE_DATA_SIZE)
 	{
-    	log_error("write size greater than buffer.");
+    	log_error("[%s] write size greater than buffer.", __func__);
 		return -1;
 	}
 
 	if(len <= atomic_load(&queue->buffer_tail) + QUEUE_DATA_SIZE - atomic_load(&queue->buffer_head))
 	{
-		queue->buffer_head += len;
+		atomic_fetch_add(&queue->buffer_head, len);
 		return len;
 	}
 	return 0;

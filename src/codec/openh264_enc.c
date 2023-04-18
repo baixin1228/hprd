@@ -209,6 +209,7 @@ static int openh264_enc_set_info(
 	priv->paramExt.iPicWidth				= width;
 	priv->paramExt.iPicHeight				= height;
 	priv->paramExt.iTargetBitrate			= bit_rate;
+    priv->paramExt.iMaxBitrate				= bit_rate;
 	priv->paramExt.iRCMode					= RC_BITRATE_MODE;
 	priv->paramExt.iComplexityMode			= LOW_COMPLEXITY;
 	priv->paramExt.uiIntraPeriod			= priv->gop_size;
@@ -218,7 +219,7 @@ static int openh264_enc_set_info(
     priv->paramExt.iNumRefFrame				= -1;
     priv->paramExt.bEnableSSEI				= 1;
     priv->paramExt.iMaxQp					= 51;
-    priv->paramExt.iMinQp					= 18;
+    priv->paramExt.iMinQp					= 24;
     priv->paramExt.bEnableAdaptiveQuant		= 1;
     priv->paramExt.iTemporalLayerNum		= 1;
 

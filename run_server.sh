@@ -1,5 +1,5 @@
 #!/bin/bash
-if [ ! -d server_build ]; then
+if [ ! -f server_build/build.ninja ]; then
 	meson server_build -Dbuild_target=server -Dbuildtype=debug
 fi
 

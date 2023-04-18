@@ -1,5 +1,5 @@
 #!/bin/bash
-if [ ! -d build ]; then
+if [ ! -d build/build.ninja ]; then
 	meson build
 fi
 # meson test -C build

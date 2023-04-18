@@ -271,11 +271,11 @@ int server_start(char *capture, char *encodec)
 
 struct option long_options[] =
 {
-	{"help",  	no_argument,        NULL, 'h'},
-	{"capture", required_argument,  NULL, 'c'},
-	{"encodec", required_argument,  NULL, 'e'},
-	{"kcp",     no_argument,        NULL, 'k'},
-	{NULL,		0,                  NULL,  0}
+	{"help",  		no_argument,        NULL, 'h'},
+	{"capture", 	required_argument,  NULL, 'c'},
+	{"encodec", 	required_argument,  NULL, 'e'},
+	{"kcp-disable", no_argument,        NULL, 'k'},
+	{NULL,		0,  	                NULL,  0}
 };
 
 void print_help()
@@ -289,7 +289,7 @@ int main(int argc, char *argv[])
 	char *capture = NULL;
 	char *encodec = NULL;
 	int option_index = 0;
-	bool enable_kcp = false;
+	bool enable_kcp = true;
 
 	debug_info_regist();
 
@@ -320,7 +320,7 @@ int main(int argc, char *argv[])
 		case 3:
 		case 'k':
 		{
-			enable_kcp = true;
+			enable_kcp = false;
 			break;
 		}
 		}

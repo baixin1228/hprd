@@ -125,6 +125,12 @@ static void on_request(struct server_client *client, struct request_event *event
 		log_info("get frame rate.");
 		break;
 	}
+	case PING:
+	{
+		ret_event.ret = RET_SUCCESS;
+		ret_event.value = event->value;
+		break;
+	}
 	default:
 	{
 		log_warning("setting: unknow cmd.");

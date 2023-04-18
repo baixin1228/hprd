@@ -435,6 +435,11 @@ int py_get_client_id(void *oqu, void (*callback)
 	return _send_request_data(oqu, GET_CLIENT_ID, 0, callback);
 }
 
+int py_ping(void *oqu, uint32_t time, void (*callback)
+	(void *oqu, uint32_t ret, uint32_t value)) {
+	return _send_request_data(oqu, PING, time, callback);
+}
+
 void* alloc_mutex()
 {
 	pthread_mutex_t *mutex;

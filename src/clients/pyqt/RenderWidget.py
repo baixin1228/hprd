@@ -71,7 +71,6 @@ class RenderWidget(QWidget):
 		if angle.x() > 0:
 			proxy().py_wheel_event(7)
 
-
 	def keyPressEvent(self, event):
 		print(event.key())
 		keycode = get_key_code(event.key())

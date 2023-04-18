@@ -96,6 +96,36 @@ int dequeue_data(struct data_queue *queue, void *p_buf, size_t len)
 	return 0;
 }
 
+int read_data(struct data_queue *queue, void *p_buf, size_t len)
+{
+	char *buf = (char *)p_buf;
+	if(queue == NULL)
+	{
+		return -1;
+	}
+	if(len > QUEUE_DATA_SIZE)
+	{
+    	log_error("read size greater than buffer.");
+		return -1;
+	}
+
+	if(len <= atomic_load(&queue->buffer_head) - atomic_load(&queue->buffer_tail))
+	{
+		if(len <= QUEUE_DATA_SIZE - (queue->buffer_tail % QUEUE_DATA_SIZE))
+		{
+			memcpy(buf, &queue->buffer_queue[queue->buffer_tail % QUEUE_DATA_SIZE], len);
+		}else{
+			size_t len_tmp = QUEUE_DATA_SIZE - (queue->buffer_tail % QUEUE_DATA_SIZE);
+			memcpy(buf, &queue->buffer_queue[queue->buffer_tail % QUEUE_DATA_SIZE], len_tmp);
+			buf += len_tmp;
+			memcpy(buf, &queue->buffer_queue[(queue->buffer_tail + len_tmp) % QUEUE_DATA_SIZE], len - len_tmp);
+		}
+
+		return len;
+	}
+	return 0;
+}
+
 int queue_tail_point_forward(struct data_queue *queue, size_t len)
 {
 	if(queue == NULL)

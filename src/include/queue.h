@@ -24,11 +24,11 @@ int queue_get_int(struct int_queue *queue);
 
 int enqueue_data(struct data_queue *queue, void *p_buf, size_t len);
 int dequeue_data(struct data_queue *queue, void *p_buf, size_t len);
+int read_data(struct data_queue *queue, void *p_buf, size_t len);
 int queue_get_free_count(struct data_queue *queue);
 int get_queue_data_count(struct data_queue *queue);
 int copy_queue_data(struct data_queue *queue, uint8_t *buf, size_t len);
 int queue_tail_point_forward(struct data_queue *queue, size_t len);
-int write2_queue_data(struct data_queue *queue, uint8_t *buf, size_t len);
 int queue_head_point_forward(struct data_queue *queue, size_t len);
 char *queue_get_write_ptr(struct data_queue *queue);
 char *queue_get_read_ptr(struct data_queue *queue);

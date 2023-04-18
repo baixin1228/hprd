@@ -118,18 +118,20 @@ int kcp_send_data_safe(struct kcp_server_client *client, char *buf, size_t len)
 static int _check_recv_pkt(struct kcp_server_client *kcp_client)
 {
 	int pkt_len;
-	char *buf_ptr;
-	buf_ptr = queue_get_read_ptr(&kcp_client->recv_queue);
+	uint32_t npkt_len;
+
 	if(get_queue_data_count(&kcp_client->recv_queue) > 4)
 	{
-		pkt_len = ntohl(*(uint32_t *)(buf_ptr));
+		read_data(&kcp_client->recv_queue, &npkt_len, 4);
+		pkt_len = ntohl(npkt_len);
 		if(pkt_len > 0)
 		{
 			if(get_queue_data_count(&kcp_client->recv_queue) >= 4 + pkt_len)
 			{
 				log_info("kcp package:%d", pkt_len);
-				server_on_pkg((struct server_client *)kcp_client->priv, buf_ptr + 4, pkt_len);
-				queue_tail_point_forward(&kcp_client->recv_queue, 4 + pkt_len);
+				dequeue_data(&kcp_client->recv_queue, &npkt_len, 4);
+				dequeue_data(&kcp_client->recv_queue, kcp_client->queue_buf, pkt_len);
+				server_on_pkg((struct server_client *)kcp_client->priv, kcp_client->queue_buf, pkt_len);
 				return 0;
 			}
 		}else{

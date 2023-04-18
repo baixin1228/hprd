@@ -21,6 +21,7 @@ struct {
 	struct sockaddr_in ser_addr;
 	struct data_queue recv_queue;
 	char recv_buf[BUFLEN];
+	char queue_buf[BUFLEN];
 	ikcpcb *kcp_context;
 } kcp_client = {0};
 
@@ -54,18 +55,20 @@ static int _kcp_send_pkt(ikcpcb * kcp, char *buf, size_t len)
 static int _check_recv_pkt()
 {
 	int pkt_len;
-	char *buf_ptr;
-	buf_ptr = queue_get_read_ptr(&kcp_client.recv_queue);
+	uint32_t npkt_len;
+
 	if(get_queue_data_count(&kcp_client.recv_queue) > 4)
 	{
-		pkt_len = ntohl(*(uint32_t *)(buf_ptr));
+		read_data(&kcp_client.recv_queue, &npkt_len, 4);
+		pkt_len = ntohl(npkt_len);
 		if(pkt_len > 0)
 		{
 			if(get_queue_data_count(&kcp_client.recv_queue) >= 4 + pkt_len)
 			{
 				log_info("kcp package:%d", pkt_len);
-				client_on_pkg(buf_ptr + 4, pkt_len);
-				queue_tail_point_forward(&kcp_client.recv_queue, 4 + pkt_len);
+				dequeue_data(&kcp_client.recv_queue, &npkt_len, 4);
+				dequeue_data(&kcp_client.recv_queue, kcp_client.queue_buf, pkt_len);
+				client_on_pkg(kcp_client.queue_buf, pkt_len);
 				return 0;
 			}
 		}else{
@@ -86,7 +89,8 @@ static void _kcp_recvdata() {
 		// 没有收到包就退出
 		if(recv_count > 0)
 		{
-			enqueue_data(&kcp_client.recv_queue, kcp_client.recv_buf, recv_count);
+			enqueue_data(&kcp_client.recv_queue, kcp_client.recv_buf,
+				recv_count);
 		}
 
 	} while(recv_count > 0);

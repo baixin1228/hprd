@@ -65,7 +65,6 @@ static int _check_recv_pkt()
 		{
 			if(get_queue_data_count(&kcp_client.recv_queue) >= 4 + pkt_len)
 			{
-				log_info("kcp package:%d", pkt_len);
 				if(dequeue_data(&kcp_client.recv_queue, &npkt_len, 4) != 4)
 				{
 					log_error("[%s] dequeue_data error.", __func__);
@@ -81,6 +80,7 @@ static int _check_recv_pkt()
 			}
 		}else{
 			log_error("kcp recv len is invalid.");
+			exit(-1);
 		}
 	}
 	return -1;

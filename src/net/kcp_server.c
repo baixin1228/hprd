@@ -29,6 +29,7 @@ struct {
 
 static int _udp_output(const char *buf, int len, ikcpcb *kcp, void *user)
 {
+	int ret = -1;
 	struct sockaddr_in send_addr;
 	struct kcp_server_client *client = (struct kcp_server_client *)user;
 
@@ -38,9 +39,18 @@ static int _udp_output(const char *buf, int len, ikcpcb *kcp, void *user)
 
 	// log_info("udp send %s:%d len:%d\n", inet_ntoa(send_addr.sin_addr), ntohs(send_addr.sin_port), len);
 	if(kcp_server.sockfd != -1)
-		sendto(kcp_server.sockfd, buf, len, 0, (struct sockaddr *)&send_addr, sizeof(send_addr));
+		ret = sendto(kcp_server.sockfd, buf, len, 0, (struct sockaddr *)&send_addr, sizeof(send_addr));
 
-	return 0;
+	if(ret != len)
+	{
+		ret = -1;
+		log_error("udp send error.");
+		exit(-1);
+	}
+	else
+		ret = 0;
+
+	return ret;
 }
 
 static struct kcp_server_client *_new_client(uint32_t nip, uint16_t nport, uint16_t family, uint32_t client_id)
@@ -82,13 +92,19 @@ static struct kcp_server_client *_new_client(uint32_t nip, uint16_t nport, uint1
 
 static inline int _kcp_send_all(ikcpcb * kcp, char *buf, size_t len)
 {
-	int ret;
+	char *test;
+	int ret = -2;
 	pthread_spin_lock(&kcp_server.kcp_lock);
+	test = malloc(len);
+	if(test == NULL)
+		exit(-1);
 	ret = ikcp_send(kcp, buf, len);
+	free(test);
 	pthread_spin_unlock(&kcp_server.kcp_lock);
+
 	if(ret != 0)
 	{
-		log_error("ikcp_send error kcp:%p buf:%p ret:%d", kcp, buf, ret);
+		log_error("ikcp_send error kcp:%p buf:%p ret:%d len:%d", kcp, buf, ret, len);
 		return -1;
 	}
 
@@ -128,7 +144,6 @@ static int _check_recv_pkt(struct kcp_server_client *kcp_client)
 		{
 			if(get_queue_data_count(&kcp_client->recv_queue) >= 4 + pkt_len)
 			{
-				log_info("kcp package:%d", pkt_len);
 				if(dequeue_data(&kcp_client->recv_queue, &npkt_len, 4) != 4)
 				{
 					log_error("[%s] dequeue_data error.", __func__);

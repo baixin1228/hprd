@@ -129,8 +129,16 @@ static int _check_recv_pkt(struct kcp_server_client *kcp_client)
 			if(get_queue_data_count(&kcp_client->recv_queue) >= 4 + pkt_len)
 			{
 				log_info("kcp package:%d", pkt_len);
-				dequeue_data(&kcp_client->recv_queue, &npkt_len, 4);
-				dequeue_data(&kcp_client->recv_queue, kcp_client->queue_buf, pkt_len);
+				if(dequeue_data(&kcp_client->recv_queue, &npkt_len, 4) != 4)
+				{
+					log_error("[%s] dequeue_data error.", __func__);
+					exit(-1);
+				}
+				if(dequeue_data(&kcp_client->recv_queue, kcp_client->queue_buf, pkt_len) != pkt_len)
+				{
+					log_error("[%s] dequeue_data error.", __func__);
+					exit(-1);
+				}
 				server_on_pkg((struct server_client *)kcp_client->priv, kcp_client->queue_buf, pkt_len);
 				return 0;
 			}
@@ -152,7 +160,11 @@ static void _kcp_recvdata(struct kcp_server_client *kcp_client) {
 		// 没有收到包就退出
 		if(recv_count > 0)
 		{
-			enqueue_data(&kcp_client->recv_queue, kcp_client->recv_buf, recv_count);
+			if(enqueue_data(&kcp_client->recv_queue, kcp_client->recv_buf, recv_count) != recv_count)
+			{
+				log_error("[%s] enqueue_data error.", __func__);
+				exit(-1);
+			}
 		}
 
 	} while(recv_count > 0);

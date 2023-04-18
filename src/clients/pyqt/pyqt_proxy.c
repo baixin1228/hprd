@@ -12,7 +12,6 @@
 #include "display_dev.h"
 #include "buffer_pool.h"
 #include "net/net_util.h"
-#include "net/tcp_client.h"
 #include "net/net_client.h"
 
 struct request_obj
@@ -131,6 +130,10 @@ static void _decode_pkt() {
 	}
 END:
 	return;
+}
+
+uint32_t py_kcp_active() {
+	return client_kcp_active();
 }
 
 uint32_t py_get_recv_count() {

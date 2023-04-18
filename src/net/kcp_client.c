@@ -24,6 +24,7 @@ struct {
 	char queue_buf[BUFLEN];
 	char send_buf[BUFLEN];
 	ikcpcb *kcp_context;
+	bool kcp_enable;
 } kcp_client = {0};
 
 static int _check_recv_pkt()
@@ -71,6 +72,7 @@ static void _kcp_recvdata() {
 		// 没有收到包就退出
 		if(recv_count > 0)
 		{
+			kcp_client.kcp_enable = true;
 			if(enqueue_data(&kcp_client.recv_queue, kcp_client.recv_buf,
 				recv_count) != recv_count)
 			{
@@ -132,6 +134,11 @@ static void *_kcp_update(void *oq) {
 		pthread_spin_unlock(&kcp_client.kcp_lock);
 	}
 	return NULL;
+}
+
+bool kcp_client_enable()
+{
+	return kcp_client.kcp_enable;
 }
 
 int kcp_client_init(char *ip, uint16_t port, uint32_t kcp_id)

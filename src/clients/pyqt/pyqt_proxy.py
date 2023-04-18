@@ -16,6 +16,9 @@ clib.py_client_connect.restype = c_int
 clib.py_kcp_connect.argtypes = [c_uint]
 clib.py_kcp_connect.restype = c_int
 
+clib.py_kcp_active.argtypes = []
+clib.py_kcp_active.restype = c_int
+
 clib.py_on_frame.argtypes = []
 clib.py_on_frame.restype = c_int
 

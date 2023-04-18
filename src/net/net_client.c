@@ -37,6 +37,11 @@ int client_kcp_connect(char *ip, uint16_t port, uint32_t kcp_id)
 	return 0;
 }
 
+bool client_kcp_active()
+{
+	return kcp_client_enable();
+}
+
 int client_net_bind_pkg_cb(void (*cb)(char *buf, size_t len))
 {
 	if(client_net == NULL)

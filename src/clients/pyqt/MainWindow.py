@@ -101,7 +101,7 @@ class MainWindow(QMainWindow):
 		debug_menu.addAction(self.status_bar_action)
 		debug_menu.triggered[QAction].connect(self.processTrigger)
 
-		self.centralwidget = RenderWidget(self._on_render_show)
+		self.centralwidget = RenderWidget(self)
 		# self.centralwidget.setStyleSheet("background:#0f0")
 		self.setCentralWidget(self.centralwidget)
 
@@ -229,6 +229,9 @@ class MainWindow(QMainWindow):
 			self.kcp_client_id = value
 			proxy().py_kcp_connect(value)
 
+	def get_fps(self):
+		return self.render_fps
+		
 	def processTrigger(self, q):
 		if q.text() == "Status Bar":
 			if q.isChecked():

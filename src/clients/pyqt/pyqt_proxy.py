@@ -67,6 +67,9 @@ clib.py_get_remote_fps.restype = c_int
 clib.py_get_client_id.argtypes = [py_object, c_void_p]
 clib.py_get_client_id.restype = c_int
 
+clib.py_ping.argtypes = [py_object, c_uint, c_void_p]
+clib.py_ping.restype = c_int
+
 clib.py_client_regist_stream_size_cb.argtypes = [py_object, c_void_p] 
 clib.py_client_regist_stream_size_cb.restype = c_int
 

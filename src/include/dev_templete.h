@@ -134,17 +134,22 @@ int __obj##_release(struct __obj##_object *obj)		\
 
 #define GET_DEV_OPS(__type, __devs, __dev_name)		\
 ({													\
-	int idx;										\
+	int idx = 0;									\
+	bool is_find = false;							\
 	struct __type *dev_ops = NULL;					\
 													\
 	if(__dev_name != NULL)							\
 	{												\
 		for (int i = 0; i < sizeof(__devs) / sizeof(struct __type*); ++i)\
 		{											\
-			if(strcmp(__dev_name, __devs[i]->name) == 0)\
+			if(strcmp(__dev_name, __devs[i]->name) == 0){\
 				idx = i;							\
+				is_find = true;						\
+			}										\
 		}											\
 		dev_ops = __devs[idx];						\
+		if(!is_find)								\
+			log_warning("not find dev:%s", __dev_name);\
 	}												\
 	dev_ops; 										\
 })

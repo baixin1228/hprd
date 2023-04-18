@@ -101,7 +101,7 @@ class MainWindow(QMainWindow):
 		debug_menu.addAction(self.status_bar_action)
 		debug_menu.triggered[QAction].connect(self.processTrigger)
 
-		self.centralwidget = RenderWidget(self._on_render_show)
+		self.centralwidget = RenderWidget(self)
 		# self.centralwidget.setStyleSheet("background:#0f0")
 		self.setCentralWidget(self.centralwidget)
 
@@ -115,6 +115,8 @@ class MainWindow(QMainWindow):
 		self.status_bar_action.setChecked(True)
 
 		self.d_a_adapt.setChecked(True)
+		self.start_time_ms = int(round(time.time() * 1000))
+		self.ping = 0
 		self.dsp_mode = 1
 		self.remote_fps = 0
 		self.render_fps = 30
@@ -138,14 +140,15 @@ class MainWindow(QMainWindow):
 			time_sub = 1
 
 		if self.statusBar.isVisible():
-			self.statusBar.showMessage("渲染帧率:%-3d  码流帧率:%-3d  服务端帧率:%-3d 码率:%-8s 渲染速度:%-4s  缓冲区长度:%-3d" % (
+			self.statusBar.showMessage("渲染帧率:%-3d  码流帧率:%-3d  服务端帧率:%-3d 码率:%-8s 渲染速度:%-4s  缓冲区长度:%-3d ping:%-3d" % (
 				int(30 * 1000 / time_sub),
 				int(proxy().py_get_and_clean_frame() * 1000 / time_sub),
 				self.remote_fps,
 				format_speed(proxy().py_get_recv_count() * 1000 / time_sub),
 				self.render_speed,
-				proxy().py_get_queue_len()), 0)
+				proxy().py_get_queue_len(), self.ping), 0)
 			proxy().py_get_remote_fps(py_object(self), self._on_fps_cb)
+			proxy().py_ping(py_object(self), time_ms - self.start_time_ms, self._on_ping)
 
 		self.time_ms = time_ms
 
@@ -199,6 +202,13 @@ class MainWindow(QMainWindow):
 		timer_set_interval(value)
 
 	@CFUNCTYPE(None, py_object, c_uint, c_uint)
+	def _on_ping(self, ret, value):
+		if ret == 1:
+			time_ms = int(round(time.time() * 1000)) - self.start_time_ms
+			print(time_ms, value)
+			self.ping = time_ms - value
+
+	@CFUNCTYPE(None, py_object, c_uint, c_uint)
 	def _on_fps_cb(self, ret, value):
 		if ret == 1:
 			self.remote_fps = value
@@ -229,6 +239,9 @@ class MainWindow(QMainWindow):
 			self.kcp_client_id = value
 			proxy().py_kcp_connect(value)
 
+	def get_fps(self):
+		return self.render_fps
+		
 	def processTrigger(self, q):
 		if q.text() == "Status Bar":
 			if q.isChecked():

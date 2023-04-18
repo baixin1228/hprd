@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdatomic.h>
+#include <libavutil/opt.h>
 #include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
 #include <libavformat/avformat.h>
@@ -71,8 +72,13 @@ static int ffmpeg_enc_set_info(
 	av_codec_ctx = enc_data->av_codec_ctx;
 
 	av_codec_ctx->codec_id = stream_format;
-	av_codec_ctx->bit_rate = *(uint32_t *)g_hash_table_lookup(
-								 enc_info, "bit_rate");
+
+	av_opt_set(av_codec_ctx->priv_data, "nal-hrd", "cbr", 0);
+	int rate = *(uint32_t *)g_hash_table_lookup(enc_info, "bit_rate");
+	av_codec_ctx->rc_min_rate = rate;       // 最小比特率
+	av_codec_ctx->rc_max_rate = rate;       // 最大比特率
+	av_codec_ctx->rc_buffer_size = rate * 2;// 设置缓冲大小, 一般设定为比特率的2倍
+	av_codec_ctx->bit_rate = rate;
 	av_codec_ctx->width = *(uint32_t *)g_hash_table_lookup(enc_info, "width");
 	av_codec_ctx->height = *(uint32_t *)g_hash_table_lookup(enc_info, "height");
 	av_codec_ctx->time_base = (AVRational) {
@@ -99,7 +105,7 @@ static int ffmpeg_enc_set_info(
 		av_codec_ctx->pix_fmt = enc_data->capture_fb_fmt;
 	}
 
-	av_codec_ctx->gop_size = frame_rate;
+	av_codec_ctx->gop_size = frame_rate * 4;
 	av_codec_ctx->max_b_frames = 0;
 	av_codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 	av_codec_ctx->thread_count = 2;

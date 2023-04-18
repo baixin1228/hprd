@@ -1,5 +1,5 @@
 #!/bin/bash
-if [ ! -d client_build ]; then
+if [ ! -d client_build/build.ninja ]; then
 	meson client_build -Dbuild_target=client
 fi
 

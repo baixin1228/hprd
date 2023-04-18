@@ -125,6 +125,12 @@ static void on_request(struct server_client *client, struct request_event *event
 		log_info("get frame rate.");
 		break;
 	}
+	case PING:
+	{
+		ret_event.ret = RET_SUCCESS;
+		ret_event.value = event->value;
+		break;
+	}
 	default:
 	{
 		log_warning("setting: unknow cmd.");
@@ -271,11 +277,11 @@ int server_start(char *capture, char *encodec)
 
 struct option long_options[] =
 {
-	{"help",  	no_argument,        NULL, 'h'},
-	{"capture", required_argument,  NULL, 'c'},
-	{"encodec", required_argument,  NULL, 'e'},
-	{"kcp",     no_argument,        NULL, 'k'},
-	{NULL,		0,                  NULL,  0}
+	{"help",  		no_argument,        NULL, 'h'},
+	{"capture", 	required_argument,  NULL, 'c'},
+	{"encodec", 	required_argument,  NULL, 'e'},
+	{"kcp-disable", no_argument,        NULL, 'k'},
+	{NULL,		0,  	                NULL,  0}
 };
 
 void print_help()
@@ -289,7 +295,7 @@ int main(int argc, char *argv[])
 	char *capture = NULL;
 	char *encodec = NULL;
 	int option_index = 0;
-	bool enable_kcp = false;
+	bool enable_kcp = true;
 
 	debug_info_regist();
 
@@ -320,7 +326,7 @@ int main(int argc, char *argv[])
 		case 3:
 		case 'k':
 		{
-			enable_kcp = true;
+			enable_kcp = false;
 			break;
 		}
 		}

@@ -6,14 +6,15 @@ from PyQt5.QtGui import *
 
 import sys
 import sip
+import time
 from util import *
 from ctypes import *
 from pyqt_proxy import *
 
 class RenderWidget(QWidget):
-	def __init__(self, on_render_show):
+	def __init__(self, main_window):
 		super(RenderWidget, self).__init__()
-		self.on_render_show = on_render_show
+		self.main_window = main_window
 		self._setup_ui()
 		set_win_center(self)
 		add_task(1, 1, self._waiting_init)
@@ -22,6 +23,7 @@ class RenderWidget(QWidget):
 		self.stream_height = 0
 		self.old_width = self.width()
 		self.old_height = self.height()
+		self.last_time = 0
 
 	def _setup_ui(self):
 		self.setMouseTracking(True)
@@ -44,8 +46,8 @@ class RenderWidget(QWidget):
 		if ret == 0:
 			stop_task(task)
 			add_task(1, 1, self._frame_loop)
-			if self.on_render_show:
-				self.on_render_show()
+			if self.main_window._on_render_show:
+				self.main_window._on_render_show()
 		if ret == -1:
 			print("py_client_init_config fail.")
 			sys.exit(-1)
@@ -68,7 +70,6 @@ class RenderWidget(QWidget):
 
 		if angle.x() > 0:
 			proxy().py_wheel_event(7)
-
 
 	def keyPressEvent(self, event):
 		print(event.key())
@@ -95,7 +96,10 @@ class RenderWidget(QWidget):
 			self.mouse_key, 1)
 
 	def mouseMoveEvent(self,event):
-		proxy().py_mouse_move(*self._get_remote_pos(event.x(), event.y()))
+		time_ms = int(round(time.time() * 1000))
+		if time_ms - self.last_time > 1000 / self.main_window.get_fps():
+			proxy().py_mouse_move(*self._get_remote_pos(event.x(), event.y()))
+			self.last_time = time_ms
 
 	def mouseReleaseEvent(self,event):
 		proxy().py_mouse_click(*self._get_remote_pos(event.x(), event.y()),

@@ -59,7 +59,8 @@ enum request_cmd
 	GET_BIT_RATE,
 	GET_FRAME_RATE,
 	GET_FPS,
-	GET_CLIENT_ID
+	GET_CLIENT_ID,
+	PING
 };
 
 struct request_event{

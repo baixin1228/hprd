@@ -2,7 +2,7 @@
 #define __PROTOCOL_H__
 
 #include "common.h"
-#include "tcp_server.h"
+#include "net/net_server.h"
 
 enum NET_CHANNEL
 {
@@ -58,7 +58,8 @@ enum request_cmd
 
 	GET_BIT_RATE,
 	GET_FRAME_RATE,
-	GET_FPS
+	GET_FPS,
+	GET_CLIENT_ID
 };
 
 struct request_event{
@@ -73,8 +74,9 @@ struct response_event{
   uint32_t value;
 };
 
-int send_event(int fd, uint32_t cmd, char *buf, size_t len);
-int server_send_event(struct ep_event *ev, uint32_t cmd, char *buf, size_t len);
+int send_event(uint32_t cmd, char *buf, size_t len);
+int server_send_event(struct server_client *client, uint32_t cmd, char *buf,
+	size_t len);
 void bradcast_video(char *buf, size_t len);
 
 #endif

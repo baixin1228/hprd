@@ -8,17 +8,16 @@
 #include "codec.h"
 #include "decodec.h"
 #include "protocol.h"
-#include "net_help.h"
-#include "tcp_client.h"
 #include "display_dev.h"
 #include "buffer_pool.h"
+#include "net/net_client.h"
 
 int fd;
 struct decodec_object *dec_obj = NULL;
 
 static void on_event(struct display_object *obj, struct input_event *event)
 {
-	if(send_event(fd, INPUT_CHANNEL, (char *)event, sizeof(struct input_event))
+	if(send_event(INPUT_CHANNEL, (char *)event, sizeof(struct input_event))
 		== -1)
 	{
 		log_error("send_event fail.");
@@ -116,7 +115,7 @@ void client_main()
 	display_main_loop(out_obj);
 }
 
-static void _on_client_pkt(int fd, char *buf, size_t len)
+static void _on_client_pkt(char *buf, size_t len)
 {
 	struct data_pkt *pkt = (struct data_pkt *)buf;
 	pkt->data_len = ntohl(pkt->data_len);
@@ -132,26 +131,6 @@ static void _on_client_pkt(int fd, char *buf, size_t len)
 			break;
 		}
 	}
-}
-
-#define BUFLEN 1024 * 1024 * 10
-static char _recv_buf[BUFLEN];
-void *tcp_client_net_thread(void *op)
-{
-	char *ip = (char *)op;
-	fd = client_connect(ip, 9999);
-
-	if (fd < 0) {
-		exit(-1);
-	}
-
-	while(1)
-	{
-		if(tcp_recv_pkt(fd, _recv_buf, BUFLEN, _on_client_pkt) == -1)
-			break;
-	}
-	close(fd);
-	return NULL;
 }
 
 struct option long_options[] =
@@ -171,7 +150,6 @@ void print_help()
 int main(int argc, char* argv[])
 {
     int ret = -1;
-	pthread_t p1;
     char *ip = NULL;
     int option_index = 0;
 
@@ -208,8 +186,8 @@ int main(int argc, char* argv[])
 		exit(0);
     }
 
-	pthread_create(&p1, NULL, tcp_client_net_thread, ip);
+	client_net_init(ip, 9999);
+	client_net_bind_pkg_cb(_on_client_pkt);
 
 	client_main();
-	pthread_join(p1, NULL);
 }

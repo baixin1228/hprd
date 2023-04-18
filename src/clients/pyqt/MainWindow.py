@@ -13,8 +13,9 @@ from pyqt_proxy import proxy
 from RenderWidget import RenderWidget
 
 class MainWindow(QMainWindow):
-	def __init__(self):
+	def __init__(self, enable_kcp):
 		super(MainWindow, self).__init__()
+		self.enable_kcp = enable_kcp
 		self.setup_ui()
 		self.init_ui()
 		set_win_center(self)
@@ -122,6 +123,8 @@ class MainWindow(QMainWindow):
 
 		proxy().py_get_bit_rate(py_object(self), self._on_bit_cb)
 		proxy().py_get_frame_rate(py_object(self), self._on_fr_cb)
+		if self.enable_kcp:
+			proxy().py_get_client_id(py_object(self), self._on_client_id)
 
 		self.time_ms = int(round(time.time() * 1000))
 
@@ -135,7 +138,7 @@ class MainWindow(QMainWindow):
 			time_sub = 1
 
 		if self.statusBar.isVisible():
-			self.statusBar.showMessage("渲染帧率:%-3d  码流帧率:%-3d  服务端帧率:%-3d 码率:%-8s 渲染速度:%s  缓冲区长度:%-3d" % (
+			self.statusBar.showMessage("渲染帧率:%-3d  码流帧率:%-3d  服务端帧率:%-3d 码率:%-8s 渲染速度:%-4s  缓冲区长度:%-3d" % (
 				int(30 * 1000 / time_sub),
 				int(proxy().py_get_and_clean_frame() * 1000 / time_sub),
 				self.remote_fps,
@@ -147,17 +150,19 @@ class MainWindow(QMainWindow):
 		self.time_ms = time_ms
 
 	def _render_monitor(self, task):
-		if proxy().py_get_queue_len() > self.render_fps * 2 and timer_get_interval() == self.interval:
+		if proxy().py_get_queue_len() > self.render_fps and timer_get_interval() == self.interval:
+			self.render_speed = "x4"
+			interval = int(self.interval / 4)
+			add_task(1, False, self._reset_interval, interval if interval > 0 else 1)
+			return
+
+		if proxy().py_get_queue_len() > self.render_fps / 5 and timer_get_interval() == self.interval:
 			self.render_speed = "x2"
 			interval = int(self.interval / 2)
 			add_task(1, False, self._reset_interval, interval if interval > 0 else 1)
+			return
 
-		if proxy().py_get_queue_len() > self.render_fps / 4 and timer_get_interval() == self.interval:
-			self.render_speed = "x1.5"
-			interval = int(self.interval / 3 * 2)
-			add_task(1, False, self._reset_interval, interval if interval > 0 else 1)
-
-		if proxy().py_get_queue_len() < self.render_fps / 4 and timer_get_interval() != self.interval:
+		if proxy().py_get_queue_len() < self.render_fps / 5 and timer_get_interval() != self.interval:
 			self.render_speed = "x1"
 			add_task(1, False, self._reset_interval, self.interval)
 
@@ -215,6 +220,14 @@ class MainWindow(QMainWindow):
 		if ret == 1:
 			if hasattr(self, f'b_{ value }M'):
 				getattr(self, f'b_{ value }M').setChecked(True)
+
+	@CFUNCTYPE(None, py_object, c_uint, c_uint)
+	def _on_client_id(self, ret, value):
+		print("client id ret:%s value:%u"%("success" if ret == 1 else "fail", 
+			value))
+		if ret == 1:
+			self.kcp_client_id = value
+			proxy().py_kcp_connect(value)
 
 	def processTrigger(self, q):
 		if q.text() == "Status Bar":

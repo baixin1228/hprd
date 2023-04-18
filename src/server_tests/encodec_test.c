@@ -11,7 +11,7 @@
 #include "protocol.h"
 #include "capture_dev.h"
 #include "input_dev.h"
-#include "tcp_server.h"
+#include "net/tcp_server.h"
 #include "buffer_pool.h"
 
 struct mem_pool server_pool = {0};

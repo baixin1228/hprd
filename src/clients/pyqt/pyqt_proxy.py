@@ -13,6 +13,9 @@ clib = cdll.LoadLibrary(cdll_names[system()])
 clib.py_client_connect.argtypes = [POINTER(c_char), c_ushort]
 clib.py_client_connect.restype = c_int
 
+clib.py_kcp_connect.argtypes = [c_uint]
+clib.py_kcp_connect.restype = c_int
+
 clib.py_on_frame.argtypes = []
 clib.py_on_frame.restype = c_int
 
@@ -60,6 +63,9 @@ clib.py_set_bit_rate.restype = c_int
 
 clib.py_get_remote_fps.argtypes = [py_object, c_void_p]
 clib.py_get_remote_fps.restype = c_int
+
+clib.py_get_client_id.argtypes = [py_object, c_void_p]
+clib.py_get_client_id.restype = c_int
 
 clib.py_client_regist_stream_size_cb.argtypes = [py_object, c_void_p] 
 clib.py_client_regist_stream_size_cb.restype = c_int

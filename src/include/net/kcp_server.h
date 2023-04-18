@@ -16,6 +16,7 @@ struct kcp_server_client{
 	struct data_queue recv_queue;
 	char recv_buf[BUFLEN];
 	char queue_buf[BUFLEN];
+	char send_buf[BUFLEN];
 	time_t last_active;
 	void *priv;
 };

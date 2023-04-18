@@ -90,7 +90,7 @@ static struct kcp_server_client *_new_client(uint32_t nip, uint16_t nport, uint1
 	return ret;
 }
 
-static inline int _kcp_send_all(ikcpcb * kcp, char *buf, size_t len)
+static int _kcp_send_pkt(ikcpcb * kcp, char *buf, size_t len)
 {
 	char *test;
 	int ret = -2;
@@ -111,23 +111,14 @@ static inline int _kcp_send_all(ikcpcb * kcp, char *buf, size_t len)
 	return len;
 }
 
-static int _kcp_send_pkt(ikcpcb * kcp, char *buf, size_t len)
-{
-	uint32_t net_len;
-	net_len = htonl(len);
-	if(_kcp_send_all(kcp, (char *)&net_len, 4) != 4)
-		return -1;
-	if(_kcp_send_all(kcp, buf, len) != len)
-		return -1;
-
-	return 0;
-}
-
 int kcp_send_data_safe(struct kcp_server_client *client, char *buf, size_t len)
 {
 	if(client->kcp_context)
-		return _kcp_send_pkt(client->kcp_context, buf, len);
-	else
+	{
+		(*(uint32_t *)client->send_buf) = htonl(len);
+		memcpy(client->send_buf + 4, buf, len);
+		return _kcp_send_pkt(client->kcp_context, client->send_buf, len + 4);
+	}else
 		return -1;
 }
 

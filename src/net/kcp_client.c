@@ -22,35 +22,9 @@ struct {
 	struct data_queue recv_queue;
 	char recv_buf[BUFLEN];
 	char queue_buf[BUFLEN];
+	char send_buf[BUFLEN];
 	ikcpcb *kcp_context;
 } kcp_client = {0};
-
-static inline int _kcp_send_all(ikcpcb * kcp, char *buf, size_t len)
-{
-	int ret;
-	pthread_spin_lock(&kcp_client.kcp_lock);
-	ret = ikcp_send(kcp, buf, len);
-	pthread_spin_unlock(&kcp_client.kcp_lock);
-	if(ret != 0)
-	{
-		log_error("ikcp_send error kcp:%p buf:%p ret:%d", kcp, buf, ret);
-		return -1;
-	}
-
-	return len;
-}
-
-static int _kcp_send_pkt(ikcpcb * kcp, char *buf, size_t len)
-{
-	uint32_t net_len;
-	net_len = htonl(len);
-	if(_kcp_send_all(kcp, (char *)&net_len, 4) != 4)
-		return -1;
-	if(_kcp_send_all(kcp, buf, len) != len)
-		return -1;
-
-	return 0;
-}
 
 static int _check_recv_pkt()
 {
@@ -203,11 +177,35 @@ int kcp_client_init(char *ip, uint16_t port, uint32_t kcp_id)
 	return 0;
 }
 
+static int _kcp_send_pkt(ikcpcb * kcp, char *buf, size_t len)
+{
+	char *test;
+	int ret = -2;
+	pthread_spin_lock(&kcp_client.kcp_lock);
+	test = malloc(len);
+	if(test == NULL)
+		exit(-1);
+	ret = ikcp_send(kcp, buf, len);
+	free(test);
+	pthread_spin_unlock(&kcp_client.kcp_lock);
+
+	if(ret != 0)
+	{
+		log_error("ikcp_send error kcp:%p buf:%p ret:%d len:%d", kcp, buf, ret, len);
+		return -1;
+	}
+
+	return len;
+}
+
 int kcp_client_send_data(char *buf, size_t len)
 {
 	if(kcp_client.kcp_context)
-		return _kcp_send_pkt(kcp_client.kcp_context, buf, len);
-	else
+	{
+		(*(uint32_t *)kcp_client.send_buf) = htonl(len);
+		memcpy(kcp_client.send_buf + 4, buf, len);
+		return _kcp_send_pkt(kcp_client.kcp_context, kcp_client.send_buf, len + 4);
+	}else
 		return -1;
 }
 

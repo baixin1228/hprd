@@ -90,23 +90,20 @@ static struct kcp_server_client *_new_client(uint32_t nip, uint16_t nport, uint1
 
 static int _kcp_send_data(ikcpcb * kcp, char *buf, size_t len)
 {
-	char *test;
-	int ret = -2;
+	int ret = -1;
 	pthread_spin_lock(&kcp_server.kcp_lock);
-	test = malloc(len);
-	if(test == NULL)
-		exit(-1);
 	ret = ikcp_send(kcp, buf, len);
-	free(test);
-	pthread_spin_unlock(&kcp_server.kcp_lock);
-
 	if(ret != 0)
 	{
 		log_error("ikcp_send error kcp:%p buf:%p ret:%d len:%d", kcp, buf, ret, len);
-		return -1;
+		ret = -1;
+	}else{
+		ikcp_flush(kcp);
+		ret = len;
 	}
+	pthread_spin_unlock(&kcp_server.kcp_lock);
 
-	return len;
+	return ret;
 }
 
 int kcp_server_send_pkt(struct kcp_server_client *client, char *buf, size_t len)

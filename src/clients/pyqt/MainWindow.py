@@ -154,7 +154,7 @@ class MainWindow(QMainWindow):
 				self.render_speed, proxy().py_get_queue_len(), ping,
 				"on" if proxy().py_kcp_active() else "off"), 0)
 			proxy().py_get_remote_fps(py_object(self), self._on_fps_cb)
-			proxy().py_ping(py_object(self), time_ms - self.start_time_ms, self._on_ping)
+			proxy().py_ping(py_object(self), int(round(time.time() * 1000)) - self.start_time_ms, self._on_ping)
 
 		self.time_ms = time_ms
 

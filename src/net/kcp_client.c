@@ -184,23 +184,21 @@ int kcp_client_init(char *ip, uint16_t port, uint32_t kcp_id)
 
 static int _kcp_send_data(ikcpcb * kcp, char *buf, size_t len)
 {
-	char *test;
-	int ret = -2;
+	int ret = -1;
 	pthread_spin_lock(&kcp_client.kcp_lock);
-	test = malloc(len);
-	if(test == NULL)
-		exit(-1);
 	ret = ikcp_send(kcp, buf, len);
-	free(test);
-	pthread_spin_unlock(&kcp_client.kcp_lock);
-
 	if(ret != 0)
 	{
 		log_error("ikcp_send error kcp:%p buf:%p ret:%d len:%d", kcp, buf, ret, len);
-		return -1;
+		ret = -1;
+	}else{
+		ikcp_flush(kcp);
+		ret = len;
 	}
 
-	return len;
+	pthread_spin_unlock(&kcp_client.kcp_lock);
+
+	return ret;
 }
 
 int kcp_client_send_pkt(char *buf, size_t len)

@@ -74,9 +74,7 @@ static struct kcp_server_client *_new_client(uint32_t nip, uint16_t nport, uint1
 	// 设置kcp的下层输出，这里为 _udp_output，模拟udp网络输出函数
 	ret->kcp_context->output = _udp_output;
 
-	// 配置窗口大小：平均延迟200ms，每20ms发送一个包，
-	// 而考虑到丢包重发，设置最大收发窗口为128
-	ikcp_wndsize(ret->kcp_context, 128, 128);
+	ikcp_wndsize(ret->kcp_context, 1024, 1024);
 
 	// 启动快速模式
 	// 第二个参数 nodelay-启用以后若干常规加速将启动
@@ -90,7 +88,7 @@ static struct kcp_server_client *_new_client(uint32_t nip, uint16_t nport, uint1
 	return ret;
 }
 
-static int _kcp_send_pkt(ikcpcb * kcp, char *buf, size_t len)
+static int _kcp_send_data(ikcpcb * kcp, char *buf, size_t len)
 {
 	char *test;
 	int ret = -2;
@@ -111,13 +109,13 @@ static int _kcp_send_pkt(ikcpcb * kcp, char *buf, size_t len)
 	return len;
 }
 
-int kcp_send_data_safe(struct kcp_server_client *client, char *buf, size_t len)
+int kcp_server_send_pkt(struct kcp_server_client *client, char *buf, size_t len)
 {
 	if(client->kcp_context)
 	{
 		(*(uint32_t *)client->send_buf) = htonl(len);
 		memcpy(client->send_buf + 4, buf, len);
-		return _kcp_send_pkt(client->kcp_context, client->send_buf, len + 4);
+		return _kcp_send_data(client->kcp_context, client->send_buf, len + 4);
 	}else
 		return -1;
 }

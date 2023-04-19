@@ -48,7 +48,7 @@ int server_net_bind_connect_cb(void (*cb)(struct server_client *client))
 	return 0;
 }
 
-int server_send_data(struct server_client *client, char *buf, size_t len)
+int server_send_pkt(struct server_client *client, char *buf, size_t len)
 {
 	if(ser_net == NULL)
 	{
@@ -59,7 +59,7 @@ int server_send_data(struct server_client *client, char *buf, size_t len)
 	/* kcp first */
 	if (client->kcp_enable)
 	{
-		return kcp_send_data_safe(client->kcp_server_client, buf, len);
+		return kcp_server_send_pkt(client->kcp_server_client, buf, len);
 	}else{
 		return tcp_send_data_safe(client->tcp_server_client, buf, len);
 	}
@@ -93,7 +93,7 @@ static void _foreach_bradcast(gpointer key, gpointer value, gpointer user_data)
 	if (ser_client->kcp_enable)
 	{
 		if(ser_client->kcp_server_client)
-			kcp_send_data_safe(ser_client->kcp_server_client, data->buf,
+			kcp_server_send_pkt(ser_client->kcp_server_client, data->buf,
 				data->len);
 		else
 			log_error("[%s] not find kcp_server_client.", __func__);

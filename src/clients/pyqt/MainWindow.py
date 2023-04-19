@@ -13,9 +13,10 @@ from pyqt_proxy import proxy
 from RenderWidget import RenderWidget
 
 class MainWindow(QMainWindow):
-	def __init__(self, enable_kcp):
+	def __init__(self, enable_kcp, ip):
 		super(MainWindow, self).__init__()
 		self.enable_kcp = enable_kcp
+		self.ip = ip
 		self.setup_ui()
 		self.init_ui()
 		set_win_center(self)
@@ -111,7 +112,7 @@ class MainWindow(QMainWindow):
 		self.setStatusBar(self.statusBar)
 
 	def init_ui(self):
-		self.setWindowTitle("High Performance Remote Desktop")
+		self.setWindowTitle("High Performance Remote Desktop - %s" % self.ip)
 		self.status_bar_action.setChecked(True)
 
 		self.d_a_adapt.setChecked(True)
@@ -144,7 +145,7 @@ class MainWindow(QMainWindow):
 				frame_rete = 0
 			else:
 				frame_rete = int(30 * 1000 / time_sub)
-				
+
 			stream_frame_rate = int(proxy().py_get_and_clean_frame() * 1000 / time_sub)
 			bit_rate = format_speed(proxy().py_get_recv_count() * 1000 / time_sub)
 			ping = "%dms"%self.ping

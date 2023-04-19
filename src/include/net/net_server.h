@@ -21,7 +21,7 @@ int server_net_init(char *ip, uint16_t port, bool kcp);
 int server_net_bind_pkg_cb(void (*cb)(struct server_client *client,
 	char *buf, size_t len));
 int server_net_bind_connect_cb(void (*cb)(struct server_client *client));
-int server_send_data(struct server_client *client, char *buf, size_t len);
+int server_send_pkt(struct server_client *client, char *buf, size_t len);
 void server_bradcast_data(char *buf, size_t len);
 void tcp_server_client_connect(struct tcp_server_client *tcp_client);
 bool server_has_client(uint32_t client_id);

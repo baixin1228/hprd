@@ -22,7 +22,7 @@ int send_event(uint32_t cmd, char *buf, size_t len)
 	memcpy(event_pkt->data, buf, len);
 	event_pkt->data_len = htonl(len);
 
-	if(client_send_data((char *)event_pkt, sizeof(struct data_pkt) +
+	if(client_send_pkt((char *)event_pkt, sizeof(struct data_pkt) +
 		len) == -1)
 	{
 		return -1;

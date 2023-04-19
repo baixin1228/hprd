@@ -54,7 +54,7 @@ int client_net_bind_pkg_cb(void (*cb)(char *buf, size_t len))
 	return 0;
 }
 
-int client_send_data(char *buf, size_t len)
+int client_send_pkt(char *buf, size_t len)
 {
 	if(client_net == NULL)
 	{
@@ -63,9 +63,9 @@ int client_send_data(char *buf, size_t len)
 	}
 	if (client_net->kcp_enable)
 	{
-		return kcp_client_send_data(buf, len);
+		return kcp_client_send_pkt(buf, len);
 	}else{
-		return tcp_client_send_data(buf, len);
+		return tcp_client_send_pkt(buf, len);
 	}
 }
 

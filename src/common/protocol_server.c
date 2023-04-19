@@ -21,7 +21,7 @@ int server_send_event(struct server_client *client, uint32_t cmd, char *buf, siz
 	memcpy(event_pkt->data, buf, len);
 	event_pkt->data_len = htonl(len);
 
-	if(server_send_data(client, (char *)event_pkt, sizeof(struct data_pkt) +
+	if(server_send_pkt(client, (char *)event_pkt, sizeof(struct data_pkt) +
 		len) == -1)
 	{
 		return -1;

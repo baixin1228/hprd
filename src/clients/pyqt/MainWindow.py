@@ -13,9 +13,10 @@ from pyqt_proxy import proxy
 from RenderWidget import RenderWidget
 
 class MainWindow(QMainWindow):
-	def __init__(self, enable_kcp):
+	def __init__(self, enable_kcp, ip):
 		super(MainWindow, self).__init__()
 		self.enable_kcp = enable_kcp
+		self.ip = ip
 		self.setup_ui()
 		self.init_ui()
 		set_win_center(self)
@@ -111,7 +112,7 @@ class MainWindow(QMainWindow):
 		self.setStatusBar(self.statusBar)
 
 	def init_ui(self):
-		self.setWindowTitle("High Performance Remote Desktop")
+		self.setWindowTitle("High Performance Remote Desktop - %s" % self.ip)
 		self.status_bar_action.setChecked(True)
 
 		self.d_a_adapt.setChecked(True)
@@ -128,7 +129,7 @@ class MainWindow(QMainWindow):
 		if self.enable_kcp:
 			proxy().py_get_client_id(py_object(self), self._on_client_id)
 
-		self.time_ms = int(round(time.time() * 1000))
+		self.time_ms = 0
 
 		add_task(1, 30, self._loop_30)
 		add_task(1, 1, self._render_monitor)
@@ -140,16 +141,20 @@ class MainWindow(QMainWindow):
 			time_sub = 1
 
 		if self.statusBar.isVisible():
-			self.statusBar.showMessage("渲染帧率:%-3d  码流帧率:%-3d  服务端帧率:%-3d 码率:%-8s 渲染速度:%-4s  缓冲区长度:%-3d ping:%-3d kcp:%s" % (
-				int(30 * 1000 / time_sub),
-				int(proxy().py_get_and_clean_frame() * 1000 / time_sub),
-				self.remote_fps,
-				format_speed(proxy().py_get_recv_count() * 1000 / time_sub),
-				self.render_speed,
-				proxy().py_get_queue_len(), self.ping,
+			if self.time_ms == 0:
+				frame_rete = 0
+			else:
+				frame_rete = int(30 * 1000 / time_sub)
+
+			stream_frame_rate = int(proxy().py_get_and_clean_frame() * 1000 / time_sub)
+			bit_rate = format_speed(proxy().py_get_recv_count() * 1000 / time_sub)
+			ping = "%dms"%self.ping
+
+			self.statusBar.showMessage("渲染帧率:%-3d  码流帧率:%-3d  服务端帧率:%-3d 码率:%-8s 渲染速度:%-4s  缓冲区长度:%-3d ping:%-6s kcp:%s" % (frame_rete, stream_frame_rate, self.remote_fps, bit_rate,
+				self.render_speed, proxy().py_get_queue_len(), ping,
 				"on" if proxy().py_kcp_active() else "off"), 0)
 			proxy().py_get_remote_fps(py_object(self), self._on_fps_cb)
-			proxy().py_ping(py_object(self), time_ms - self.start_time_ms, self._on_ping)
+			proxy().py_ping(py_object(self), int(round(time.time() * 1000)) - self.start_time_ms, self._on_ping)
 
 		self.time_ms = time_ms
 

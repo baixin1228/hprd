@@ -79,13 +79,14 @@ class LoginWindow(QMainWindow):
 		self.conn_button.clicked.connect(self.on_connect)  # 登录
 
 	def main_win_show(self, task):
-		self.main_win = MainWindow(self.kcp)
+		self.main_win = MainWindow(self.kcp, self.ip)
 		self.main_win.show()
 		self.close()
 
 	def on_connect(self):
 		port = 0
 		ip_port = self.ip_edit.text().split(":")
+		self.ip = ip_port[0]
 
 		if len(ip_port) == 2:
 			port = int(ip_port[1])

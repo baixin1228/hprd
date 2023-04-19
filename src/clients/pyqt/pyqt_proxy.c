@@ -104,6 +104,20 @@ static void _on_video(char *buf, size_t len) {
 	}
 }
 
+uint32_t py_kcp_active() {
+	return client_kcp_active();
+}
+
+uint32_t py_get_recv_count() {
+	uint32_t ret = client.recv_sum;
+	client.recv_sum = 0;
+	return ret;
+}
+
+uint32_t py_get_queue_len() {
+	return atomic_load(&client.recv_pkt_count);
+}
+
 static void _decode_pkt() {
 	while(atomic_load(&client.recv_pkt_count) > 0)
 	{
@@ -118,10 +132,6 @@ static void _decode_pkt() {
 				_on_video(client.recv_pkt->data, client.recv_pkt->data_len);
 				goto END;
 			}
-			case RESPONSE_CHANNEL: {
-				_on_response((struct response_event *)client.recv_pkt->data);
-				break;
-			}
 			default : {
 				log_info("unknow channel.");
 				break;
@@ -130,20 +140,6 @@ static void _decode_pkt() {
 	}
 END:
 	return;
-}
-
-uint32_t py_kcp_active() {
-	return client_kcp_active();
-}
-
-uint32_t py_get_recv_count() {
-	uint32_t ret = client.recv_sum;
-	client.recv_sum = 0;
-	return ret;
-}
-
-uint32_t py_get_queue_len() {
-	return atomic_load(&client.recv_pkt_count);
 }
 
 int py_on_frame() {
@@ -215,14 +211,30 @@ END:
 
 static void _on_client_recv(char *buf, size_t len) {
 	int ret;
-	while((ret = enqueue_data(&client.recv_queue, buf, len)) == 0);
-	if(ret == -1)
-	{
-		log_error("enqueue fail.");
-		exit(-1);
+	struct data_pkt *recv_pkt = (struct data_pkt *)buf;
+
+	switch(recv_pkt->channel) {
+		case VIDEO_CHANNEL: {
+			while((ret = enqueue_data(&client.recv_queue, buf, len)) == 0);
+			if(ret == -1)
+			{
+				log_error("enqueue fail.");
+				exit(-1);
+			}
+			atomic_fetch_add(&client.recv_pkt_count, 1);
+			break;
+		}
+		case RESPONSE_CHANNEL: {
+			_on_response((struct response_event *)recv_pkt->data);
+			break;
+		}
+		default : {
+			log_info("unknow channel.");
+			break;
+		}
 	}
+
 	client.recv_sum += len;
-	atomic_fetch_add(&client.recv_pkt_count, 1);
 }
 
 int py_client_connect(char *ip, uint16_t port) {

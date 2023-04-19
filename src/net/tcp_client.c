@@ -131,7 +131,7 @@ int tcp_client_init(char *ip, uint16_t port)
 	return 0;
 }
 
-int tcp_client_send_data(char *buf, size_t len)
+int tcp_client_send_pkt(char *buf, size_t len)
 {
 	return _tcp_send_pkt(tcp_client.fd, buf, len);
 }

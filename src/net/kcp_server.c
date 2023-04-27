@@ -88,6 +88,27 @@ static struct kcp_server_client *_new_client(uint32_t nip, uint16_t nport, uint1
 	return ret;
 }
 
+int kcp_server_release_client(struct kcp_server_client *client)
+{
+	int ret = -1;
+
+	ikcp_release(client->kcp_context);
+
+	if(g_hash_table_contains(kcp_server.client_table, &client->client_id))
+	{
+		g_hash_table_remove(kcp_server.client_table, &client->client_id);
+		struct in_addr addr;
+		addr.s_addr = client->nip;
+		log_info("[kcp 删除链接] addr:%s:%d", inet_ntoa(addr), ntohs(client->nport));
+		free(client);
+		ret = 0;
+	}else{
+		log_warning("remove client fail, not find client client_id:%x", client->client_id);
+	}
+
+	return ret;
+}
+
 static int _kcp_send_data(ikcpcb * kcp, char *buf, size_t len)
 {
 	int ret = -1;

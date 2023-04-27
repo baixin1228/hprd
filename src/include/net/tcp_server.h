@@ -26,6 +26,7 @@ int tcp_server_init(char *ip, uint16_t port);
 int get_client_count(void);
 int tcp_send_data_safe(struct tcp_server_client *ev, char *buf, uint32_t len);
 int tcp_send_data_unsafe(struct tcp_server_client *ev, char *buf, uint32_t len);
+int tcp_server_release_client(struct tcp_server_client *ev);
 void tcp_foreach_client(void (*callback)(gpointer key, gpointer value, gpointer user_data), void *opaque);
 struct tcp_server_client *tcp_find_client(uint32_t client_id);
 

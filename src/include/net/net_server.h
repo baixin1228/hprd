@@ -29,7 +29,6 @@ void kcp_server_client_connect(struct kcp_server_client *kcp_client, uint32_t cl
 uint32_t server_client_getid(struct server_client *client);
 uint32_t server_client_newid();
 void server_on_pkg(struct server_client *ser_client, char *buf, size_t len);
-void server_on_client_exit(struct server_client *ser_client);
 void server_net_release();
 
 #endif

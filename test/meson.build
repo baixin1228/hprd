@@ -17,8 +17,3 @@ x11_extensions_test = executable('x11_extensions_test', 'x11_extensions_test.c',
 					dependencies : [dependency('x11'), dependency('xproto'), dependency('xext')]
 				)
 test('x11_extensions_performance_test', x11_extensions_test, suite: 'x11_extensions_test', is_parallel : false)
-
-blockdpy_test = executable('blockdpy_test', 'blockdpy.c', 
-					dependencies : [dependency('x11'), dependency('xcb'), dependency('xext')]
-				)
-test('blockdpy_test', x11_extensions_test, suite: 'blockdpy_test', is_parallel : false)

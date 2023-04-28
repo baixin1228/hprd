@@ -106,7 +106,9 @@ static void *_recv_thread(void *oq) {
 			log_info("[%s] udp exit.", __func__);
 			break;
 		}
+		pthread_spin_lock(&kcp_client.kcp_lock);
 		ikcp_input(kcp_client.kcp_context, udp_buf, recv_count);
+		pthread_spin_unlock(&kcp_client.kcp_lock);
 		_kcp_recvdata();
 	}
 

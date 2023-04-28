@@ -79,7 +79,6 @@ static void _remove_event(int epfd, struct tcp_server_client *ev) {
 static int _remove_client(int epfd, struct tcp_server_client *ev) {
 	int ret = -1;
 
-	log_info("remove event, fd:%d client_id:%x", ev->fd, ev->client_id);
 	close(ev->fd);
 
 	if(g_hash_table_contains(tcp_server.client_table, &ev->client_id))
@@ -87,7 +86,7 @@ static int _remove_client(int epfd, struct tcp_server_client *ev) {
 		g_hash_table_remove(tcp_server.client_table, &ev->client_id);
 		struct in_addr addr;
 		addr.s_addr = ev->nip;
-		log_info("[删除链接] addr:%s:%d\n", inet_ntoa(addr), ntohs(ev->nport));
+		log_info("[tcp 删除链接] addr:%s:%d", inet_ntoa(addr), ntohs(ev->nport));
 		free(ev);
 		ret = 0;
 	}else{
@@ -97,7 +96,7 @@ static int _remove_client(int epfd, struct tcp_server_client *ev) {
 	return ret;
 }
 
-static void _callback_accept(int epfd, struct tcp_server_client *ser_obj) {
+static void _callback_accept(struct tcp_server_client *ser_obj) {
 	struct sockaddr_in addr;
 	struct tcp_server_client *ev;
 
@@ -122,7 +121,7 @@ static void _callback_accept(int epfd, struct tcp_server_client *ser_obj) {
 	} else {
 		ev->nip = addr.sin_addr.s_addr;
 		ev->nport = addr.sin_port;
-		_add_event(epfd, ev);
+		_add_event(tcp_server.epoll_fd, ev);
 		ev->client_id = server_client_newid();
 
 		pthread_spin_lock(&tcp_server.lock);
@@ -159,14 +158,14 @@ static int _check_recv_pkt(struct tcp_server_client *ev)
 	return -1;
 }
 
-static void _callback_recvdata(int epfd, struct tcp_server_client *ev) {
+static void _callback_recvdata(struct tcp_server_client *ev) {
 	int ret;
 	char *buf_ptr;
 	buf_ptr = queue_get_write_ptr(&ev->recv_queue);
 	if((ret = recv(ev->fd, buf_ptr, queue_get_end_free_count(&ev->recv_queue), 0)) == 0) {
 		log_error("recv error.");
 		pthread_spin_lock(&tcp_server.lock);
-		_remove_client(epfd, ev);
+		server_on_client_exit((struct server_client *)ev->priv);
 		pthread_spin_unlock(&tcp_server.lock);
 		return;
 	}
@@ -177,7 +176,7 @@ static void _callback_recvdata(int epfd, struct tcp_server_client *ev) {
 	ev->last_active = time(0);
 }
 
-static void _callback_senddata(int epfd, struct tcp_server_client *ev) {
+static void _callback_senddata(struct tcp_server_client *ev) {
 	int ret;
 	char *buf_ptr;
 	static int time = 0;
@@ -187,7 +186,7 @@ static void _callback_senddata(int epfd, struct tcp_server_client *ev) {
 	if((ret = send(ev->fd, buf_ptr, queue_get_end_data_count(&ev->send_queue), 0)) == 0) {
 		log_error("send error.");
 		pthread_spin_lock(&tcp_server.lock);
-		_remove_client(epfd, ev);
+		server_on_client_exit((struct server_client *)ev->priv);
 		pthread_spin_unlock(&tcp_server.lock);
 		goto EXIT;
 	}
@@ -201,7 +200,7 @@ static void _callback_senddata(int epfd, struct tcp_server_client *ev) {
 
 	time++;
 	ev->events = EPOLLIN;
-	_mod_event(epfd, ev);
+	_mod_event(tcp_server.epoll_fd, ev);
 
 EXIT:
 	return;
@@ -299,27 +298,31 @@ void tcp_foreach_client(void (*callback)(gpointer key, gpointer value, gpointer 
 	pthread_spin_unlock(&tcp_server.lock);
 }
 
+int tcp_server_release_client(struct tcp_server_client *ev)
+{
+	return _remove_client(tcp_server.epoll_fd, ev);
+}
+
 static int _foreach_active(gpointer key, gpointer value, gpointer user_data)
 {
 	time_t duration;
 	time_t now = time(0);
-	int *epfd = (int *)user_data;
 	struct tcp_server_client *ev = (struct tcp_server_client *)value;
 
 	duration = now - ev->last_active;
 	if (duration >= 5) {
 		log_warning("client time out, clean.");
-		_remove_client(*epfd, ev);
+		server_on_client_exit((struct server_client *)ev->priv);
 		return true;
 	}
 	return false;
 }
 
 __attribute__((unused))
-static void _check_active(int epfd) {
+static void _check_active() {
 	pthread_spin_lock(&tcp_server.lock);
 	g_hash_table_foreach_remove(tcp_server.client_table, _foreach_active,
-		&epfd);
+		NULL);
 	pthread_spin_unlock(&tcp_server.lock);
 }
 
@@ -350,9 +353,9 @@ static void _process_event(struct epoll_event *event)
 		{
 			if(ev->fd == tcp_server.tcp_fd)
 			{
-				_callback_accept(tcp_server.epoll_fd, ev);
+				_callback_accept(ev);
 			}else{
-				_callback_recvdata(tcp_server.epoll_fd, ev);
+				_callback_recvdata(ev);
 			}
 			break;
 		}
@@ -360,7 +363,7 @@ static void _process_event(struct epoll_event *event)
 		{
 			if(ev->fd != tcp_server.tcp_fd)
 			{
-				_callback_senddata(tcp_server.epoll_fd, ev);
+				_callback_senddata(ev);
 			}else{
 				log_warning("EPLLOUT event, fd:%d", ev->fd);
 			}
@@ -370,7 +373,7 @@ static void _process_event(struct epoll_event *event)
 		case EPOLLHUP:
 		{
 			pthread_spin_lock(&tcp_server.lock);
-			_remove_client(tcp_server.epoll_fd, ev);
+			server_on_client_exit((struct server_client *)ev->priv);
 			pthread_spin_unlock(&tcp_server.lock);
 			log_warning("EPOLLHUP event, remove client.");
 			break;
@@ -378,7 +381,7 @@ static void _process_event(struct epoll_event *event)
 		default:
 		{
 			pthread_spin_lock(&tcp_server.lock);
-			_remove_client(tcp_server.epoll_fd, ev);
+			server_on_client_exit((struct server_client *)ev->priv);
 			pthread_spin_unlock(&tcp_server.lock);
 			log_warning("unknow EPOLL event:%d", event->events);
 			break;
@@ -399,7 +402,7 @@ static void *_tcp_server_thread(void *opaque) {
 
 	struct epoll_event events[MAX_EVENTS + 1];
 	while (1) {
-		// _check_active(tcp_server.epoll_fd);
+		// _check_active();
 		nfd = epoll_wait(tcp_server.epoll_fd, events, MAX_EVENTS + 1, 10);
 		if(nfd < 0)
 		{

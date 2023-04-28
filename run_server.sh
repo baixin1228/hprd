@@ -9,4 +9,4 @@ if [ $? != 0 ]; then
 fi
 # meson test -C server_build -v hprd_server_test
 
-./server_build/src/server $*
+DISPLAY=:0 XAUTHORITY=/var/run/lightdm/root/:0 sudo ./server_build/src/server $*

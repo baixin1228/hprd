@@ -218,6 +218,23 @@ void server_on_pkg(struct server_client *ser_client, char *buf, size_t len)
 	}
 }
 
+void server_on_client_exit(struct server_client *ser_client)
+{
+	if(ser_client->tcp_server_client &&
+		tcp_server_release_client(ser_client->tcp_server_client) != 0)
+	{
+		log_error("tcp_server_release_client fail");
+	}
+	ser_client->tcp_server_client = NULL;
+
+	if(ser_client->kcp_server_client &&
+		kcp_server_release_client(ser_client->kcp_server_client) != 0)
+	{
+		log_error("kcp_server_release_client fail");
+	}
+	ser_client->kcp_server_client = NULL;
+}
+
 void server_net_release()
 {
 	if(ser_net == NULL)

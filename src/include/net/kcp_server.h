@@ -24,6 +24,7 @@ struct kcp_server_client{
 int kcp_server_init(char *ip, uint16_t port);
 void kcp_bradcast(char *buf, uint32_t len);
 struct kcp_server_client *kcp_create_client_connect(uint32_t nip, uint16_t nport, uint32_t client_id);
+int kcp_server_release_client(struct kcp_server_client *client);
 int kcp_server_send_pkt(struct kcp_server_client *client, char *buf, size_t len);
 
 #endif

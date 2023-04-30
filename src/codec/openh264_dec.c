@@ -311,7 +311,7 @@ static int svc_decode_release(struct decodec_object *obj)
 
 struct decodec_ops openh264_dec_ops =
 {
-    .name               = "openh264_decodec",
+    .name               = "openh264_dec",
     .init               = svc_decode_init,
     .put_pkt            = svc_push_pkt,
     .get_info           = svc_get_info,
@@ -321,3 +321,5 @@ struct decodec_ops openh264_dec_ops =
     .unmap_fb       = svc_unmap_fb,
     .release            = svc_decode_release
 };
+
+DECODEC_ADD_DEV(98, openh264_dec_ops)

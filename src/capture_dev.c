@@ -45,6 +45,7 @@ struct capture_object *capture_dev_init(struct mem_pool *pool, char *name)
 			dev_ops = (struct capture_ops *)item->data;
 		}
 	}
+	log_info("capture dev is:%s", dev_ops->name);
 
 	ret = dev_ops->init(capture_obj);
 	if(ret == 0)

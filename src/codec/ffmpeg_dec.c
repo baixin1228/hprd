@@ -490,9 +490,9 @@ static int ffmepg_dec_release(struct module_data *dev)
 	return 0;
 }
 
-struct decodec_ops dev_ops = 
+struct decodec_ops ffmpeg_dec_ops = 
 {
-    .name               = "ffmpeg_decodec",
+    .name               = "ffmpeg_dec",
     .init               = ffmpeg_dec_init,
     .put_pkt            = ffmepg_put_packet,
     .get_info 			= ,
@@ -502,3 +502,5 @@ struct decodec_ops dev_ops =
     .unmap_fb 		= ,
     .release            = ffmepg_dec_release
 };
+
+DECODEC_ADD_DEV(99, ffmpeg_dec_ops)

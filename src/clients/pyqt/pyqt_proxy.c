@@ -256,7 +256,7 @@ int py_client_connect(char *ip, uint16_t port) {
 
 	client.recv_pkt = calloc(BUFLEN, 1);
 
-	client.dec_obj = decodec_init(&client.client_pool);
+	client.dec_obj = decodec_init(&client.client_pool, NULL);
 	client.dsp_obj = display_dev_init(&client.client_pool, "x11_renderer");
 
 	for (int i = 0; i < 5; ++i) {

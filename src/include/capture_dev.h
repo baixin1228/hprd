@@ -6,7 +6,7 @@
 
 extern GSList *capture_list;
 #define CAPTURE_ADD_DEV(prio, dev)\
-static __attribute__((constructor(prio + 100))) void __start__##prio()\
+static __attribute__((constructor(prio + 100))) void __capture_init__##prio()\
 {\
 	capture_list = g_slist_append(capture_list, &dev);\
 }

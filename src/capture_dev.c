@@ -7,11 +7,19 @@
 #include "frame_buffer.h"
 #include "dev_templete.h"
 
-extern struct capture_ops xcb_dev_ops;
+GSList *capture_list = NULL;
 
-struct capture_object *capture_dev_init(struct mem_pool *pool)
+static gint dev_comp (gconstpointer a, gconstpointer b)
+{
+	struct capture_ops *dev_a = (struct capture_ops *)a;
+	char *str_b = (char *)b;
+	return g_ascii_strcasecmp(dev_a->name, str_b);
+}
+
+struct capture_object *capture_dev_init(struct mem_pool *pool, char *name)
 {
 	int ret;
+	GSList *item = NULL;
 	struct capture_ops *dev_ops;
 	struct capture_object *capture_obj;
 
@@ -19,14 +27,23 @@ struct capture_object *capture_dev_init(struct mem_pool *pool)
 
 	capture_obj->buf_pool = pool;
 
-	dev_ops = &xcb_dev_ops;
-
-	if(!dev_ops)
+	if(!capture_list)
 	{
-		char path_tmp[255];
-		getcwd(path_tmp, 255);
-		log_error("load xcb_capture.so fail. dir:%s\n", path_tmp);
-		exit(-1);
+		log_error("can not find any capture dev.");
+		return NULL;
+	}
+	dev_ops = (struct capture_ops *)capture_list->data;
+
+	if(name)
+	{
+		item = g_slist_find_custom(capture_list, name, (GCompareFunc)dev_comp);
+		if(!item)
+		{
+			log_warning("not find capture dev:%s, use default:%s", name, 
+				dev_ops->name);
+		}else{
+			dev_ops = (struct capture_ops *)item->data;
+		}
 	}
 
 	ret = dev_ops->init(capture_obj);

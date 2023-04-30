@@ -35,7 +35,7 @@ if build_target == 'server' or build_target == 'all'
 	hprd_server = executable('server', 'server.c',
 		include_directories : inc,
 		dependencies: server_deps,
-		link_with: server_static_lib,
+		link_whole: server_static_lib,
 		link_args : ['-ldl', '-lpthread'],
 		install : true)
 

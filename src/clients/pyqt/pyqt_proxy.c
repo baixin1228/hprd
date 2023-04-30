@@ -229,7 +229,7 @@ static void _on_client_recv(char *buf, size_t len) {
 			break;
 		}
 		default : {
-			log_info("unknow channel.");
+			log_error("unknow channel.");
 			break;
 		}
 	}

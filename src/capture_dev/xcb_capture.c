@@ -299,7 +299,7 @@ static int xcb_quit(struct capture_object *obj)
 }
 
 struct capture_ops xcb_dev_ops = {
-	.name 				= "x11_extensions_capture_dev",
+	.name 				= "x11_capture",
 	.init 				= xext_dev_init,
 	.set_info			= xext_set_info,
 	.get_info			= xext_get_fb_info,
@@ -311,3 +311,5 @@ struct capture_ops xcb_dev_ops = {
 	.main_loop			= xcb_main_loop,
 	.quit				= xcb_quit
 };
+
+CAPTURE_ADD_DEV(99, xcb_dev_ops)

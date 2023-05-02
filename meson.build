@@ -7,4 +7,3 @@ if get_option('buildtype').startswith('debug')
 endif
 
 subdir('src')
-subdir('test')

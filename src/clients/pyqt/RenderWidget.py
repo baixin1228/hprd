@@ -31,6 +31,8 @@ class RenderWidget(QWidget):
 		self.mouse_key = 0
 		self.installEventFilter(self)
 		self.modifiers = 0
+		self.angle_key = 0
+		self.angle_key_times = 0
 
 	@CFUNCTYPE(None, py_object, c_uint, c_uint)
 	def _stream_size_cb(self, width, height):
@@ -60,17 +62,38 @@ class RenderWidget(QWidget):
 
 	def wheelEvent(self, event):
 		angle = event.angleDelta()
+
 		if angle.y() > 0:
-			proxy().py_wheel_event(4)
+			if self.angle_key == 4 and self.angle_key_times < 10:
+				self.angle_key_times = self.angle_key_times + 1
+			else:
+				proxy().py_wheel_event(4)
+				self.angle_key = 4
+				self.angle_key_times = 1
 
 		if angle.y() < 0:
-			proxy().py_wheel_event(5)
+			if self.angle_key == 5 and self.angle_key_times < 10:
+				self.angle_key_times = self.angle_key_times + 1
+			else:
+				proxy().py_wheel_event(5)
+				self.angle_key = 5
+				self.angle_key_times = 1
 
 		if angle.x() < 0:
-			proxy().py_wheel_event(6)
+			if self.angle_key == 6 and self.angle_key_times < 10:
+				self.angle_key_times = self.angle_key_times + 1
+			else:
+				proxy().py_wheel_event(6)
+				self.angle_key = 6
+				self.angle_key_times = 1
 
 		if angle.x() > 0:
-			proxy().py_wheel_event(7)
+			if self.angle_key == 7 and self.angle_key_times < 10:
+				self.angle_key_times = self.angle_key_times + 1
+			else:
+				proxy().py_wheel_event(7)
+				self.angle_key = 7
+				self.angle_key_times = 1
 
 	def keyPressEvent(self, event):
 		self.modifiers = event.modifiers()

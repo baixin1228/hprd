@@ -109,6 +109,8 @@ static long get_xkeycode(int keycode)
 			return XK_F11;
 		case 123:
 			return XK_F12;
+		case 188:
+			return XK_comma;
 		case 190:
 			return XK_period;
 		case 219:

@@ -181,7 +181,16 @@ def get_key_code(code):
 	if code == Qt.Key_F12:
 		return 123
 
+	if code == Qt.Key_Comma:
+		return 188
+
+	if code == Qt.Key_Less:
+		return 188
+
 	if code == Qt.Key_Period:
+		return 190
+
+	if code == Qt.Key_Greater:
 		return 190
 
 	if code == Qt.Key_BracketLeft:

@@ -82,6 +82,7 @@ class RenderWidget(QWidget):
 		keycode = get_key_code(event.key())
 		proxy().py_key_event(keycode, 0)
 
+
 	def mousePressEvent(self,event):
 		if self.mouse_key != 0:
 			return
@@ -123,6 +124,8 @@ class RenderWidget(QWidget):
 				proxy().py_key_event(Qt.Key_Shift, 0)
 			if self.modifiers == Qt.ControlModifier:
 				proxy().py_key_event(Qt.Key_Control, 0)
+			if self.modifiers == Qt.AltModifier:
+				proxy().py_key_event(Qt.Key_Alt, 0)
 			return True
 
 		return False

@@ -131,7 +131,7 @@ static long get_xkeycode(int keycode)
 			return XK_apostrophe;
 	}
 
-	if(keycode > 32 && keycode <= 57)
+	if(keycode > 32 && keycode <= 200)
 		return keycode;
 	else
 		return XK_Control_L;

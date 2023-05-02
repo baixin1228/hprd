@@ -181,6 +181,12 @@ def get_key_code(code):
 	if code == Qt.Key_F12:
 		return 123
 
+	if code == Qt.Key_Semicolon:
+		return 186
+
+	if code == Qt.Key_Colon:
+		return 186
+
 	if code == Qt.Key_Comma:
 		return 188
 
@@ -193,6 +199,18 @@ def get_key_code(code):
 	if code == Qt.Key_Greater:
 		return 190
 
+	if code == Qt.Key_Slash:
+		return 191
+
+	if code == Qt.Key_Question:
+		return 191
+
+	if code == Qt.Key_Backslash:
+		return 220
+
+	if code == Qt.Key_Bar:
+		return 220
+		
 	if code == Qt.Key_BracketLeft:
 		return 219
 

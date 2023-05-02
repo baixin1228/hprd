@@ -350,9 +350,11 @@ struct display_ops sdl_ops =
 	.priority 			= 10,
 	.init				= sdl_dev_init,
 	.set_info			= sdl_set_info,
-	.map_fb			= sdl_map_fb,
-	.get_fb			= sdl_get_fb,
-	.put_fb			= sdl_put_fb,
+	.map_fb				= sdl_map_fb,
+	.get_fb				= sdl_get_fb,
+	.put_fb				= sdl_put_fb,
 	.main_loop			= sdl_main_loop,
 	.release			= sdl_release,
 };
+
+DISPLAY_ADD_DEV(50, sdl_ops)

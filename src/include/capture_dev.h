@@ -4,8 +4,14 @@
 #include <glib.h>
 #include "frame_buffer.h"
 
-struct capture_ops;
+extern GSList *capture_list;
+#define CAPTURE_ADD_DEV(prio, dev)\
+static __attribute__((constructor(prio + 100))) void __capture_init__##prio()\
+{\
+	capture_list = g_slist_append(capture_list, &dev);\
+}
 
+struct capture_ops;
 struct capture_object
 {
 	void *priv;
@@ -32,7 +38,7 @@ struct capture_ops
 	int (* release)(struct capture_object *obj);
 };
 
-struct capture_object *capture_dev_init(struct mem_pool *pool);
+struct capture_object *capture_dev_init(struct mem_pool *pool, char *name);
 int capture_get_info(struct capture_object *capture_obj, GHashTable *fb_info);
 int capture_set_info(struct capture_object *capture_obj, GHashTable *fb_info);
 int capture_map_fb(struct capture_object *capture_obj, int buf_id);

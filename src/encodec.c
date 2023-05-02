@@ -7,17 +7,19 @@
 #include "frame_buffer.h"
 #include "dev_templete.h"
 
-extern struct encodec_ops ffmpeg_enc_ops;
-extern struct encodec_ops openh264_enc_ops;
+GSList *encodec_list = NULL;
 
-static struct encodec_ops* encodec_devs[] = {
-	&ffmpeg_enc_ops,
-	&openh264_enc_ops
-};
+static gint dev_comp (gconstpointer a, gconstpointer b)
+{
+	struct encodec_ops *dev_a = (struct encodec_ops *)a;
+	char *str_b = (char *)b;
+	return g_ascii_strcasecmp(dev_a->name, str_b);
+}
 
-struct encodec_object *encodec_init(struct mem_pool *pool, char *encodec_name)
+struct encodec_object *encodec_init(struct mem_pool *pool, char *name)
 {
 	int ret;
+	GSList *item = NULL;
 	struct encodec_ops *dev_ops;
 	struct encodec_object *enc_obj;
 
@@ -25,20 +27,32 @@ struct encodec_object *encodec_init(struct mem_pool *pool, char *encodec_name)
 
 	enc_obj->buf_pool = pool;
 
-	dev_ops = GET_DEV_OPS(encodec_ops, encodec_devs, encodec_name);
-
-	if(!dev_ops)
+	if(!encodec_list)
 	{
-		log_error("load encodec:%s fail.\n", encodec_name);
-		exit(-1);
+		log_error("can not find any encodec dev.");
+		return NULL;
 	}
+	dev_ops = (struct encodec_ops *)encodec_list->data;
+
+	if(name)
+	{
+		item = g_slist_find_custom(encodec_list, name, (GCompareFunc)dev_comp);
+		if(!item)
+		{
+			log_warning("not find encodec dev:%s, use default:%s", name, 
+				dev_ops->name);
+		}else{
+			dev_ops = (struct encodec_ops *)item->data;
+		}
+	}
+	log_info("encodec dev is:%s", dev_ops->name);
 
 	ret = dev_ops->init(enc_obj);
 	if(ret == 0)
 	{
 		enc_obj->ops = dev_ops;
 	}else{
-		log_error("init encodec:%s fail.\n", encodec_name);
+		log_error("init encodec:%s fail.\n", name);
 		exit(-1);
 	}
 	

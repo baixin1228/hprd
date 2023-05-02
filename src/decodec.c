@@ -7,11 +7,19 @@
 #include "frame_buffer.h"
 #include "dev_templete.h"
 
-extern struct decodec_ops openh264_dec_ops;
+GSList *decodec_list = NULL;
 
-struct decodec_object *decodec_init(struct mem_pool *pool)
+static gint dev_comp (gconstpointer a, gconstpointer b)
+{
+	struct decodec_ops *dev_a = (struct decodec_ops *)a;
+	char *str_b = (char *)b;
+	return g_ascii_strcasecmp(dev_a->name, str_b);
+}
+
+struct decodec_object *decodec_init(struct mem_pool *pool, char *name)
 {
 	int ret;
+	GSList *item = NULL;
 	struct decodec_ops *dev_ops;
 	struct decodec_object *dec_obj;
 
@@ -19,15 +27,25 @@ struct decodec_object *decodec_init(struct mem_pool *pool)
 
 	dec_obj->buf_pool = pool;
 
-	dev_ops = &openh264_dec_ops;
-
-	if(!dev_ops)
+	if(!decodec_list)
 	{
-		char path_tmp[255];
-		getcwd(path_tmp, 255);
-		log_error("load libffmpeg_dec.so fail. dir:%s\n", path_tmp);
-		exit(-1);
+		log_error("can not find any decodec dev.");
+		return NULL;
 	}
+	dev_ops = (struct decodec_ops *)decodec_list->data;
+
+	if(name)
+	{
+		item = g_slist_find_custom(decodec_list, name, (GCompareFunc)dev_comp);
+		if(!item)
+		{
+			log_warning("not find decodec dev:%s, use default:%s", name, 
+				dev_ops->name);
+		}else{
+			dev_ops = (struct decodec_ops *)item->data;
+		}
+	}
+	log_info("decodec dev is:%s", dev_ops->name);
 
 	ret = dev_ops->init(dec_obj);
 	if(ret == 0)

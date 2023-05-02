@@ -74,7 +74,7 @@ void client_main()
 	uint32_t frame_rate = 61;
 	GHashTable *fb_info = g_hash_table_new(g_str_hash, g_str_equal);
 
-	dec_obj = decodec_init(&client_pool);
+	dec_obj = decodec_init(&client_pool, NULL);
 	out_obj = display_dev_init(&client_pool, "sdl_display");
 
 	for (int i = 0; i < 5; ++i)

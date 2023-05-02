@@ -4,8 +4,14 @@
 #include <glib.h>
 #include "frame_buffer.h"
 
-struct encodec_ops;
+extern GSList *encodec_list;
+#define ENCODEC_ADD_DEV(prio, dev)\
+static __attribute__((constructor(prio + 100))) void __encodec_init__##prio()\
+{\
+	encodec_list = g_slist_append(encodec_list, &dev);\
+}
 
+struct encodec_ops;
 struct encodec_object
 {
 	void *priv;
@@ -28,8 +34,8 @@ struct encodec_ops
 	int (* release)(struct encodec_object *obj);
 };
 
-struct encodec_object *encodec_init(struct mem_pool *pool, char *encodec_name);
-int encodec_set_info(struct encodec_object *display_obj, GHashTable *fb_info);
+struct encodec_object *encodec_init(struct mem_pool *pool, char *name);
+int encodec_set_info(struct encodec_object *encodec_obj, GHashTable *fb_info);
 int encodec_map_fb(struct encodec_object *encodec_obj, int buf_id);
 int encodec_unmap_fb(struct encodec_object *encodec_obj, int buf_id);
 int encodec_get_fb(struct encodec_object *encodec_obj);

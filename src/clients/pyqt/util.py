@@ -85,9 +85,6 @@ def set_win_center(ui):
 	ui.move(int(newLeft),int(newTop))
 
 def get_key_code(code):
-	if code <= 222:
-		return code
-
 	if code == Qt.Key_Backspace:
 		return 8
 
@@ -142,7 +139,140 @@ def get_key_code(code):
 	if code == Qt.Key_Down:
 		return 40
 
-	return 17
+	if code == Qt.Key_Insert:
+		return 45
+
+	if code == Qt.Key_Delete:
+		return 46
+
+	if code == Qt.Key_ParenRight:
+		return 48
+
+	if code == Qt.Key_exclamdown:
+		return 49
+
+	if code == Qt.Key_At:
+		return 50
+
+	if code == Qt.Key_NumberSign:
+		return 51
+
+	if code == Qt.Key_Dollar:
+		return 52
+
+	if code == Qt.Key_Percent:
+		return 53
+
+	if code == Qt.Key_AsciiCircum:
+		return 54
+
+	if code == Qt.Key_Ampersand:
+		return 55
+
+	if code == Qt.Key_Asterisk:
+		return 56
+
+	if code == Qt.Key_ParenLeft:
+		return 57
+
+	if code == Qt.Key_F1:
+		return 112
+
+	if code == Qt.Key_F2:
+		return 113
+
+	if code == Qt.Key_F3:
+		return 114
+
+	if code == Qt.Key_F4:
+		return 115
+
+	if code == Qt.Key_F5:
+		return 116
+
+	if code == Qt.Key_F6:
+		return 117
+
+	if code == Qt.Key_F7:
+		return 118
+
+	if code == Qt.Key_F8:
+		return 119
+
+	if code == Qt.Key_F9:
+		return 120
+
+	if code == Qt.Key_F10:
+		return 121
+
+	if code == Qt.Key_F11:
+		return 122
+
+	if code == Qt.Key_F12:
+		return 123
+
+	if code == Qt.Key_Semicolon:
+		return 186
+
+	if code == Qt.Key_Colon:
+		return 186
+
+	if code == Qt.Key_Equal:
+		return 187
+
+	if code == Qt.Key_Plus:
+		return 187
+
+	if code == Qt.Key_Comma:
+		return 188
+
+	if code == Qt.Key_Less:
+		return 188
+
+	if code == Qt.Key_Minus:
+		return 189
+
+	if code == Qt.Key_Underscore:
+		return 189
+		
+	if code == Qt.Key_Period:
+		return 190
+
+	if code == Qt.Key_Greater:
+		return 190
+
+	if code == Qt.Key_Slash:
+		return 191
+
+	if code == Qt.Key_Question:
+		return 191
+
+	if code == Qt.Key_Backslash:
+		return 220
+
+	if code == Qt.Key_Bar:
+		return 220
+
+	if code == Qt.Key_BracketLeft:
+		return 219
+
+	if code == Qt.Key_BraceLeft:
+		return 219
+
+	if code == Qt.Key_BracketRight:
+		return 221
+
+	if code == Qt.Key_BraceRight:
+		return 221
+
+	if code == Qt.Key_Apostrophe:
+		return 222
+
+	if code == Qt.Key_QuoteDbl:
+		return 222
+
+	print(code)
+	return code
 
 def format_speed(speed):
 	if speed < 1024:

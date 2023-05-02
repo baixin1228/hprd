@@ -187,12 +187,24 @@ def get_key_code(code):
 	if code == Qt.Key_Colon:
 		return 186
 
+	if code == Qt.Key_Equal:
+		return 187
+
+	if code == Qt.Key_Plus:
+		return 187
+		
 	if code == Qt.Key_Comma:
 		return 188
 
 	if code == Qt.Key_Less:
 		return 188
 
+	if code == Qt.Key_Minus:
+		return 189
+
+	if code == Qt.Key_Underscore:
+		return 189
+		
 	if code == Qt.Key_Period:
 		return 190
 
@@ -210,7 +222,7 @@ def get_key_code(code):
 
 	if code == Qt.Key_Bar:
 		return 220
-		
+
 	if code == Qt.Key_BracketLeft:
 		return 219
 

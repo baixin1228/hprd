@@ -111,6 +111,8 @@ static long get_xkeycode(int keycode)
 			return XK_F12;
 		case 186:
 			return XK_colon;
+		case 187:
+			return XK_equal;
 		case 188:
 			return XK_comma;
 		case 190:

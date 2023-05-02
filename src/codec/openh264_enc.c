@@ -348,3 +348,5 @@ struct encodec_ops openh264_enc_ops = {
 	.get_fb				= openh264_enc_getbuf,
 	.release			= openh264_enc_release
 };
+
+ENCODEC_ADD_DEV(99, openh264_enc_ops)

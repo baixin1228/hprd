@@ -271,3 +271,5 @@ struct display_ops x11_renderer_ops = {
 	.resize			= x11_renderer_resize,
 	.release		= x11_renderer_release,
 };
+
+DISPLAY_ADD_DEV(2, x11_renderer_ops)

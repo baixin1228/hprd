@@ -8,18 +8,19 @@
 #include "frame_buffer.h"
 #include "dev_templete.h"
 
-extern struct display_ops x11_renderer_ops;
-extern struct display_ops sdl_ops;
+GSList *display_list = NULL;
 
-static struct display_ops* dsp_devs[] = {
-	&x11_renderer_ops,
-	&sdl_ops
-};
+static gint dev_comp (gconstpointer a, gconstpointer b)
+{
+	struct display_ops *dev_a = (struct display_ops *)a;
+	char *str_b = (char *)b;
+	return g_ascii_strcasecmp(dev_a->name, str_b);
+}
 
-struct display_object *display_dev_init(struct mem_pool *pool,
-	char *display_name)
+struct display_object *display_dev_init(struct mem_pool *pool, char *name)
 {
 	int ret;
+	GSList *item = NULL;
 	struct display_ops *dev_ops;
 	struct display_object *display_obj;
 
@@ -27,12 +28,25 @@ struct display_object *display_dev_init(struct mem_pool *pool,
 
 	display_obj->buf_pool = pool;
 
-	dev_ops = GET_DEV_OPS(display_ops, dsp_devs, display_name);
-
-	if(!dev_ops)
+	if(!display_list)
 	{
+		log_error("can not find any display dev.");
 		return NULL;
 	}
+	dev_ops = (struct display_ops *)display_list->data;
+
+	if(name)
+	{
+		item = g_slist_find_custom(display_list, name, (GCompareFunc)dev_comp);
+		if(!item)
+		{
+			log_warning("not find display dev:%s, use default:%s", name, 
+				dev_ops->name);
+		}else{
+			dev_ops = (struct display_ops *)item->data;
+		}
+	}
+	log_info("display dev is:%s", dev_ops->name);
 
 	ret = dev_ops->init(display_obj);
 	if(ret == 0)

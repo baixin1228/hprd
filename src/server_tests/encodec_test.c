@@ -79,7 +79,7 @@ int server_start()
 
 	cap_obj = capture_dev_init(&server_pool, NULL);
 	enc_obj = encodec_init(&server_pool, "openh264_encodec");
-	in_obj = input_init();
+	in_obj = input_init(NULL);
 
 	for (int i = 0; i < 5; ++i)
 	{

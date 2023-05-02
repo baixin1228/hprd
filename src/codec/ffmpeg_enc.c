@@ -295,3 +295,5 @@ struct encodec_ops ffmpeg_enc_ops = {
 	.get_fb				= ffmpeg_enc_getbuf,
 	.release			= ffmpeg_enc_release
 };
+
+ENCODEC_ADD_DEV(98, ffmpeg_enc_ops)

@@ -151,9 +151,11 @@ static int xlib_dev_release(struct input_object *obj) {
 }
 
 struct input_ops xlib_input_ops = {
-	.name 				= "xlib_input_dev",
+	.name 				= "xlib_input",
 	.init 				= xlib_dev_init,
 	.set_info			= xlib_set_info,
 	.push_key			= xlib_push_key,
 	.release 			= xlib_dev_release,
 };
+
+INPUT_ADD_DEV(99, xlib_input_ops);

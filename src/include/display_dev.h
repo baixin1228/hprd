@@ -5,8 +5,14 @@
 #include "frame_buffer.h"
 #include "protocol.h"
 
-struct display_ops;
+extern GSList *display_list;
+#define DISPLAY_ADD_DEV(prio, dev)\
+static __attribute__((constructor(prio + 100))) void __display_init__##prio()\
+{\
+	display_list = g_slist_append(display_list, &dev);\
+}
 
+struct display_ops;
 struct display_object
 {
 	void *priv;
@@ -31,8 +37,7 @@ struct display_ops
 	int (* release)(struct display_object *obj);
 };
 
-struct display_object *display_dev_init(struct mem_pool *pool,
-	char *display_name);
+struct display_object *display_dev_init(struct mem_pool *pool, char *name);
 int display_set_info(struct display_object *display_obj, GHashTable *fb_info);
 int display_map_fb(struct display_object *display_obj, int buf_id);
 int display_get_fb(struct display_object *display_obj);

@@ -12,77 +12,77 @@
 #define SVC_MAX_BUFFER_COUNT 24
 
 #define OPENH264_VER_AT_LEAST(maj, min) \
-    ((OPENH264_MAJOR  > (maj)) || \
-     (OPENH264_MAJOR == (maj) && OPENH264_MINOR >= (min)))
+	((OPENH264_MAJOR  > (maj)) || \
+	 (OPENH264_MAJOR == (maj) && OPENH264_MINOR >= (min)))
 
 struct svc_dec_data
 {
-    ISVCDecoder *decoder;
-    SBufferInfo info;
-    uint32_t format;
-    uint32_t width;
-    uint32_t hor_stride;
-    uint32_t height;
-    uint32_t ver_stride;
-    struct dev_id_queue buf_q;
+	ISVCDecoder *decoder;
+	SBufferInfo info;
+	uint32_t format;
+	uint32_t width;
+	uint32_t hor_stride;
+	uint32_t height;
+	uint32_t ver_stride;
+	struct dev_id_queue buf_q;
 };
 
 static void _libopenh264_trace_callback(void *ctx, int level, const char *msg)
 {
-    // log_info("[%p] %s", ctx, msg);
+	// log_info("[%p] %s", ctx, msg);
 }
 
 static int svc_decode_init(struct decodec_object *obj)
 {
-    int log_level;
-    SDecodingParam param = { 0 };
-    struct svc_dec_data *svc_data;
-    WelsTraceCallback callback_function;
-    
-    svc_data = calloc(1, sizeof(*svc_data));
-    if(!svc_data)
-    {
-        log_error("calloc fail, check free memery.");
-        goto FAIL1;
-    }
+	int log_level;
+	SDecodingParam param = { 0 };
+	struct svc_dec_data *svc_data;
+	WelsTraceCallback callback_function;
+	
+	svc_data = calloc(1, sizeof(*svc_data));
+	if(!svc_data)
+	{
+		log_error("calloc fail, check free memery.");
+		goto FAIL1;
+	}
 
-    // OpenH264Version libver = WelsGetCodecVersion();
-    if (WelsCreateDecoder (&svc_data->decoder)  ||
-        (NULL == svc_data->decoder)) {
-        printf ("Create Decoder failed.\n");
-        goto FAIL1;
-    }
+	// OpenH264Version libver = WelsGetCodecVersion();
+	if (WelsCreateDecoder (&svc_data->decoder)  ||
+		(NULL == svc_data->decoder)) {
+		printf ("Create Decoder failed.\n");
+		goto FAIL1;
+	}
 
-    // Pass all libopenh264 messages to our callback, to allow ourselves to filter them.
-    log_level = WELS_LOG_DETAIL;
-    (*svc_data->decoder)->SetOption(svc_data->decoder,
-                                    DECODER_OPTION_TRACE_LEVEL, &log_level);
-    callback_function = _libopenh264_trace_callback;
-    (*svc_data->decoder)->SetOption(svc_data->decoder,
-                                    DECODER_OPTION_TRACE_CALLBACK, (void *)&callback_function);
-    (*svc_data->decoder)->SetOption(svc_data->decoder,
-                                    DECODER_OPTION_TRACE_CALLBACK_CONTEXT, (void *)&obj);
+	// Pass all libopenh264 messages to our callback, to allow ourselves to filter them.
+	log_level = WELS_LOG_DETAIL;
+	(*svc_data->decoder)->SetOption(svc_data->decoder,
+									DECODER_OPTION_TRACE_LEVEL, &log_level);
+	callback_function = _libopenh264_trace_callback;
+	(*svc_data->decoder)->SetOption(svc_data->decoder,
+									DECODER_OPTION_TRACE_CALLBACK, (void *)&callback_function);
+	(*svc_data->decoder)->SetOption(svc_data->decoder,
+									DECODER_OPTION_TRACE_CALLBACK_CONTEXT, (void *)&obj);
 
 #if !OPENH264_VER_AT_LEAST(1, 6)
-    param.edisplayColorFormat = videoFormatI420;
+	param.edisplayColorFormat = videoFormatI420;
 #endif
-    param.eEcActiveIdc       = ERROR_CON_DISABLE;
-    param.sVideoProperty.eVideoBsType = VIDEO_BITSTREAM_DEFAULT;
+	param.eEcActiveIdc       = ERROR_CON_DISABLE;
+	param.sVideoProperty.eVideoBsType = VIDEO_BITSTREAM_DEFAULT;
 
-    if ((*svc_data->decoder)->Initialize(svc_data->decoder, &param) != cmResultSuccess)
-    {
-        log_error("OpenH264 Initialize failed\n");
-        goto FAIL2;
-    }
+	if ((*svc_data->decoder)->Initialize(svc_data->decoder, &param) != cmResultSuccess)
+	{
+		log_error("OpenH264 Initialize failed\n");
+		goto FAIL2;
+	}
 
-    obj->priv = svc_data;
+	obj->priv = svc_data;
 
-    return 0;
+	return 0;
 FAIL2:
-    WelsDestroyDecoder(svc_data->decoder);
+	WelsDestroyDecoder(svc_data->decoder);
 FAIL1:
-    free(svc_data);
-    return -1;
+	free(svc_data);
+	return -1;
 }
 
 // static int svc_set_info(struct decodec_object *obj, GHashTable *dec_info)
@@ -95,231 +95,231 @@ FAIL1:
 
 static int svc_map_fb(struct decodec_object *obj, int buf_id)
 {
-    struct raw_buffer *raw_buf;
-    struct svc_dec_data *svc_data = (struct svc_dec_data *)obj->priv;
+	struct raw_buffer *raw_buf;
+	struct svc_dec_data *svc_data = (struct svc_dec_data *)obj->priv;
 
-    dev_id_queue_set_status(&svc_data->buf_q, buf_id, true);
+	dev_id_queue_set_status(&svc_data->buf_q, buf_id, true);
 
-    raw_buf = get_raw_buffer(obj->buf_pool, buf_id);
+	raw_buf = get_raw_buffer(obj->buf_pool, buf_id);
 
-    raw_buf->format = YUV420P;
-    raw_buf->bpp = 8;
+	raw_buf->format = YUV420P;
+	raw_buf->bpp = 8;
 
-    return 0;
+	return 0;
 }
 
 uint32_t svc_fmt_to_com(uint32_t format)
 {
-    switch(format)
-    {
-        case videoFormatRGB:
-        {
-            // log_info("svc format videoFormatRGB.");
-            return RGB888;
-        }
-        case videoFormatRGBA:
-        {
-            // log_info("svc format videoFormatRGBA.");
-            return RGBA8888;
-        }
-        case videoFormatRGB555:
-        {
-            // log_info("svc format videoFormatRGB555.");
-            return RGB555;
-        }
-        case videoFormatRGB565:
-        {
-            // log_info("svc format videoFormatRGB565.");
-            return RGB565;
-        }
-        case videoFormatBGR:
-        {
-            // log_info("svc format videoFormatBGR.");
-            return BGR888;
-        }
-        case videoFormatBGRA:
-        {
-            // log_info("svc format videoFormatBGRA.");
-            return BGRA8888;
-        }
-        case videoFormatABGR:
-        {
-            // log_info("svc format videoFormatABGR.");
-            return ABGR8888;
-        }
-        case videoFormatARGB:
-        {
-            // log_info("svc format videoFormatARGB.");
-            return ARGB8888;
-        }
-        case videoFormatYUY2:
-        {
-            // log_info("svc format videoFormatYUY2.");
-            break;
-        }
-        case videoFormatYVYU:
-        {
-            // log_info("svc format videoFormatYVYU.");
-            break;
-        }
-        case videoFormatUYVY:
-        {
-            // log_info("svc format videoFormatUYVY.");
-            break;
-        }
-        case videoFormatI420:
-        {
-            // log_info("svc format videoFormatI420.");
-            return YUV420P;
-        }
-        case videoFormatYV12:
-        {
-            // log_info("svc format videoFormatYV12.");
-            break;
-        }
-        case videoFormatNV12:
-        {
-            // log_info("svc format videoFormatNV12.");
-            return NV12;
-        }
-    }
+	switch(format)
+	{
+		case videoFormatRGB:
+		{
+			// log_info("svc format videoFormatRGB.");
+			return RGB888;
+		}
+		case videoFormatRGBA:
+		{
+			// log_info("svc format videoFormatRGBA.");
+			return RGBA8888;
+		}
+		case videoFormatRGB555:
+		{
+			// log_info("svc format videoFormatRGB555.");
+			return RGB555;
+		}
+		case videoFormatRGB565:
+		{
+			// log_info("svc format videoFormatRGB565.");
+			return RGB565;
+		}
+		case videoFormatBGR:
+		{
+			// log_info("svc format videoFormatBGR.");
+			return BGR888;
+		}
+		case videoFormatBGRA:
+		{
+			// log_info("svc format videoFormatBGRA.");
+			return BGRA8888;
+		}
+		case videoFormatABGR:
+		{
+			// log_info("svc format videoFormatABGR.");
+			return ABGR8888;
+		}
+		case videoFormatARGB:
+		{
+			// log_info("svc format videoFormatARGB.");
+			return ARGB8888;
+		}
+		case videoFormatYUY2:
+		{
+			// log_info("svc format videoFormatYUY2.");
+			break;
+		}
+		case videoFormatYVYU:
+		{
+			// log_info("svc format videoFormatYVYU.");
+			break;
+		}
+		case videoFormatUYVY:
+		{
+			// log_info("svc format videoFormatUYVY.");
+			break;
+		}
+		case videoFormatI420:
+		{
+			// log_info("svc format videoFormatI420.");
+			return YUV420P;
+		}
+		case videoFormatYV12:
+		{
+			// log_info("svc format videoFormatYV12.");
+			break;
+		}
+		case videoFormatNV12:
+		{
+			// log_info("svc format videoFormatNV12.");
+			return NV12;
+		}
+	}
 
-    return RGB888;
+	return RGB888;
 }
 
 static int svc_push_pkt(struct decodec_object *obj, char *buf, size_t len)
 {
-    DECODING_STATE state;
-    int buf_id;
-    struct raw_buffer *raw_buf;
-    struct svc_dec_data *svc_data = obj->priv;
+	DECODING_STATE state;
+	int buf_id;
+	struct raw_buffer *raw_buf;
+	struct svc_dec_data *svc_data = obj->priv;
 
-    buf_id = dev_id_queue_get_id(&svc_data->buf_q);
-    if(buf_id == -1)
-        return -1;
-    
-    raw_buf = get_raw_buffer(obj->buf_pool, buf_id);
+	buf_id = dev_id_queue_get_id(&svc_data->buf_q);
+	if(buf_id == -1)
+		return -1;
+	
+	raw_buf = get_raw_buffer(obj->buf_pool, buf_id);
 
-    if (!buf)
-    {
+	if (!buf)
+	{
 #if OPENH264_VER_AT_LEAST(1, 9)
-        int end_of_stream = 1;
-        (*svc_data->decoder)->SetOption(svc_data->decoder, DECODER_OPTION_END_OF_STREAM, &end_of_stream);
-        state = (*svc_data->decoder)->FlushFrame(svc_data->decoder,
-                (uint8_t **)raw_buf->ptrs, &svc_data->info);
-        return 0;
+		int end_of_stream = 1;
+		(*svc_data->decoder)->SetOption(svc_data->decoder, DECODER_OPTION_END_OF_STREAM, &end_of_stream);
+		state = (*svc_data->decoder)->FlushFrame(svc_data->decoder,
+				(uint8_t **)raw_buf->ptrs, &svc_data->info);
+		return 0;
 #else
-        return 0;
+		return 0;
 #endif
-    }
-    else
-    {
-        // svc_data->info.uiInBsTimeStamp = buffer->pts;
+	}
+	else
+	{
+		// svc_data->info.uiInBsTimeStamp = buffer->pts;
 #if OPENH264_VER_AT_LEAST(1, 4)
-        // Contrary to the name, DecodeFrameNoDelay actually does buffering
-        // and reordering of frames, and is the recommended decoding entry
-        // point since 1.4. This is essential for successfully decoding
-        // B-frames.
-        state = (*svc_data->decoder)->DecodeFrameNoDelay(svc_data->decoder,
-                (const unsigned char *)buf, len, (uint8_t **)raw_buf->ptrs, &svc_data->info);
+		// Contrary to the name, DecodeFrameNoDelay actually does buffering
+		// and reordering of frames, and is the recommended decoding entry
+		// point since 1.4. This is essential for successfully decoding
+		// B-frames.
+		state = (*svc_data->decoder)->DecodeFrameNoDelay(svc_data->decoder,
+				(const unsigned char *)buf, len, (uint8_t **)raw_buf->ptrs, &svc_data->info);
 #else
-        state = (*svc_data->decoder)->DecodeFrame2(svc_data->decoder,
-                (const unsigned char *)buf, len, (uint8_t **)raw_buf->ptrs, &svc_data->info);
+		state = (*svc_data->decoder)->DecodeFrame2(svc_data->decoder,
+				(const unsigned char *)buf, len, (uint8_t **)raw_buf->ptrs, &svc_data->info);
 #endif
-    }
-    if (state != dsErrorFree)
-    {
-        // log_error("OpenH264: DecodeFrame failed:%p", state);
-        return -1;
-    }
-    if (svc_data->info.iBufferStatus != 1)
-    {
-        return -1;
-    }
+	}
+	if (state != dsErrorFree)
+	{
+		// log_error("OpenH264: DecodeFrame failed:%p", state);
+		return -1;
+	}
+	if (svc_data->info.iBufferStatus != 1)
+	{
+		return -1;
+	}
 
-    svc_data->width = svc_data->info.UsrData.sSystemBuffer.iWidth;
-    svc_data->height = svc_data->info.UsrData.sSystemBuffer.iHeight;
-    svc_data->hor_stride = svc_data->info.UsrData.sSystemBuffer.iStride[0];
-    svc_data->ver_stride = svc_data->info.UsrData.sSystemBuffer.iStride[1];
-    svc_data->format = 
-    svc_fmt_to_com(svc_data->info.UsrData.sSystemBuffer.iFormat);
+	svc_data->width = svc_data->info.UsrData.sSystemBuffer.iWidth;
+	svc_data->height = svc_data->info.UsrData.sSystemBuffer.iHeight;
+	svc_data->hor_stride = svc_data->info.UsrData.sSystemBuffer.iStride[0];
+	svc_data->ver_stride = svc_data->info.UsrData.sSystemBuffer.iStride[1];
+	svc_data->format = 
+	svc_fmt_to_com(svc_data->info.UsrData.sSystemBuffer.iFormat);
 
-    raw_buf->width = svc_data->width;
-    raw_buf->hor_stride = svc_data->hor_stride;
-    raw_buf->height = svc_data->height;
-    raw_buf->ver_stride = svc_data->ver_stride;
-    raw_buf->size = svc_data->width * svc_data->height * 3 / 2;
-    raw_buf->format = svc_data->format;
+	raw_buf->width = svc_data->width;
+	raw_buf->hor_stride = svc_data->hor_stride;
+	raw_buf->height = svc_data->height;
+	raw_buf->ver_stride = svc_data->ver_stride;
+	raw_buf->size = svc_data->width * svc_data->height * 3 / 2;
+	raw_buf->format = svc_data->format;
 
-    dev_id_queue_sub_id(&svc_data->buf_q);
-    return 0;
+	dev_id_queue_sub_id(&svc_data->buf_q);
+	return 0;
 }
 
 static int svc_get_info(struct decodec_object *obj, GHashTable *fb_info)
 {
-    struct svc_dec_data *svc_data = obj->priv;
+	struct svc_dec_data *svc_data = obj->priv;
 
-    if(svc_data->width == 0 || svc_data->height == 0 || svc_data->format == 0)
-        return -1;
+	if(svc_data->width == 0 || svc_data->height == 0 || svc_data->format == 0)
+		return -1;
 
-    log_info("openh264, width:%d height:%d", svc_data->width, svc_data->height);
-    g_hash_table_insert(fb_info, "format", &svc_data->format);
-    g_hash_table_insert(fb_info, "width", &svc_data->width);
-    g_hash_table_insert(fb_info, "height", &svc_data->height);
-    g_hash_table_insert(fb_info, "hor_stride", &svc_data->hor_stride);
-    g_hash_table_insert(fb_info, "ver_stride", &svc_data->ver_stride);
-    return 0;
+	log_info("openh264, width:%d height:%d", svc_data->width, svc_data->height);
+	g_hash_table_insert(fb_info, "format", &svc_data->format);
+	g_hash_table_insert(fb_info, "width", &svc_data->width);
+	g_hash_table_insert(fb_info, "height", &svc_data->height);
+	g_hash_table_insert(fb_info, "hor_stride", &svc_data->hor_stride);
+	g_hash_table_insert(fb_info, "ver_stride", &svc_data->ver_stride);
+	return 0;
 }
 
 static int svc_get_fb(struct decodec_object *obj)
 {
-    int buf_id;
-    struct svc_dec_data *svc_data = obj->priv;
+	int buf_id;
+	struct svc_dec_data *svc_data = obj->priv;
 
-    buf_id = dev_id_queue_get_buf(&svc_data->buf_q);
+	buf_id = dev_id_queue_get_buf(&svc_data->buf_q);
 
-    return buf_id;
+	return buf_id;
 }
 
 static int svc_put_fb(struct decodec_object *obj, int buf_id)
 {
-    struct svc_dec_data *svc_data = obj->priv;
+	struct svc_dec_data *svc_data = obj->priv;
 
-    dev_id_queue_put_buf(&svc_data->buf_q, buf_id);
+	dev_id_queue_put_buf(&svc_data->buf_q, buf_id);
 
-    return 0;
+	return 0;
 }
 
 static int svc_unmap_fb(struct decodec_object *obj, int buf_id)
 {
-    struct svc_dec_data *svc_data = obj->priv;
+	struct svc_dec_data *svc_data = obj->priv;
 
-    dev_id_queue_set_status(&svc_data->buf_q, buf_id, false);
+	dev_id_queue_set_status(&svc_data->buf_q, buf_id, false);
 
-    return 0;
+	return 0;
 }
 
 static int svc_decode_release(struct decodec_object *obj)
 {
-    struct svc_dec_data *svc_data = obj->priv;
+	struct svc_dec_data *svc_data = obj->priv;
 
-    if (svc_data->decoder)
-        WelsDestroyDecoder(svc_data->decoder);
+	if (svc_data->decoder)
+		WelsDestroyDecoder(svc_data->decoder);
 
-    return 0;
+	return 0;
 }
 
 struct decodec_ops openh264_dec_ops =
 {
-    .name               = "openh264_dec",
-    .init               = svc_decode_init,
-    .put_pkt            = svc_push_pkt,
-    .get_info           = svc_get_info,
-    .map_fb         = svc_map_fb,
-    .get_fb         = svc_get_fb,
-    .put_fb         = svc_put_fb,
-    .unmap_fb       = svc_unmap_fb,
-    .release            = svc_decode_release
+	.name               = "openh264_dec",
+	.init               = svc_decode_init,
+	.put_pkt            = svc_push_pkt,
+	.get_info           = svc_get_info,
+	.map_fb             = svc_map_fb,
+	.get_fb             = svc_get_fb,
+	.put_fb             = svc_put_fb,
+	.unmap_fb           = svc_unmap_fb,
+	.release            = svc_decode_release
 };
 
 DECODEC_ADD_DEV(98, openh264_dec_ops)

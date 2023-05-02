@@ -195,7 +195,7 @@ int server_start(char *capture, char *encodec)
 
 	cap_obj = capture_dev_init(&server_pool, capture);
 	enc_obj = encodec_init(&server_pool, encodec);
-	in_obj = input_init();
+	in_obj = input_init(NULL);
 
 	for (int i = 0; i < 5; ++i)
 	{

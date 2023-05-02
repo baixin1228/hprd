@@ -10,23 +10,43 @@
 
 extern struct input_ops xlib_input_ops;
 
-struct input_object *input_init()
+GSList *input_list = NULL;
+
+static gint dev_comp (gconstpointer a, gconstpointer b)
+{
+	struct input_ops *dev_a = (struct input_ops *)a;
+	char *str_b = (char *)b;
+	return g_ascii_strcasecmp(dev_a->name, str_b);
+}
+
+struct input_object *input_init(char *name)
 {
 	int ret;
+	GSList *item = NULL;
 	struct input_ops *dev_ops;
 	struct input_object *input_obj;
 
 	input_obj = calloc(1, sizeof(struct input_object));
 
-	dev_ops = &xlib_input_ops;
-
-	if(!dev_ops)
+	if(!input_list)
 	{
-		char path_tmp[255];
-		getcwd(path_tmp, 255);
-		log_error("load xlib_input_ops fail. dir:%s\n", path_tmp);
-		exit(-1);
+		log_error("can not find any input dev.");
+		return NULL;
 	}
+	dev_ops = (struct input_ops *)input_list->data;
+
+	if(name)
+	{
+		item = g_slist_find_custom(input_list, name, (GCompareFunc)dev_comp);
+		if(!item)
+		{
+			log_warning("not find input dev:%s, use default:%s", name, 
+				dev_ops->name);
+		}else{
+			dev_ops = (struct input_ops *)item->data;
+		}
+	}
+	log_info("input dev is:%s", dev_ops->name);
 
 	ret = dev_ops->init(input_obj);
 	if(ret == 0)

@@ -115,6 +115,8 @@ static long get_xkeycode(int keycode)
 			return XK_equal;
 		case 188:
 			return XK_comma;
+		case 189:
+			return XK_minus;
 		case 190:
 			return XK_period;
 		case 191:

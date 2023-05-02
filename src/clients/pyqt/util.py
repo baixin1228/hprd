@@ -145,6 +145,36 @@ def get_key_code(code):
 	if code == Qt.Key_Delete:
 		return 46
 
+	if code == Qt.Key_ParenRight:
+		return 48
+
+	if code == Qt.Key_exclamdown:
+		return 49
+
+	if code == Qt.Key_At:
+		return 50
+
+	if code == Qt.Key_NumberSign:
+		return 51
+
+	if code == Qt.Key_Dollar:
+		return 52
+
+	if code == Qt.Key_Percent:
+		return 53
+
+	if code == Qt.Key_AsciiCircum:
+		return 54
+
+	if code == Qt.Key_Ampersand:
+		return 55
+
+	if code == Qt.Key_Asterisk:
+		return 56
+
+	if code == Qt.Key_ParenLeft:
+		return 57
+
 	if code == Qt.Key_F1:
 		return 112
 
@@ -192,7 +222,7 @@ def get_key_code(code):
 
 	if code == Qt.Key_Plus:
 		return 187
-		
+
 	if code == Qt.Key_Comma:
 		return 188
 

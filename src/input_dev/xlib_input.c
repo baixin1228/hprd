@@ -85,6 +85,36 @@ static long get_xkeycode(int keycode)
 			return XK_Delete;
 		case 108:
 			return XK_Return;
+		case 112:
+			return XK_F1;
+		case 113:
+			return XK_F2;
+		case 114:
+			return XK_F3;
+		case 115:
+			return XK_F4;
+		case 116:
+			return XK_F5;
+		case 117:
+			return XK_F6;
+		case 118:
+			return XK_F7;
+		case 119:
+			return XK_F8;
+		case 120:
+			return XK_F9;
+		case 121:
+			return XK_F10;
+		case 122:
+			return XK_F11;
+		case 123:
+			return XK_F12;
+		case 219:
+			return XK_bracketleft;
+		case 221:
+			return XK_bracketright;
+		case 222:
+			return XK_apostrophe;
 	}
 
 	if(keycode > 32 && keycode <= 222)

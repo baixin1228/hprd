@@ -72,7 +72,6 @@ class RenderWidget(QWidget):
 			proxy().py_wheel_event(7)
 
 	def keyPressEvent(self, event):
-		print(event.key())
 		keycode = get_key_code(event.key())
 		proxy().py_key_event(keycode, 1)
 

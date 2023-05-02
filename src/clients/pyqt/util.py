@@ -85,9 +85,6 @@ def set_win_center(ui):
 	ui.move(int(newLeft),int(newTop))
 
 def get_key_code(code):
-	if code <= 222:
-		return code
-
 	if code == Qt.Key_Backspace:
 		return 8
 
@@ -148,7 +145,62 @@ def get_key_code(code):
 	if code == Qt.Key_Delete:
 		return 46
 
-	return 17
+	if code == Qt.Key_F1:
+		return 112
+
+	if code == Qt.Key_F2:
+		return 113
+
+	if code == Qt.Key_F3:
+		return 114
+
+	if code == Qt.Key_F4:
+		return 115
+
+	if code == Qt.Key_F5:
+		return 116
+
+	if code == Qt.Key_F6:
+		return 117
+
+	if code == Qt.Key_F7:
+		return 118
+
+	if code == Qt.Key_F8:
+		return 119
+
+	if code == Qt.Key_F9:
+		return 120
+
+	if code == Qt.Key_F10:
+		return 121
+
+	if code == Qt.Key_F11:
+		return 122
+
+	if code == Qt.Key_F12:
+		return 123
+
+	if code == Qt.Key_BracketLeft:
+		return 219
+
+	if code == Qt.Key_BraceLeft:
+		return 219
+
+	if code == Qt.Key_BracketRight:
+		return 221
+
+	if code == Qt.Key_BraceRight:
+		return 221
+
+	if code == Qt.Key_Apostrophe:
+		return 222
+
+	if code == Qt.Key_QuoteDbl:
+		return 222
+
+	print(code)
+	return code
 
 def format_speed(speed):
 	if speed < 1024:

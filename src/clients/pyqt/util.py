@@ -142,6 +142,12 @@ def get_key_code(code):
 	if code == Qt.Key_Down:
 		return 40
 
+	if code == Qt.Key_Insert:
+		return 45
+
+	if code == Qt.Key_Delete:
+		return 46
+
 	return 17
 
 def format_speed(speed):

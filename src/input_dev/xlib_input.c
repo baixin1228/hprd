@@ -48,47 +48,49 @@ static long get_xkeycode(int keycode)
 	switch(keycode)
 	{
 		case 8:
-			return XStringToKeysym("BackSpace");
+			return XK_BackSpace;
 		case 9:
-			return XStringToKeysym("Tab");
+			return XK_Tab;
 		case 13:
-			return XStringToKeysym("Return");
+			return XK_Return;
 		case 16:
-			return XStringToKeysym("Shift_L");
+			return XK_Shift_L;
 		case 17:
-			return XStringToKeysym("Control_L");
+			return XK_Control_L;
 		case 18:
-			return XStringToKeysym("Alt_L");
+			return XK_Alt_L;
 		case 20:
-			return XStringToKeysym("CapsLock");
+			return XK_Caps_Lock;
 		case 27:
-			return XStringToKeysym("Escape");
+			return XK_Escape;
 		case 32:
-			return XStringToKeysym("space");
+			return XK_space;
 		case 33:
-			return XStringToKeysym("PageUp");
+			return XK_Page_Up;
 		case 34:
-			return XStringToKeysym("PageDown");
+			return XK_Page_Down;
 		case 35:
-			return XStringToKeysym("End");
+			return XK_End;
 		case 36:
-			return XStringToKeysym("Home");
+			return XK_Home;
 		case 37:
-			return XStringToKeysym("Left");
+			return XK_Left;
 		case 38:
-			return XStringToKeysym("Up");
+			return XK_Up;
 		case 39:
-			return XStringToKeysym("Right");
+			return XK_Right;
 		case 40:
-			return XStringToKeysym("Down");
+			return XK_Down;
+		case 46:
+			return XK_Delete;
 		case 108:
-			return XStringToKeysym("Enter");
+			return XK_Return;
 	}
 
 	if(keycode > 32 && keycode <= 222)
 		return keycode;
 	else
-		return XStringToKeysym("Control_L");
+		return XK_Control_L;
 }
 
 static int xlib_push_key(struct input_object *obj, struct input_event *event)

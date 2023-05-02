@@ -30,6 +30,7 @@ class RenderWidget(QWidget):
 		self.setFocusPolicy(Qt.StrongFocus)
 		self.mouse_key = 0
 		self.installEventFilter(self)
+		self.modifiers = 0
 
 	@CFUNCTYPE(None, py_object, c_uint, c_uint)
 	def _stream_size_cb(self, width, height):
@@ -72,10 +73,12 @@ class RenderWidget(QWidget):
 			proxy().py_wheel_event(7)
 
 	def keyPressEvent(self, event):
+		self.modifiers = event.modifiers()
 		keycode = get_key_code(event.key())
 		proxy().py_key_event(keycode, 1)
 
 	def keyReleaseEvent(self, event):
+		self.modifiers = event.modifiers()
 		keycode = get_key_code(event.key())
 		proxy().py_key_event(keycode, 0)
 
@@ -116,7 +119,12 @@ class RenderWidget(QWidget):
 		if event.type() == QEvent.FocusIn:
 			return True
 		if event.type() == QEvent.FocusOut:
+			if self.modifiers == Qt.ShiftModifier:
+				proxy().py_key_event(Qt.Key_Shift, 0)
+			if self.modifiers == Qt.ControlModifier:
+				proxy().py_key_event(Qt.Key_Control, 0)
 			return True
+
 		return False
 
 	def resizeEvent(self, event):

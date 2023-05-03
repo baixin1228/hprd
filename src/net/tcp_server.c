@@ -235,16 +235,22 @@ struct tcp_server_client *tcp_find_client(uint32_t client_id)
 {
 	struct tcp_server_client *ret = NULL;
 
+	pthread_spin_lock(&tcp_server.lock);
 	if(g_hash_table_contains(tcp_server.client_table, &client_id))
 	{
 		ret = (struct tcp_server_client *)g_hash_table_lookup(tcp_server.client_table, &client_id);
 	}
+	pthread_spin_unlock(&tcp_server.lock);
 	return ret;
 }
 
 int get_client_count(void)
 {
-	return g_hash_table_size(tcp_server.client_table);
+	int ret;
+	pthread_spin_lock(&tcp_server.lock);
+	ret = g_hash_table_size(tcp_server.client_table);
+	pthread_spin_unlock(&tcp_server.lock);
+	return ret;
 }
 
 int tcp_send_data_safe(struct tcp_server_client *ev, char *buf, uint32_t len)
@@ -316,10 +322,10 @@ static int _foreach_active(gpointer key, gpointer value, gpointer user_data)
 }
 
 __attribute__((unused))
-static void _check_active(int epfd) {
+static void _check_active() {
 	pthread_spin_lock(&tcp_server.lock);
 	g_hash_table_foreach_remove(tcp_server.client_table, _foreach_active,
-		&epfd);
+		&tcp_server.epoll_fd);
 	pthread_spin_unlock(&tcp_server.lock);
 }
 
@@ -334,9 +340,10 @@ static void _foreach_send(gpointer key, gpointer value, gpointer user_data)
 	}
 }
 
-static void _check_need_send(int epfd) {
+static void _check_need_send() {
 	pthread_spin_lock(&tcp_server.lock);
-	g_hash_table_foreach(tcp_server.client_table, _foreach_send, &epfd);
+	g_hash_table_foreach(tcp_server.client_table, _foreach_send,
+		&tcp_server.epoll_fd);
 	pthread_spin_unlock(&tcp_server.lock);
 }
 
@@ -399,7 +406,7 @@ static void *_tcp_server_thread(void *opaque) {
 
 	struct epoll_event events[MAX_EVENTS + 1];
 	while (1) {
-		// _check_active(tcp_server.epoll_fd);
+		// _check_active();
 		nfd = epoll_wait(tcp_server.epoll_fd, events, MAX_EVENTS + 1, 10);
 		if(nfd < 0)
 		{
@@ -409,7 +416,7 @@ static void *_tcp_server_thread(void *opaque) {
 		for (int i = 0; i < nfd; i++) {
 			_process_event(&events[i]);
 		}
-		_check_need_send(tcp_server.epoll_fd);
+		_check_need_send();
 	}
 }
 

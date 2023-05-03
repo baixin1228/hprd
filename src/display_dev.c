@@ -2,7 +2,6 @@
 #include <unistd.h>
 
 #include "util.h"
-#include "dl_help.h"
 #include "display_dev.h"
 #include "buffer_pool.h"
 #include "frame_buffer.h"

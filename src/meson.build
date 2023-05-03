@@ -23,7 +23,6 @@ if build_target == 'server' or build_target == 'all'
 	server_srcs += 'input_dev.c'
 	server_srcs += 'capture_dev.c'
 	server_srcs += 'encodec.c'
-	server_srcs += 'dl_help.c'
 
 	server_static_lib = static_library('server', server_srcs,
 		include_directories : inc,
@@ -49,7 +48,6 @@ if build_target == 'client' or build_target == 'all'
 
 	client_srcs += 'display_dev.c'
 	client_srcs += 'decodec.c'
-	client_srcs += 'dl_help.c'
 
 	client_static_lib = static_library('client', client_srcs,
 			include_directories : inc,

@@ -47,6 +47,8 @@ static long get_xkeycode(int keycode)
 {
 	switch(keycode)
 	{
+		case 1:
+			return XK_Super_L;
 		case 8:
 			return XK_BackSpace;
 		case 9:

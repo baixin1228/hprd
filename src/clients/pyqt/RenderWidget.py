@@ -33,6 +33,11 @@ class RenderWidget(QWidget):
 		self.modifiers = 0
 		self.angle_key = 0
 		self.angle_key_times = 0
+		self.grab = False
+		self.enable_clip = False
+		self.text_clip = 0
+		self.html_clip = 0
+		self.image_clip = 0
 
 	@CFUNCTYPE(None, py_object, c_uint, c_uint)
 	def _stream_size_cb(self, width, height):
@@ -97,6 +102,11 @@ class RenderWidget(QWidget):
 
 	def keyPressEvent(self, event):
 		self.modifiers = event.modifiers()
+		if self.modifiers & Qt.AltModifier and self.modifiers & Qt.ControlModifier and event.key() == Qt.Key_G:
+			proxy().py_key_event(Qt.Key_Control, 0)
+			proxy().py_key_event(Qt.Key_Alt, 0)
+			self._ui_release_grab()
+			return
 		keycode = get_key_code(event.key())
 		proxy().py_key_event(keycode, 1)
 
@@ -123,6 +133,7 @@ class RenderWidget(QWidget):
 
 	def mouseMoveEvent(self,event):
 		time_ms = int(round(time.time() * 1000))
+		self._ui_grab()
 		if time_ms - self.last_time > 1000 / self.main_window.get_fps():
 			proxy().py_mouse_move(*self._get_remote_pos(event.x(), event.y()))
 			self.last_time = time_ms
@@ -138,17 +149,57 @@ class RenderWidget(QWidget):
 			self.old_height = self.height()
 			proxy().py_client_resize(self.width(), int(self.height()))
 
+	def _ui_grab(self):
+		if self.grab == False and self.geometry().contains(self.mapFromGlobal(QCursor.pos())):
+			self.grabKeyboard()
+			self.grab = True
+			print("grabKeyboard")
+
+	def _ui_release_grab(self):
+		if self.grab == True:
+			self.releaseKeyboard()
+			self.grab = False
+			print("releaseKeyboard")
+
+	def enterEvent(self, event):
+		self._ui_grab()
+
+	def leaveEvent(self, event):
+		self._ui_release_grab()
+
+	def _focus_in(self):
+		self._ui_grab()
+		clipboard = QApplication.clipboard()
+		mimeData = clipboard.mimeData()
+		# print(mimeData.formats())
+		if mimeData.hasFormat('text/plain'):
+			pass
+			# print(mimeData.text())
+		elif mimeData.hasHtml():
+			pass
+			# print(mimeData.html())
+		elif mimeData.hasFormat('application/x-qt-image'):
+			pass
+			# print("img")
+			# self.showBox.setPixmap(clipboard.pixmap())
+
+	def _focus_out(self):
+		if self.modifiers & Qt.ShiftModifier:
+			proxy().py_key_event(Qt.Key_Shift, 0)
+		if self.modifiers & Qt.ControlModifier:
+			proxy().py_key_event(Qt.Key_Control, 0)
+		if self.modifiers & Qt.AltModifier:
+			proxy().py_key_event(Qt.Key_Alt, 0)
+		self._ui_release_grab()
+
 	def eventFilter(self, widget, event):
-		# avoid flickering
 		if event.type() == QEvent.FocusIn:
+			if event.reason() == Qt.ActiveWindowFocusReason:
+				self._focus_in()
 			return True
 		if event.type() == QEvent.FocusOut:
-			if self.modifiers == Qt.ShiftModifier:
-				proxy().py_key_event(Qt.Key_Shift, 0)
-			if self.modifiers == Qt.ControlModifier:
-				proxy().py_key_event(Qt.Key_Control, 0)
-			if self.modifiers == Qt.AltModifier:
-				proxy().py_key_event(Qt.Key_Alt, 0)
+			if event.reason() == Qt.ActiveWindowFocusReason:
+				self._focus_out()
 			return True
 
 		return False

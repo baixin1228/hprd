@@ -59,7 +59,7 @@ if build_target == 'client' or build_target == 'all'
 	hprd_client = executable('client', 'client.c',
 		include_directories : inc,
 		dependencies: client_deps,
-		link_with: client_static_lib,
+		link_whole: client_static_lib,
 		link_args : ['-ldl', '-lpthread'],
 	    install : true)
 

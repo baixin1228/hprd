@@ -7,7 +7,6 @@ display_dev_lib = static_library('displaydev',
 
 client_libs += display_dev_lib
 
-
 subdir('opengl')
 x11_renderer_source = files('x11_renderer.c')
 x11_renderer_lib = static_library('x11renderer',

@@ -245,6 +245,8 @@ static int sdl_set_info(struct display_object *obj, GHashTable *fb_info)
 	priv->sdlRect.h = priv->screen_h;
 	priv->fb_format = *(uint32_t *)g_hash_table_lookup(fb_info, "format");
 	priv->cur_buf_id = -1;
+    // SDL_SetWindowGrab(priv->sdl_window, SDL_TRUE);
+
 	return 0;
 }
 

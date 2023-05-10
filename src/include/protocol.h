@@ -9,6 +9,7 @@ enum NET_CHANNEL
 	VIDEO_CHANNEL,
 	AUDIO_CHANNEL,
 	INPUT_CHANNEL,
+	CLIP_CHANNEL,
 	REQUEST_CHANNEL,
 	RESPONSE_CHANNEL,
 	USB_CHANNEL,
@@ -47,6 +48,11 @@ struct input_event{
   uint32_t key_code;
   uint32_t x;
   uint32_t y;
+};
+
+struct clip_event{
+  uint16_t data_len;
+  char clip_data[0];
 };
 
 #define RET_SUCCESS 1

@@ -37,6 +37,9 @@ clib.py_mouse_click.restype = c_int
 clib.py_wheel_event.argtypes = [c_int]
 clib.py_wheel_event.restype = c_int
 
+clib.py_clip_event.argtypes = [POINTER(c_char), POINTER(c_char), c_ushort]
+clib.py_clip_event.restype = c_int
+
 clib.py_key_event.argtypes = [c_int, c_int]
 clib.py_key_event.restype = c_int
 

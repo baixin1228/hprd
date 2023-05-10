@@ -26,12 +26,14 @@ struct input_ops
 	int (* init)(struct input_object *obj);
 	int (* set_info)(struct input_object *obj, GHashTable *info);
 	int (* push_key)(struct input_object *obj, struct input_event *event);
+	int (* push_clip)(struct input_object *obj, struct clip_event *event);
 	int (* release)(struct input_object *obj);
 };
 
 struct input_object *input_init(char *name);
 int input_set_info(struct input_object *input_obj, GHashTable *fb_info);
 int input_push_key(struct input_object *input_obj, struct input_event *event);
+int input_push_clip(struct input_object *obj, struct clip_event *event);
 int input_release(struct input_object *input_obj);
 
 #endif

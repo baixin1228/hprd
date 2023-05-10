@@ -64,6 +64,12 @@ static void on_key(struct input_event *event)
 		input_push_key(in_obj, event);
 }
 
+static void on_clip(struct clip_event *event)
+{
+	if(in_obj)
+		input_push_clip(in_obj, event);
+}
+
 #define MIN_BIT_RATE (1 * 1024 * 1024)
 uint32_t frame_rate = 58;
 uint32_t stream_ftm = STREAM_H264;
@@ -156,6 +162,11 @@ static void on_server_pkt(struct server_client *client, char *buf, size_t len)
 		case INPUT_CHANNEL:
 		{
 			on_key((struct input_event *)pkt->data);
+			break;
+		}
+		case CLIP_CHANNEL:
+		{
+			on_clip((struct clip_event *)pkt->data);
 			break;
 		}
 		case REQUEST_CHANNEL:

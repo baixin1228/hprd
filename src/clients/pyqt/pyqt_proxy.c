@@ -381,6 +381,29 @@ int py_key_event(int key, int down_or_up) {
 	return 0;
 }
 
+int py_clip_event(char *type, char *data, uint16_t len) {
+	struct clip_event *event = NULL;
+	if(!event)
+	{
+		event = calloc(1, 10240);
+	}
+	if(len > 10200)
+		return -1;
+
+	event->data_len = htons(len + strlen(type) + 1);
+	strcpy(event->clip_data, type);
+	memcpy(&event->clip_data[strlen(type) + 1], data, len);
+
+	if(send_event(CLIP_CHANNEL, (char *)event, sizeof(event) + len + 
+		strlen(type) + 1)
+			== -1) {
+		log_error("clip_event fail.");
+		return -1;
+	}
+
+	return 0;
+}
+
 int _send_request_data(void *oqu, uint32_t type, uint32_t frame_rate,
 	void (*callback)(void *oqu, uint32_t ret, uint32_t value)) {
 	static uint32_t id = 0;

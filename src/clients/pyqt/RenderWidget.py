@@ -35,8 +35,8 @@ class RenderWidget(QWidget):
 		self.angle_key_times = 0
 		self.grab = False
 		self.enable_clip = False
-		self.text_clip = 0
-		self.html_clip = 0
+		self.text_clip = ""
+		self.html_clip = ""
 		self.image_clip = 0
 
 	@CFUNCTYPE(None, py_object, c_uint, c_uint)
@@ -175,8 +175,10 @@ class RenderWidget(QWidget):
 		mimeData = clipboard.mimeData()
 		# print(mimeData.formats())
 		if mimeData.hasFormat('text/plain'):
-			pass
-			# print(mimeData.text())
+			if self.text_clip != mimeData.text():
+				self.text_clip = mimeData.text()
+
+				proxy().py_clip_event('text/plain'.encode('utf-8'), self.text_clip.encode('utf-8'), len(self.text_clip) + 1)
 		elif mimeData.hasHtml():
 			pass
 			# print(mimeData.html())

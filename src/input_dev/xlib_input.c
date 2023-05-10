@@ -2,9 +2,11 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <assert.h>
-#include <X11/extensions/XTest.h>
+#include <string.h>
+#include <X11/Xatom.h>
 #include <X11/keysym.h>
 #include <X11/keysymdef.h>
+#include <X11/extensions/XTest.h>
 
 #include <glib.h>
 
@@ -16,13 +18,108 @@
 
 struct xlib_input {
 	Display *display;
+	Atom sel;
+	char clip_type[64];
+	char clip_data[10240];
+	size_t clip_len;
 	uint32_t screen_num;
 	Window root_win;
+	pthread_t clip_thread;
+	bool exit;
 };
+
+int _on_request_atom(struct xlib_input *priv, XSelectionRequestEvent *req)
+{
+	if(strcmp("text/plain", priv->clip_type) == 0)
+	{
+		Atom string_atom_list[] = { 
+			XInternAtom(priv->display, "UTF8_STRING", False),
+			XInternAtom(priv->display, "TEXT", False),
+			XInternAtom(priv->display, "STRING", False),
+			XInternAtom(priv->display, "text/plain", False),
+			XInternAtom(priv->display, "COMPOUND_TEXT", False),
+			XA_STRING
+		};
+		XChangeProperty(priv->display, req->requestor,
+					req->property, XInternAtom(priv->display, "ATOM", False),
+					32, PropModeReplace,
+					(uint8_t *)string_atom_list,
+					sizeof(string_atom_list) / sizeof(string_atom_list[0]));
+		return 0;
+	}
+	log_warning("[%s] not find clip type:%s", __func__, priv->clip_type);
+	return -1;
+}
+
+void _on_selection_request(struct xlib_input *priv, XSelectionRequestEvent *req)
+{
+	XEvent respond = {0};
+
+	Atom targets = XInternAtom(priv->display, "TARGETS", False);
+	if(req->target == targets) {
+		if(_on_request_atom(priv, req) != 0)
+			return;
+	} else {
+		XChangeProperty(priv->display,
+						req->requestor,
+						req->property, req->target,
+						8,
+						PropModeReplace,
+						(unsigned char *)priv->clip_data,
+						priv->clip_len);
+	}
+
+	respond.xselection.property = req->property;
+	respond.xselection.type = SelectionNotify;
+	respond.xselection.display = req->display;
+	respond.xselection.requestor = req->requestor;
+	respond.xselection.selection = req->selection;
+	respond.xselection.target = req->target;
+	respond.xselection.time = req->time;
+	XSendEvent(priv->display, req->requestor, 0, 0, &respond);
+	XFlush(priv->display);
+}
+
+void * _clip_server(void *oqu)
+{
+	XEvent ev;
+	XSelectionRequestEvent *sev;
+	struct xlib_input *priv = (struct xlib_input *)oqu;
+
+	priv->sel = XInternAtom(priv->display, "CLIPBOARD", False);
+
+	priv->root_win = XCreateSimpleWindow(priv->display, 
+		DefaultRootWindow(priv->display), -10, -10, 1, 1, 0, 0, 0);
+	if(priv->root_win == -1) {
+		log_error("XCreateSimpleWindow fail.");
+		return NULL;
+	}
+
+	// XConvertSelection(priv->display, sel, utf8, target_property, target_window,
+					  // CurrentTime);
+
+	while(!priv->exit)
+	{
+		XNextEvent(priv->display, &ev);
+		switch (ev.type)
+		{
+			case SelectionClear:
+				printf("Lost selection ownership\n");
+				break;
+			case SelectionRequest:
+				sev = (XSelectionRequestEvent*)&ev.xselectionrequest;
+				printf("Requestor: 0x%lx\n", sev->requestor);
+				_on_selection_request(priv, sev);
+		}
+	}
+	log_info("clip server exit.");
+	return NULL;
+}
 
 static int xlib_dev_init(struct input_object *obj) {
 	int ret = -1;
 	struct xlib_input *priv;
+	char * def_dpy = ":0.0";
 
 	priv = calloc(1, sizeof(*priv));
 	if(!priv) {
@@ -30,8 +127,18 @@ static int xlib_dev_init(struct input_object *obj) {
 		goto FAIL1;
 	}
 
-	priv->display = XOpenDisplay(DEFAULT_DISPLAY);
+	if(getenv("DISPLAY"))
+		def_dpy=getenv("DISPLAY");
 
+	priv->display = XOpenDisplay(def_dpy);
+
+	if(priv->display == NULL) {
+		log_error("XOpenDisplay: cannot connect to X server %s.",
+				  XDisplayName(def_dpy));
+		goto FAIL1;
+	}
+
+	pthread_create(&priv->clip_thread, NULL, _clip_server, (void *)priv);
 	obj->priv = (void *)priv;
 	return 0;
 FAIL1:
@@ -47,6 +154,8 @@ static long get_xkeycode(int keycode)
 {
 	switch(keycode)
 	{
+		case 1:
+			return XK_Super_L;
 		case 8:
 			return XK_BackSpace;
 		case 9:
@@ -141,57 +250,84 @@ static int xlib_push_key(struct input_object *obj, struct input_event *event)
 {
 	struct xlib_input *priv = (struct xlib_input *)obj->priv;
 
-    switch (event->type) {
-	    case MOUSE_MOVE:
-	    {
-	        XTestFakeMotionEvent(priv->display, 0, event->x, event->y, 0);
-	        break;
-	    }
-	    case KEY_UP:
-	    {
-	        if (event->key_code == 0) return -1;
-	        XTestFakeKeyEvent(priv->display, XKeysymToKeycode(priv->display,get_xkeycode(event->key_code)), false, 0);
-	        break;
-	    }
-	    case KEY_DOWN:
-	    {
-	        if (event->key_code == 0) return -1;
-	        XTestFakeKeyEvent(priv->display, XKeysymToKeycode(priv->display,get_xkeycode(event->key_code)), true, 0);
-	        break;
-	    }
-	    case MOUSE_UP:
-	    {
-	        if (event->key_code == 0) return -1;
-	        XTestFakeButtonEvent(priv->display, event->key_code, false, 0);
-	        break;
-	    }
-	    case MOUSE_DOWN:
-	    {
-	        if (event->key_code == 0) return -1;
-	        XTestFakeButtonEvent(priv->display, event->key_code, true, 0);
-	        break;
-	    }
-	    case MOUSE_WHEEL:
-	    {
-	        if (event->key_code == 0) return -1;
+	switch (event->type) {
+		case MOUSE_MOVE:
+		{
+			XTestFakeMotionEvent(priv->display, 0, event->x, event->y, 0);
+			break;
+		}
+		case KEY_UP:
+		{
+			if (event->key_code == 0) return -1;
+			XTestFakeKeyEvent(priv->display, XKeysymToKeycode(priv->display,get_xkeycode(event->key_code)), false, 0);
+			break;
+		}
+		case KEY_DOWN:
+		{
+			if (event->key_code == 0) return -1;
+			XTestFakeKeyEvent(priv->display, XKeysymToKeycode(priv->display,get_xkeycode(event->key_code)), true, 0);
+			break;
+		}
+		case MOUSE_UP:
+		{
+			if (event->key_code == 0) return -1;
+			XTestFakeButtonEvent(priv->display, event->key_code, false, 0);
+			break;
+		}
+		case MOUSE_DOWN:
+		{
+			if (event->key_code == 0) return -1;
+			XTestFakeButtonEvent(priv->display, event->key_code, true, 0);
+			break;
+		}
+		case MOUSE_WHEEL:
+		{
+			if (event->key_code == 0) return -1;
 			XTestFakeButtonEvent(priv->display, event->key_code, true, CurrentTime);
 			XTestFakeButtonEvent(priv->display, event->key_code, false, CurrentTime);
-	        break;
-	    }
-	    default:
-	    {
-	    	return -1;
-	    }
-    }
+			break;
+		}
+		default:
+		{
+			return -1;
+		}
+	}
 
-    XFlush(priv->display);
+	XFlush(priv->display);
+	return 0;
+}
+
+static int xlib_push_clip(struct input_object *obj, struct clip_event *event)
+{
+	struct xlib_input *priv = (struct xlib_input *)obj->priv;
+	uint16_t clip_len = ntohs(event->data_len);
+	uint16_t type_len = 0;
+
+	strcpy(priv->clip_type, (char *)event->clip_data);
+	type_len = strlen(priv->clip_type) + 1;
+	if(clip_len - type_len > 0)
+	{
+		memcpy(priv->clip_data, &event->clip_data[type_len], clip_len - type_len);
+		priv->clip_len = clip_len - type_len;
+
+		// 窗口A拥有剪贴板
+		if(priv->root_win)
+		{
+			XSetSelectionOwner(priv->display, priv->sel, priv->root_win,
+				CurrentTime);
+		}
+	}else{
+		log_error("clip len to small.");
+	}
 	return 0;
 }
 
 static int xlib_dev_release(struct input_object *obj) {
 	struct xlib_input *priv = (struct xlib_input *)obj->priv;
-
+	priv->exit = true;
 	XCloseDisplay(priv->display);
+
+	pthread_join(priv->clip_thread, NULL);
 	free(priv);
 	return 0;
 }
@@ -201,6 +337,7 @@ struct input_ops xlib_input_ops = {
 	.init 				= xlib_dev_init,
 	.set_info			= xlib_set_info,
 	.push_key			= xlib_push_key,
+	.push_clip 			= xlib_push_clip,
 	.release 			= xlib_dev_release,
 };
 

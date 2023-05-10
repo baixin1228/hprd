@@ -122,7 +122,6 @@ int __obj##_release(struct __obj##_object *obj)		\
 			ret = dev_ops->release(obj);			\
 			if(ret == 0)							\
 			{										\
-				release_lib(obj->ops);				\
 				free(obj);							\
 			}										\
 		}else 										\
@@ -131,27 +130,4 @@ int __obj##_release(struct __obj##_object *obj)		\
 													\
 	return -1;										\
 }
-
-#define GET_DEV_OPS(__type, __devs, __dev_name)		\
-({													\
-	int idx = 0;									\
-	bool is_find = false;							\
-	struct __type *dev_ops = NULL;					\
-													\
-	if(__dev_name != NULL)							\
-	{												\
-		for (int i = 0; i < sizeof(__devs) / sizeof(struct __type*); ++i)\
-		{											\
-			if(strcmp(__dev_name, __devs[i]->name) == 0){\
-				idx = i;							\
-				is_find = true;						\
-			}										\
-		}											\
-		dev_ops = __devs[idx];						\
-		if(!is_find)								\
-			log_warning("not find dev:%s", __dev_name);\
-	}												\
-	dev_ops; 										\
-})
-
 #endif

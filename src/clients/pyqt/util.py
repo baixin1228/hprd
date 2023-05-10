@@ -85,6 +85,9 @@ def set_win_center(ui):
 	ui.move(int(newLeft),int(newTop))
 
 def get_key_code(code):
+	if code == Qt.Key_Super_L:
+		return 1
+		
 	if code == Qt.Key_Backspace:
 		return 8
 

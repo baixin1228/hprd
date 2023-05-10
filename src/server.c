@@ -64,6 +64,12 @@ static void on_key(struct input_event *event)
 		input_push_key(in_obj, event);
 }
 
+static void on_clip(struct clip_event *event)
+{
+	if(in_obj)
+		input_push_clip(in_obj, event);
+}
+
 #define MIN_BIT_RATE (1 * 1024 * 1024)
 uint32_t frame_rate = 58;
 uint32_t stream_ftm = STREAM_H264;
@@ -75,67 +81,67 @@ static void on_request(struct server_client *client, struct request_event *event
 	ret_event.id = event->id;
 	switch(event->cmd)
 	{
-	case SET_BIT_RATE:
-	{
-		bit_rate = ntohl(event->value);
-		if(bit_rate < MIN_BIT_RATE)
-			bit_rate = MIN_BIT_RATE;
-		capture_quit(cap_obj);
-		ret_event.ret = RET_SUCCESS;
-		ret_event.value = event->value;
-		log_info("change bit rate.");
-		break;
-	}
-	case SET_FRAME_RATE:
-	{
-		frame_rate = ntohl(event->value);
-		capture_quit(cap_obj);
-		ret_event.ret = RET_SUCCESS;
-		ret_event.value = event->value;
-		log_info("change frame rate.");
-		break;
-	}
-	case GET_BIT_RATE:
-	{
-		ret_event.ret = RET_SUCCESS;
-		ret_event.value = htonl(bit_rate);
-		log_info("get bit rate.");
-		break;
-	}
-	case GET_FRAME_RATE:
-	{
-		ret_event.ret = RET_SUCCESS;
-		ret_event.value = htonl(frame_rate);
-		log_info("get frame rate.");
-		break;
-	}
-	case GET_FPS:
-	{
-		ret_event.ret = RET_SUCCESS;
-		ret_event.value = htonl((uint32_t)capture_get_fps(cap_obj));
-		break;
-	}
-	case GET_CLIENT_ID:
-	{
-		if(server_client_getid(client) != 0)
+		case SET_BIT_RATE:
+		{
+			bit_rate = ntohl(event->value);
+			if(bit_rate < MIN_BIT_RATE)
+				bit_rate = MIN_BIT_RATE;
+			capture_quit(cap_obj);
+			ret_event.ret = RET_SUCCESS;
+			ret_event.value = event->value;
+			log_info("change bit rate.");
+			break;
+		}
+		case SET_FRAME_RATE:
+		{
+			frame_rate = ntohl(event->value);
+			capture_quit(cap_obj);
+			ret_event.ret = RET_SUCCESS;
+			ret_event.value = event->value;
+			log_info("change frame rate.");
+			break;
+		}
+		case GET_BIT_RATE:
 		{
 			ret_event.ret = RET_SUCCESS;
-			ret_event.value = htonl(server_client_getid(client));
+			ret_event.value = htonl(bit_rate);
+			log_info("get bit rate.");
+			break;
 		}
-		log_info("get frame rate.");
-		break;
-	}
-	case PING:
-	{
-		ret_event.ret = RET_SUCCESS;
-		ret_event.value = event->value;
-		break;
-	}
-	default:
-	{
-		log_warning("setting: unknow cmd.");
-		break;
-	}
+		case GET_FRAME_RATE:
+		{
+			ret_event.ret = RET_SUCCESS;
+			ret_event.value = htonl(frame_rate);
+			log_info("get frame rate.");
+			break;
+		}
+		case GET_FPS:
+		{
+			ret_event.ret = RET_SUCCESS;
+			ret_event.value = htonl((uint32_t)capture_get_fps(cap_obj));
+			break;
+		}
+		case GET_CLIENT_ID:
+		{
+			if(server_client_getid(client) != 0)
+			{
+				ret_event.ret = RET_SUCCESS;
+				ret_event.value = htonl(server_client_getid(client));
+			}
+			log_info("get frame rate.");
+			break;
+		}
+		case PING:
+		{
+			ret_event.ret = RET_SUCCESS;
+			ret_event.value = event->value;
+			break;
+		}
+		default:
+		{
+			log_warning("setting: unknow cmd.");
+			break;
+		}
 	}
 
 	if(ret_event.ret != RET_SUCCESS)
@@ -153,20 +159,25 @@ static void on_server_pkt(struct server_client *client, char *buf, size_t len)
 	pthread_mutex_lock(&net_cb_lock);
 	switch(pkt->channel)
 	{
-	case INPUT_CHANNEL:
-	{
-		on_key((struct input_event *)pkt->data);
-		break;
-	}
-	case REQUEST_CHANNEL:
-	{
-		on_request(client, (struct request_event *)pkt->data);
-		break;
-	}
-	default:
-	{
-		break;
-	}
+		case INPUT_CHANNEL:
+		{
+			on_key((struct input_event *)pkt->data);
+			break;
+		}
+		case CLIP_CHANNEL:
+		{
+			on_clip((struct clip_event *)pkt->data);
+			break;
+		}
+		case REQUEST_CHANNEL:
+		{
+			on_request(client, (struct request_event *)pkt->data);
+			break;
+		}
+		default:
+		{
+			break;
+		}
 	}
 	pthread_mutex_unlock(&net_cb_lock);
 }

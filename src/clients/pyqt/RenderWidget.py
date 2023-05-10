@@ -33,6 +33,11 @@ class RenderWidget(QWidget):
 		self.modifiers = 0
 		self.angle_key = 0
 		self.angle_key_times = 0
+		self.grab = False
+		self.enable_clip = False
+		self.text_clip = ""
+		self.html_clip = ""
+		self.image_clip = 0
 
 	@CFUNCTYPE(None, py_object, c_uint, c_uint)
 	def _stream_size_cb(self, width, height):
@@ -61,50 +66,57 @@ class RenderWidget(QWidget):
 		return int(x), int(y)
 
 	def wheelEvent(self, event):
-		angle = event.angleDelta()
+		if self.grab == True:
+			angle = event.angleDelta()
 
-		if angle.y() > 0:
-			if self.angle_key == 4 and self.angle_key_times < 10:
-				self.angle_key_times = self.angle_key_times + 1
-			else:
-				proxy().py_wheel_event(4)
-				self.angle_key = 4
-				self.angle_key_times = 1
+			if angle.y() > 0:
+				if self.angle_key == 4 and self.angle_key_times < 10:
+					self.angle_key_times = self.angle_key_times + 1
+				else:
+					proxy().py_wheel_event(4)
+					self.angle_key = 4
+					self.angle_key_times = 1
 
-		if angle.y() < 0:
-			if self.angle_key == 5 and self.angle_key_times < 10:
-				self.angle_key_times = self.angle_key_times + 1
-			else:
-				proxy().py_wheel_event(5)
-				self.angle_key = 5
-				self.angle_key_times = 1
+			if angle.y() < 0:
+				if self.angle_key == 5 and self.angle_key_times < 10:
+					self.angle_key_times = self.angle_key_times + 1
+				else:
+					proxy().py_wheel_event(5)
+					self.angle_key = 5
+					self.angle_key_times = 1
 
-		if angle.x() < 0:
-			if self.angle_key == 6 and self.angle_key_times < 10:
-				self.angle_key_times = self.angle_key_times + 1
-			else:
-				proxy().py_wheel_event(6)
-				self.angle_key = 6
-				self.angle_key_times = 1
+			if angle.x() < 0:
+				if self.angle_key == 6 and self.angle_key_times < 10:
+					self.angle_key_times = self.angle_key_times + 1
+				else:
+					proxy().py_wheel_event(6)
+					self.angle_key = 6
+					self.angle_key_times = 1
 
-		if angle.x() > 0:
-			if self.angle_key == 7 and self.angle_key_times < 10:
-				self.angle_key_times = self.angle_key_times + 1
-			else:
-				proxy().py_wheel_event(7)
-				self.angle_key = 7
-				self.angle_key_times = 1
+			if angle.x() > 0:
+				if self.angle_key == 7 and self.angle_key_times < 10:
+					self.angle_key_times = self.angle_key_times + 1
+				else:
+					proxy().py_wheel_event(7)
+					self.angle_key = 7
+					self.angle_key_times = 1
 
 	def keyPressEvent(self, event):
-		self.modifiers = event.modifiers()
-		keycode = get_key_code(event.key())
-		proxy().py_key_event(keycode, 1)
+		if self.grab == True:
+			self.modifiers = event.modifiers()
+			if self.modifiers & Qt.AltModifier and self.modifiers & Qt.ControlModifier and event.key() == Qt.Key_G:
+				proxy().py_key_event(Qt.Key_Control, 0)
+				proxy().py_key_event(Qt.Key_Alt, 0)
+				self._ui_release_grab()
+				return
+			keycode = get_key_code(event.key())
+			proxy().py_key_event(keycode, 1)
 
 	def keyReleaseEvent(self, event):
-		self.modifiers = event.modifiers()
-		keycode = get_key_code(event.key())
-		proxy().py_key_event(keycode, 0)
-
+		if self.grab == True:
+			self.modifiers = event.modifiers()
+			keycode = get_key_code(event.key())
+			proxy().py_key_event(keycode, 0)
 
 	def mousePressEvent(self,event):
 		if self.mouse_key != 0:
@@ -123,6 +135,7 @@ class RenderWidget(QWidget):
 
 	def mouseMoveEvent(self,event):
 		time_ms = int(round(time.time() * 1000))
+		self._ui_grab()
 		if time_ms - self.last_time > 1000 / self.main_window.get_fps():
 			proxy().py_mouse_move(*self._get_remote_pos(event.x(), event.y()))
 			self.last_time = time_ms
@@ -138,17 +151,60 @@ class RenderWidget(QWidget):
 			self.old_height = self.height()
 			proxy().py_client_resize(self.width(), int(self.height()))
 
+	def _ui_grab(self):
+		if self.grab == False and self.geometry().contains(self.mapFromGlobal(QCursor.pos())):
+			self.grabKeyboard()
+			self.grab = True
+			print("grabKeyboard")
+
+	def _ui_release_grab(self):
+		if self.grab == True:
+			self.releaseKeyboard()
+			self.grab = False
+			print("releaseKeyboard")
+
+	def enterEvent(self, event):
+		self._ui_grab()
+
+	def leaveEvent(self, event):
+		self._ui_release_grab()
+
+	def _focus_in(self):
+		self._ui_grab()
+		clipboard = QApplication.clipboard()
+		mimeData = clipboard.mimeData()
+		# print(mimeData.formats())
+		if mimeData.hasFormat('text/plain'):
+			if self.text_clip != mimeData.text():
+				self.text_clip = mimeData.text()
+
+				proxy().py_clip_event('text/plain'.encode('utf-8'), self.text_clip.encode('utf-8'), len(self.text_clip) + 1)
+		elif mimeData.hasHtml():
+			pass
+			# print(mimeData.html())
+		elif mimeData.hasFormat('application/x-qt-image'):
+			pass
+			# print("img")
+			# self.showBox.setPixmap(clipboard.pixmap())
+
+	def _focus_out(self):
+		if self.grab == True:
+			if self.modifiers & Qt.ShiftModifier:
+				proxy().py_key_event(Qt.Key_Shift, 0)
+			if self.modifiers & Qt.ControlModifier:
+				proxy().py_key_event(Qt.Key_Control, 0)
+			if self.modifiers & Qt.AltModifier:
+				proxy().py_key_event(Qt.Key_Alt, 0)
+			self._ui_release_grab()
+
 	def eventFilter(self, widget, event):
-		# avoid flickering
 		if event.type() == QEvent.FocusIn:
+			if event.reason() == Qt.ActiveWindowFocusReason:
+				self._focus_in()
 			return True
 		if event.type() == QEvent.FocusOut:
-			if self.modifiers == Qt.ShiftModifier:
-				proxy().py_key_event(Qt.Key_Shift, 0)
-			if self.modifiers == Qt.ControlModifier:
-				proxy().py_key_event(Qt.Key_Control, 0)
-			if self.modifiers == Qt.AltModifier:
-				proxy().py_key_event(Qt.Key_Alt, 0)
+			if event.reason() == Qt.ActiveWindowFocusReason:
+				self._focus_out()
 			return True
 
 		return False

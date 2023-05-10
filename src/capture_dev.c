@@ -2,7 +2,6 @@
 #include <unistd.h>
 
 #include "util.h"
-#include "dl_help.h"
 #include "capture_dev.h"
 #include "frame_buffer.h"
 #include "dev_templete.h"

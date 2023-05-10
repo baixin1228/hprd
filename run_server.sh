@@ -9,6 +9,9 @@ if [ $? != 0 ]; then
 fi
 # meson test -C server_build -v hprd_server_test
 
-XAUTHORITY=/var/run/lightdm/root/:0 sudo ./server_build/src/server $*
-#DISPLAY=:0 XAUTHORITY=/run/user/1000/gdm/Xauthority sudo ./server_build/src/server $*
-#DISPLAY=:0 ./server_build/src/server $*
+if [ -f /var/run/lightdm/root/:0 ]
+then
+	XAUTHORITY=/var/run/lightdm/root/:0 sudo ./server_build/src/server $*
+else
+	./server_build/src/server $*
+fi

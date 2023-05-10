@@ -2,7 +2,6 @@
 #include <unistd.h>
 
 #include "util.h"
-#include "dl_help.h"
 #include "input_dev.h"
 #include "buffer_pool.h"
 #include "frame_buffer.h"
@@ -77,6 +76,25 @@ int input_push_key(struct input_object *obj, struct input_event *event)
 			return dev_ops->push_key(obj, event);
 		else
 			printf("input dev not find func:push_key\n");
+	}
+
+	return -1;
+}
+
+int input_push_clip(struct input_object *obj, struct clip_event *event)
+{
+	struct input_ops *dev_ops;
+
+	if(!obj)
+		return -1;
+
+	dev_ops = (struct input_ops *)obj->ops;
+	if(dev_ops)
+	{
+		if(dev_ops->push_clip)
+			return dev_ops->push_clip(obj, event);
+		else
+			printf("input dev not find func:push_clip\n");
 	}
 
 	return -1;

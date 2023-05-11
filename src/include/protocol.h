@@ -81,7 +81,9 @@ struct response_event{
   uint32_t value;
 };
 
-int send_event(uint32_t cmd, char *buf, size_t len);
+int send_input_event(char *buf, size_t len);
+int send_request_event(uint32_t cmd, uint32_t value, uint32_t id);
+int send_clip_event(char *type, char *data, uint16_t len);
 int server_send_event(struct server_client *client, uint32_t cmd, char *buf,
 	size_t len);
 void bradcast_video(char *buf, size_t len);

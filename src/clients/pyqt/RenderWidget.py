@@ -173,13 +173,16 @@ class RenderWidget(QWidget):
 		self._ui_grab()
 		clipboard = QApplication.clipboard()
 		mimeData = clipboard.mimeData()
-		# print(mimeData.formats())
 		if mimeData.hasFormat('text/plain'):
 			if self.text_clip != mimeData.text():
 				self.text_clip = mimeData.text()
-
-				proxy().py_clip_event('text/plain'.encode('utf-8'), self.text_clip.encode('utf-8'), len(self.text_clip) + 1)
+				if self.text_clip != "" and len(self.text_clip) < 10240:
+					c_format = 'text/plain'.encode('utf-8')
+					c_str = self.text_clip.encode('utf-8')
+					c_str_len = len(self.text_clip) + 1
+					proxy().py_clip_event(c_format, c_str, c_str_len)
 		elif mimeData.hasHtml():
+			print(mimeData.formats())
 			pass
 			# print(mimeData.html())
 		elif mimeData.hasFormat('application/x-qt-image'):

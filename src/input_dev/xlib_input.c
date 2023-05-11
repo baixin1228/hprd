@@ -130,6 +130,10 @@ static int xlib_dev_init(struct input_object *obj) {
 	if(getenv("DISPLAY"))
 		def_dpy=getenv("DISPLAY");
 
+	if(XInitThreads() == 0)
+	{
+		log_warning("xlib not support multi-threaded");
+	}
 	priv->display = XOpenDisplay(def_dpy);
 
 	if(priv->display == NULL) {

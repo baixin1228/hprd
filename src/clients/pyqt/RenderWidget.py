@@ -155,13 +155,11 @@ class RenderWidget(QWidget):
 		if self.grab == False and self.geometry().contains(self.mapFromGlobal(QCursor.pos())):
 			self.grabKeyboard()
 			self.grab = True
-			print("grabKeyboard")
 
 	def _ui_release_grab(self):
 		if self.grab == True:
 			self.releaseKeyboard()
 			self.grab = False
-			print("releaseKeyboard")
 
 	def enterEvent(self, event):
 		self._ui_grab()

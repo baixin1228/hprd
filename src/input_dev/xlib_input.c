@@ -25,7 +25,6 @@ struct xlib_input {
 	uint32_t screen_num;
 	Window root_win;
 	pthread_t clip_thread;
-	bool exit;
 };
 
 int _on_request_atom(struct xlib_input *priv, XSelectionRequestEvent *req)
@@ -98,7 +97,7 @@ void * _clip_server(void *oqu)
 	// XConvertSelection(priv->display, sel, utf8, target_property, target_window,
 					  // CurrentTime);
 
-	while(!priv->exit)
+	while(1)
 	{
 		XNextEvent(priv->display, &ev);
 		switch (ev.type)
@@ -110,8 +109,12 @@ void * _clip_server(void *oqu)
 				sev = (XSelectionRequestEvent*)&ev.xselectionrequest;
 				printf("Requestor: 0x%lx\n", sev->requestor);
 				_on_selection_request(priv, sev);
+			case ClientMessage:
+				goto exit;
+				break;
 		}
 	}
+exit:
 	log_info("clip server exit.");
 	return NULL;
 }
@@ -328,10 +331,18 @@ static int xlib_push_clip(struct input_object *obj, struct clip_event *event)
 
 static int xlib_dev_release(struct input_object *obj) {
 	struct xlib_input *priv = (struct xlib_input *)obj->priv;
-	priv->exit = true;
-	XCloseDisplay(priv->display);
+	XClientMessageEvent exit_event = {0};
+
+	exit_event.type = ClientMessage;
+	exit_event.window = priv->root_win;
+	exit_event.format = 32;
+	XSendEvent(priv->display, priv->root_win, 0, 0, (XEvent*)&exit_event);
+	XFlush(priv->display);
 
 	pthread_join(priv->clip_thread, NULL);
+
+	XDestroyWindow(priv->display, priv->root_win);
+	XCloseDisplay(priv->display);
 	free(priv);
 	return 0;
 }

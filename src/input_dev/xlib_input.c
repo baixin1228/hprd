@@ -79,14 +79,51 @@ void _on_selection_request(struct xlib_input *priv, XSelectionRequestEvent *req)
 	XFlush(priv->display);
 }
 
+void show_utf8_prop(Display *dpy, Window w, Atom p)
+{
+	Atom da, incr, type;
+	int di;
+	unsigned long size, dul;
+	unsigned char *prop_ret = NULL;
+ 
+	/* Dummy call to get type and size. */
+	XGetWindowProperty(dpy, w, p, 0, 0, False, AnyPropertyType,
+					   &type, &di, &dul, &size, &prop_ret);
+	XFree(prop_ret);
+ 
+	incr = XInternAtom(dpy, "INCR", False);
+	if (type == incr)
+	{
+		log_error("Data too large and INCR mechanism not implemented\n");
+		return;
+	}
+ 
+ 	if(size > 0)
+ 	{
+		/* Read the data in one go. */
+		printf("Property size: %lu\n", size);
+	 	XGetWindowProperty(dpy, w, p, 0, size, False, AnyPropertyType,
+						   &da, &di, &dul, &dul, &prop_ret);
+		printf("%s\n", prop_ret);
+		fflush(stdout);
+		XFree(prop_ret);
+ 	}
+ 
+	/* Signal the selection owner that we have successfully read the
+	 * data. */
+	XDeleteProperty(dpy, w, p);
+}
+
 void * _clip_server(void *oqu)
 {
 	XEvent ev;
-	XSelectionRequestEvent *sev;
+	Atom property;
+	XSelectionRequestEvent *serqv;
+	XSelectionEvent *sev;
 	struct xlib_input *priv = (struct xlib_input *)oqu;
 
 	priv->sel = XInternAtom(priv->display, "CLIPBOARD", False);
-
+	property = XInternAtom(priv->display, "PENGUIN", False);
 	priv->root_win = XCreateSimpleWindow(priv->display, 
 		DefaultRootWindow(priv->display), -10, -10, 1, 1, 0, 0, 0);
 	if(priv->root_win == -1) {
@@ -94,21 +131,29 @@ void * _clip_server(void *oqu)
 		return NULL;
 	}
 
-	// XConvertSelection(priv->display, sel, utf8, target_property, target_window,
-					  // CurrentTime);
-
 	while(1)
 	{
 		XNextEvent(priv->display, &ev);
 		switch (ev.type)
 		{
 			case SelectionClear:
-				printf("Lost selection ownership\n");
+				XConvertSelection(priv->display, priv->sel,
+					XInternAtom(priv->display, "UTF8_STRING", False),
+					property, priv->root_win, CurrentTime);
+				printf("SelectionClear\n");
 				break;
 			case SelectionRequest:
-				sev = (XSelectionRequestEvent*)&ev.xselectionrequest;
-				printf("Requestor: 0x%lx\n", sev->requestor);
-				_on_selection_request(priv, sev);
+				serqv = (XSelectionRequestEvent*)&ev.xselectionrequest;
+				_on_selection_request(priv, serqv);
+			case SelectionNotify:
+				sev = (XSelectionEvent*)&ev.xselection;
+				if (sev->property == None)
+				{
+					printf("Conversion could not be performed.\n");
+				}else{
+					show_utf8_prop(priv->display, priv->root_win, property);
+				}
+				break;
 			case ClientMessage:
 				goto exit;
 				break;

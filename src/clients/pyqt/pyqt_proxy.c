@@ -315,9 +315,9 @@ int py_mouse_move(int x, int y) {
 	event.x = x;
 	event.y = y;
 
-	if(send_event(INPUT_CHANNEL, (char *)&event, sizeof(event))
+	if(send_input_event((char *)&event, sizeof(event))
 			== -1) {
-		log_error("send_event fail.");
+		log_error("send_input_event fail.");
 		return -1;
 	}
 
@@ -337,9 +337,9 @@ int py_mouse_click(int x, int y, int key, int down_or_up) {
 	event.x = x;
 	event.y = y;
 
-	if(send_event(INPUT_CHANNEL, (char *)&event, sizeof(event))
+	if(send_input_event((char *)&event, sizeof(event))
 			== -1) {
-		log_error("send_event fail.");
+		log_error("send_input_event fail.");
 		return -1;
 	}
 
@@ -352,9 +352,9 @@ int py_wheel_event(int key) {
 	event.type = MOUSE_WHEEL;
 	event.key_code = key;
 
-	if(send_event(INPUT_CHANNEL, (char *)&event, sizeof(event))
+	if(send_input_event((char *)&event, sizeof(event))
 			== -1) {
-		log_error("send_event fail.");
+		log_error("send_input_event fail.");
 		return -1;
 	}
 
@@ -372,9 +372,9 @@ int py_key_event(int key, int down_or_up) {
 
 	event.key_code = key;
 
-	if(send_event(INPUT_CHANNEL, (char *)&event, sizeof(event))
+	if(send_input_event((char *)&event, sizeof(event))
 			== -1) {
-		log_error("send_event fail.");
+		log_error("send_input_event fail.");
 		return -1;
 	}
 
@@ -382,32 +382,17 @@ int py_key_event(int key, int down_or_up) {
 }
 
 int py_clip_event(char *type, char *data, uint16_t len) {
-	struct clip_event *event = NULL;
-	if(!event)
-	{
-		event = calloc(1, 10240);
-	}
-	if(len > 10200)
-		return -1;
-
-	event->data_len = htons(len + strlen(type) + 1);
-	strcpy(event->clip_data, type);
-	memcpy(&event->clip_data[strlen(type) + 1], data, len);
-
-	if(send_event(CLIP_CHANNEL, (char *)event, sizeof(event) + len + 
-		strlen(type) + 1)
-			== -1) {
-		log_error("clip_event fail.");
+	if(send_clip_event(type, data, len) == -1) {
+		log_error("send_clip_event fail.");
 		return -1;
 	}
 
 	return 0;
 }
 
-int _send_request_data(void *oqu, uint32_t type, uint32_t frame_rate,
+int _send_request_data(void *oqu, uint32_t cmd, uint32_t value,
 	void (*callback)(void *oqu, uint32_t ret, uint32_t value)) {
 	static uint32_t id = 0;
-	struct request_event event;
 	struct request_obj *set_req;
 
 	if(oqu == NULL)
@@ -431,12 +416,8 @@ int _send_request_data(void *oqu, uint32_t type, uint32_t frame_rate,
 	set_req->id = id;
 	add_request(set_req);
 
-	event.cmd = type;
-	event.id = htonl(id);
-	event.value = htonl(frame_rate);
-	if(send_event(REQUEST_CHANNEL, (char *)&event, sizeof(event))
-			== -1) {
-		log_error("send_event fail.");
+	if(send_request_event(cmd, value, id) == -1) {
+		log_error("send_request_event fail.");
 		set_req = get_del_request(id);
 		free(set_req);
 		return -1;
@@ -461,6 +442,11 @@ int py_set_frame_rate(void *oqu, uint32_t frame_rate, void (*callback)
 int py_set_bit_rate(void *oqu, uint32_t bit_rate, void (*callback)
 	(void *oqu, uint32_t ret, uint32_t value)) {
 	return _send_request_data(oqu, SET_BIT_RATE, bit_rate, callback);
+}
+
+int py_set_share_clipboard(void *oqu, uint32_t is_share, void (*callback)
+	(void *oqu, uint32_t ret, uint32_t value)) {
+	return _send_request_data(oqu, SET_SHARE_CLIPBOARD, is_share, callback);
 }
 
 int py_get_remote_fps(void *oqu, void (*callback)

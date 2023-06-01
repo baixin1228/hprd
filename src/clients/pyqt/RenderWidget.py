@@ -155,13 +155,11 @@ class RenderWidget(QWidget):
 		if self.grab == False and self.geometry().contains(self.mapFromGlobal(QCursor.pos())):
 			self.grabKeyboard()
 			self.grab = True
-			print("grabKeyboard")
 
 	def _ui_release_grab(self):
 		if self.grab == True:
 			self.releaseKeyboard()
 			self.grab = False
-			print("releaseKeyboard")
 
 	def enterEvent(self, event):
 		self._ui_grab()
@@ -169,17 +167,26 @@ class RenderWidget(QWidget):
 	def leaveEvent(self, event):
 		self._ui_release_grab()
 
+	def set_share_clipboard(self, value):
+		self.enable_clip = value
+		
 	def _focus_in(self):
 		self._ui_grab()
+
+		if not self.enable_clip:
+			return
 		clipboard = QApplication.clipboard()
 		mimeData = clipboard.mimeData()
-		# print(mimeData.formats())
 		if mimeData.hasFormat('text/plain'):
 			if self.text_clip != mimeData.text():
 				self.text_clip = mimeData.text()
-
-				proxy().py_clip_event('text/plain'.encode('utf-8'), self.text_clip.encode('utf-8'), len(self.text_clip) + 1)
+				if self.text_clip != "" and len(self.text_clip) < 10240:
+					c_format = 'text/plain'.encode('utf-8')
+					c_str = self.text_clip.encode('utf-8')
+					c_str_len = len(self.text_clip) + 1
+					proxy().py_clip_event(c_format, c_str, c_str_len)
 		elif mimeData.hasHtml():
+			print(mimeData.formats())
 			pass
 			# print(mimeData.html())
 		elif mimeData.hasFormat('application/x-qt-image'):

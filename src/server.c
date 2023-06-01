@@ -77,13 +77,14 @@ uint32_t bit_rate = MIN_BIT_RATE;
 static void on_request(struct server_client *client, struct request_event *event)
 {
 	struct response_event ret_event;
+	uint32_t req_value = ntohl(event->value);
 
 	ret_event.id = event->id;
 	switch(event->cmd)
 	{
 		case SET_BIT_RATE:
 		{
-			bit_rate = ntohl(event->value);
+			bit_rate = req_value;
 			if(bit_rate < MIN_BIT_RATE)
 				bit_rate = MIN_BIT_RATE;
 			capture_quit(cap_obj);
@@ -94,11 +95,18 @@ static void on_request(struct server_client *client, struct request_event *event
 		}
 		case SET_FRAME_RATE:
 		{
-			frame_rate = ntohl(event->value);
+			frame_rate = req_value;
 			capture_quit(cap_obj);
 			ret_event.ret = RET_SUCCESS;
 			ret_event.value = event->value;
 			log_info("change frame rate.");
+			break;
+		}
+		case SET_SHARE_CLIPBOARD:
+		{
+			ret_event.ret = RET_SUCCESS;
+			ret_event.value = event->value;
+			log_info("set share clipboard:%s.", req_value == 1 ? "true" : "false");
 			break;
 		}
 		case GET_BIT_RATE:

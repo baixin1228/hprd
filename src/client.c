@@ -17,7 +17,7 @@ struct decodec_object *dec_obj = NULL;
 
 static void on_event(struct display_object *obj, struct input_event *event)
 {
-	if(send_event(INPUT_CHANNEL, (char *)event, sizeof(struct input_event))
+	if(send_input_event((char *)event, sizeof(struct input_event))
 		== -1)
 	{
 		log_error("send_event fail.");

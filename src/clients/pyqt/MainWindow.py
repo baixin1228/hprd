@@ -13,10 +13,11 @@ from pyqt_proxy import proxy
 from RenderWidget import RenderWidget
 
 class MainWindow(QMainWindow):
-	def __init__(self, enable_kcp, ip):
+	def __init__(self, params):
 		super(MainWindow, self).__init__()
-		self.enable_kcp = enable_kcp
-		self.ip = ip
+		self.enable_kcp = params["kcp"]
+		self.ip = params["ip"]
+		self.share_clipboard = params["share_clipboard"]
 		self.setup_ui()
 		self.init_ui()
 		set_win_center(self)
@@ -36,9 +37,9 @@ class MainWindow(QMainWindow):
 		file_menu.addAction(quit_button)
 		file_menu.triggered[QAction].connect(self.processTrigger)
 
-		display_menu = self.menu_bar.addMenu("Display")
+		setting_menu = self.menu_bar.addMenu("Setting")
 
-		scale_button = display_menu.addMenu("Scale")
+		scale_button = setting_menu.addMenu("Scale")
 		self.d_a_adapt = QAction("Adapt", self)
 		self.d_a_adapt.setCheckable(True)
 		scale_button.addAction(self.d_a_adapt)
@@ -54,7 +55,7 @@ class MainWindow(QMainWindow):
 		scale_group.addAction(self.d_a_match);
 		scale_group.setExclusive(True);
 
-		framerate_button = display_menu.addMenu("Taget Frame Rate")
+		framerate_button = setting_menu.addMenu("Taget Frame Rate")
 		self.fps_30 = QAction("30fps", self)
 		self.fps_30.setCheckable(True)
 		framerate_button.addAction(self.fps_30)
@@ -74,7 +75,7 @@ class MainWindow(QMainWindow):
 		frame_rate_group.addAction(self.fps_240);
 		frame_rate_group.setExclusive(True);
 
-		bitrate_button = display_menu.addMenu("Target Bit Rate")
+		bitrate_button = setting_menu.addMenu("Target Bit Rate")
 		self.b_1M = QAction("1Mbps", self)
 		self.b_1M.setCheckable(True)
 		bitrate_button.addAction(self.b_1M)
@@ -94,7 +95,12 @@ class MainWindow(QMainWindow):
 		target_bit_group.addAction(self.b_30M);
 		target_bit_group.setExclusive(True);
 
-		display_menu.triggered[QAction].connect(self.processTrigger)
+		self.share_clipboard_action = QAction("Share ClipBoard", self)
+		self.share_clipboard_action.setCheckable(True)
+		self.share_clipboard_action.setChecked(False)
+		setting_menu.addAction(self.share_clipboard_action)
+
+		setting_menu.triggered[QAction].connect(self.processTrigger)
 
 		debug_menu = self.menu_bar.addMenu("Debug")
 		self.status_bar_action = QAction("Status Bar", self)
@@ -128,6 +134,9 @@ class MainWindow(QMainWindow):
 		proxy().py_get_frame_rate(py_object(self), self._on_fr_cb)
 		if self.enable_kcp:
 			proxy().py_get_client_id(py_object(self), self._on_client_id)
+
+		if self.share_clipboard:
+			proxy().py_set_share_clipboard(py_object(self), 1, self._on_share_clipboard)
 
 		self.time_ms = 0
 
@@ -219,6 +228,16 @@ class MainWindow(QMainWindow):
 			self.remote_fps = value
 
 	@CFUNCTYPE(None, py_object, c_uint, c_uint)
+	def _on_share_clipboard(self, ret, value):
+		print("_on_share_clipboard", ret, hex(value))
+		if ret == 1 and value == 1:
+			self.share_clipboard_action.setChecked(True)
+			self.centralwidget.set_share_clipboard(True)
+		else:
+			self.share_clipboard_action.setChecked(False)
+			self.centralwidget.set_share_clipboard(False)
+
+	@CFUNCTYPE(None, py_object, c_uint, c_uint)
 	def _on_fr_cb(self, ret, value):
 		print("frame rate ret:%s value:%u"%("success" if ret == 1 else "fail", value))
 		if ret == 1:
@@ -280,6 +299,13 @@ class MainWindow(QMainWindow):
 			proxy().py_set_bit_rate(py_object(self), 10 * 1024 * 1024, self._on_bit_cb)
 		elif q.text() == "30Mbps":
 			proxy().py_set_bit_rate(py_object(self), 30 * 1024 * 1024, self._on_bit_cb)
+		elif q.text() == "Share ClipBoard":
+			if self.share_clipboard_action.isChecked():
+				value = 1
+			else:
+				value = 0
+
+			proxy().py_set_share_clipboard(py_object(self), value, self._on_share_clipboard)
 
 		elif q.text() == "Quit":
 			sys.exit(0)

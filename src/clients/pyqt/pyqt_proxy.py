@@ -67,6 +67,9 @@ clib.py_set_frame_rate.restype = c_int
 clib.py_set_bit_rate.argtypes = [py_object, c_uint, c_void_p]
 clib.py_set_bit_rate.restype = c_int
 
+clib.py_set_share_clipboard.argtypes = [py_object, c_uint, c_void_p]
+clib.py_set_share_clipboard.restype = c_int
+
 clib.py_get_remote_fps.argtypes = [py_object, c_void_p]
 clib.py_get_remote_fps.restype = c_int
 

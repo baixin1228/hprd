@@ -167,8 +167,14 @@ class RenderWidget(QWidget):
 	def leaveEvent(self, event):
 		self._ui_release_grab()
 
+	def set_share_clipboard(self, value):
+		self.enable_clip = value
+		
 	def _focus_in(self):
 		self._ui_grab()
+
+		if not self.enable_clip:
+			return
 		clipboard = QApplication.clipboard()
 		mimeData = clipboard.mimeData()
 		if mimeData.hasFormat('text/plain'):

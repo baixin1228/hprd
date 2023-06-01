@@ -66,6 +66,7 @@ void _on_selection_request(struct xlib_input *priv, XSelectionRequestEvent *req)
 						PropModeReplace,
 						(unsigned char *)priv->clip_data,
 						priv->clip_len);
+		log_info("clip board set:[%s]", __func__, priv->clip_data);
 	}
 
 	respond.xselection.property = req->property;
@@ -122,6 +123,7 @@ void * _clip_server(void *oqu)
 	XSelectionEvent *sev;
 	struct xlib_input *priv = (struct xlib_input *)oqu;
 
+	log_info("clip server start.");
 	priv->sel = XInternAtom(priv->display, "CLIPBOARD", False);
 	property = XInternAtom(priv->display, "PENGUIN", False);
 	priv->root_win = XCreateSimpleWindow(priv->display, 

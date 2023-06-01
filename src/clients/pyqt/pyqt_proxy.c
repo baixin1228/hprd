@@ -444,6 +444,11 @@ int py_set_bit_rate(void *oqu, uint32_t bit_rate, void (*callback)
 	return _send_request_data(oqu, SET_BIT_RATE, bit_rate, callback);
 }
 
+int py_set_share_clipboard(void *oqu, uint32_t is_share, void (*callback)
+	(void *oqu, uint32_t ret, uint32_t value)) {
+	return _send_request_data(oqu, SET_SHARE_CLIPBOARD, is_share, callback);
+}
+
 int py_get_remote_fps(void *oqu, void (*callback)
 	(void *oqu, uint32_t ret, uint32_t value)) {
 	return _send_request_data(oqu, GET_FPS, 0, callback);

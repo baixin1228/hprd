@@ -23,6 +23,7 @@ class LoginWindow(QMainWindow):
 			self.on_connect()
 
 	def init_args(self):
+		self.client_params = {}
 		# parser = argparse.ArgumentParser(description='hprd')
 		parser = argparse.ArgumentParser()
 		parser.add_argument('-a', '--ip', dest='ip', type=str, metavar='', required=False, help='Remote server ip addr.')
@@ -30,10 +31,10 @@ class LoginWindow(QMainWindow):
 		parser.add_argument('-s', '--silent', dest='silent', action='store_true', required=False, help='Silent mode, Direct connect.')
 
 		args = parser.parse_args()
-		self.ip = args.ip
-		self.kcp = 1 if args.kcp else 0
+		self.client_params["ip"] = args.ip
+		self.client_params["kcp"] = True if args.kcp else False
+		self.client_params["share_clipboard"] = True
 		self.silent = args.silent
-
 
 	def setup_ui(self):
 		self.resize(720, 400)
@@ -48,7 +49,7 @@ class LoginWindow(QMainWindow):
 		self.ip_lable.setText("IP:")
 		self.layout.addWidget(self.ip_lable,0,0,1,1, Qt.AlignRight)
 		self.ip_edit = QLineEdit()
-		self.ip_edit.setText(self.ip or "127.0.0.1:9999")
+		self.ip_edit.setText(self.client_params["ip"] or "127.0.0.1:9999")
 		self.layout.addWidget(self.ip_edit,0,1,1,3)
 
 		self.user_lable = QLabel()
@@ -65,11 +66,16 @@ class LoginWindow(QMainWindow):
 		self.passwd_edit.setText("")
 		self.passwd_edit.setEchoMode(QLineEdit.Password)
 		self.layout.addWidget(self.passwd_edit,2,1,1,3)
+	
+		self.share_clipboard_checkbox = QCheckBox('Share ClipBoard')
+		self.share_clipboard_checkbox.setChecked(True)
+		self.layout.addWidget(self.share_clipboard_checkbox,3,1,1,2)
+		self.share_clipboard_checkbox.stateChanged.connect(self.share_clipboard_cb)
 
 		self.conn_button = QPushButton()
 		self.conn_button.setText("连接")
-		self.layout.addWidget(self.conn_button,3,1,1,2)
- 
+		self.layout.addWidget(self.conn_button,4,1,1,2)
+	
 	def init_ui(self):
 		self.ip_edit.setFocus()
 		self.ip_edit.setPlaceholderText("请输入ip地址")
@@ -79,14 +85,20 @@ class LoginWindow(QMainWindow):
 		self.conn_button.clicked.connect(self.on_connect)  # 登录
 
 	def main_win_show(self, task):
-		self.main_win = MainWindow(self.kcp, self.ip)
+		self.main_win = MainWindow(self.client_params)
 		self.main_win.show()
 		self.close()
+
+	def share_clipboard_cb(self):
+		if self.share_clipboard_checkbox.checkState() == Qt.Checked:
+			self.client_params["share_clipboard"] = True
+		else:
+			self.client_params["share_clipboard"] = False
 
 	def on_connect(self):
 		port = 0
 		ip_port = self.ip_edit.text().split(":")
-		self.ip = ip_port[0]
+		self.client_params["ip"] = ip_port[0]
 
 		if len(ip_port) == 2:
 			port = int(ip_port[1])

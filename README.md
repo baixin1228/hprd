@@ -3,7 +3,7 @@
 # High Performance Remote Desktop
 
 ## Introduction
-Hprd is a remote desktop that enables users to stream their desktops and games to other devices. Stream/share gameplay moments and remotely control your desktop using custom hotkeys.Hprd is under development, so there will be many problems to be solved.Extremely small bandwidth occupation, about 1~10Mbps, can run on the public network.
+Hprd is a remote desktop that enables users to stream their desktops and games to other devices. Stream/share gameplay moments and remotely control your desktop using custom hotkeys.Extremely small bandwidth occupation, about 1~10Mbps, can run on the public network.Hprd is under development, so there will be many problems to be solved.
 
 ### Features
 1.X11 Capture  

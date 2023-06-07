@@ -22,7 +22,7 @@ if os.path.exists(cdll_names[system()]):
 else:
 	cmd_ret = os.popen(cdll_pkg[system()])
 	if cmd_ret:
-		pkg_path = cmd_ret.read().replaec("\n", "")
+		pkg_path = cmd_ret.read().replace("\n", "")
 		clib = cdll.LoadLibrary(pkg_path)
 	else:
 		print("not find libpyqt_proxy.so, exit...")

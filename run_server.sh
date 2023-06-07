@@ -11,7 +11,7 @@ fi
 
 if [ -f /var/run/lightdm/root/:0 ]
 then
-	XAUTHORITY=/var/run/lightdm/root/:0 sudo ./server_build/src/server $*
+	XAUTHORITY=/var/run/lightdm/root/:0 sudo ./server_build/src/hprd_server $*
 else
-	./server_build/src/server $*
+	./server_build/src/hprd_server $*
 fi

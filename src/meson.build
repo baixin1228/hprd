@@ -29,9 +29,9 @@ if build_target == 'server' or build_target == 'all'
 		dependencies: server_deps,
 		link_whole: server_libs,
 		link_args : ['-ldl', '-lpthread'],
-		install : true)
+		install : false)
 
-	hprd_server = executable('server', 'server.c',
+	hprd_server = executable('hprd_server', 'server.c',
 		include_directories : inc,
 		dependencies: server_deps,
 		link_whole: server_static_lib,
@@ -54,14 +54,14 @@ if build_target == 'client' or build_target == 'all'
 			dependencies: client_deps,
 			link_whole: client_libs,
 			link_args : ['-ldl', '-lpthread'],
-		    install : true)
+		    install : false)
 
 	hprd_client = executable('client', 'client.c',
 		include_directories : inc,
 		dependencies: client_deps,
 		link_whole: client_static_lib,
 		link_args : ['-ldl', '-lpthread'],
-	    install : true)
+	    install : false)
 
 	subdir('clients/pyqt')
 	test('hprd_client_test', hprd_client, is_parallel : false, timeout: 1000)

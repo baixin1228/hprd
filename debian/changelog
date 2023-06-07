@@ -1,0 +1,126 @@
+hprd (0.1.2-1) unstable; urgency=medium
+
+  [ Bai Xin ]
+  * add x265
+  * add x264
+  * add sw scale.
+  * add ffmpeg dec
+  * add gl render
+  * add pyqt_client: ip args
+  * py_client: add mouse move cmd.
+  * tcp: fix the problem where the link failed but did not return an error
+  * pyqt_client: reduce the number of calls to resizeEvent.
+  * readme: format the readme.
+  * readme: add logo.
+  * readme: format the readme.
+  * readme: format the readme.
+  * pyqt_client: add mouse wheel key event.
+  * server: add key.
+  * pyqt_client: update the rendered screen size when the statusbar show or hidden.
+  * pyqt_client: add video rate info and frame rate info.
+  * pyqt_client: add quit.
+  * pyqt_client: add bit rate and frame rate menu.
+  * pyqt_client: change menu text form 'runing info' to 'status bar'.
+  * pyqt_client: add frame rate setting support.
+  * codec: add openh264_enc.
+  * pyqt_client: fix status bar action.
+  * codec: add openh264 enc.
+  * dev: add priority params.
+  * pyqt_client: add net recv thread.
+  * codec: add openh264 enc.
+  * server: add getopt to server.
+  * server: change default bitrate to 5Mbps.
+  * codec: change openh264 irc mode.
+  * pyqt_client: fix timer setInterval float error.
+  * pyqt_client: avoid flickering.
+  * pyqt_client: disable short cut.
+  * pyqt_client: Changed the information refresh rate from 0.3 second intervals to 0.6 second intervals.
+  * pyqt_client: change default bit rate to 1Mbps
+  * codec/ffpmeg_enc: set thread_count to 2.
+  * protocol: change data_pkt cmd to channel.
+  * net: add response.
+  * pyqt_client: add setting response.
+  * server: add release logi.
+  * pyqt_client: add bit rate setting.
+  * pyqt_client/key: add enter code.
+  * capture_dev/xcb_capture: add logic to get the default display.
+  * net: add send buffer.
+  * net: change send buffer to queue.
+  * server: add server fps info.
+  * pyqt_client: fix frame skipping issues.
+  * refactor code.
+  * pyqt_client: add recv cache.
+  * refactor code.
+  * protocol: add remote fps info.
+  * pyqt_client: add remote fps info.
+  * pyqt_client: add render monitor
+  * pyqt_client: add pthread spinlock mutex.
+  * pyqt_client/timer: change spin lock from spinlock to mutex.
+  * pyqt_client: disable X11 EGL VSYNC.
+  * pyqt_client: fix task del error.
+  * codec: add openh264 encodec.
+  * codec/openh264: refactor code.
+  * server/codec: add force I frame when client connected.
+  * refactor code.
+  * codec/ffmpeg_enc: add force key frame.
+  * tmp
+  * pyqt_client: fix the issue of ineffective fast forwarding.
+  * add kcp protocol.
+  * bash: fix meson build break.
+  * server: make kcp to default.
+  * pyqt_client: limit the sending rate of mouse movement events.
+  * kcp: fix recv queue seg fail.
+  * kcp: fix recv queue seg fail.
+  * kcp: fix ikcp send fail.
+  * codec/ffmpeg_enc: change rc mode to CBR.
+  * codec/openh264_enc: add CBR mode.
+  * codec: fix seg fail when encode parameters do not match.
+  * net/kcp: merge send data.
+  * pyqt_client/statbar: add ping info.
+  * pyqt_client: add kcp info.
+  * pyqt_client/statbar: organize format.
+  * pyqt_client: add ip addr info into title.
+  * refactor code
+  * net/kcp: optimize performance.
+  * net: add release logic.
+  * server: fix lightdm capture fail.
+  * test: add blockdpy test.
+
+  [ Bai Xin ]
+  * Revert "Main dev"
+  * net/kcp_client: fix seg fault..
+  * dev: add constructor logic.
+  * dev/capture: add constructor logic.
+  * dev/capture: add constructor logic.
+  * pyqt_client:map delete key.
+  * pyqt_client:map Fx key code.
+  * pyqt_client:map key code.
+  * pyqt_client:map key code.
+  * pyqt_client:map key code.
+  * pyqt_client:map key code.
+  * pyqt_client:map key code.
+  * pyqt_client:map key code.
+  * pyqt_client:map key code.
+  * pyqt_client:map key code.
+  * pyqt_client:map key code.
+  * pyqt_client: limit wheel speed.
+  * server: fix tcp_server seg fault
+  * pyqt_client: add key grab.
+  * pyqt_client: fix alt input confusion when siwtch window in title.
+  * pyqt_client: add super key.
+  * pyqt_client: add clip board.
+
+  [ Bai Xin ]
+  * server/xlib_input: add xlib multi-threaded support.
+  * pyqt_client:fix crash on paste too big data.
+  * server/xlib_input: fix x11 crash when xlib_input release.
+
+  [ Bai Xin ]
+  * server/xlib_input: add clip copy.
+
+  [ Bai Xin ]
+  * pyqt_client: add clipboard switch.
+  * readme: update features.
+  * readme: update features.
+
+ -- baixin <1228504957@qq.com>  Wed, 07 Jun 2023 14:09:49 +0800

@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=0.1.2
+Encoding=UTF-8
+Name=HPRD Client
+Exec=hprd_client
+Comment=
+Icon=/usr/share/icons/hprd/hprd-icon.png
+Terminal=false
+Categories=Application;Game;
+StartupNotify=false
+MimeType= 

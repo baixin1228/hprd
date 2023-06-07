@@ -5,7 +5,6 @@
 #include "util.h"
 #include "common.h"
 #include "protocol.h"
-#include "protocol.h"
 #include "net/net_client.h"
 
 
@@ -74,7 +73,10 @@ int send_clip_event(char *type, char *data, uint16_t len)
 	clip_event = (struct clip_event *)event_pkt->data;
 	send_len += sizeof(*clip_event);
 	clip_event->data_len = htons(len + strlen(type) + 1);
+	#pragma GCC diagnostic push
+	#pragma GCC diagnostic ignored "-Warray-bounds"
 	strcpy(clip_event->clip_data, type);
+	#pragma GCC diagnostic pop
 	send_len += strlen(type) + 1;
 	memcpy(&clip_event->clip_data[strlen(type) + 1], data, len);
 

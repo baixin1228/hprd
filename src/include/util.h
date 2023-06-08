@@ -19,10 +19,12 @@ static inline void log_info(const char *fmt, ...)
 	char fmt_buffer[1024];
 	sprintf(fmt_buffer, "[\033[0m\033[1;34mInfo\033[0m] %s\n", fmt);
 	va_list va;
+	#pragma GCC diagnostic push
 	#pragma GCC diagnostic ignored "-Wvarargs"
 	va_start(va, fmt_buffer);
 	vfprintf(stdout, fmt_buffer, va);
 	va_end(va);
+	#pragma GCC diagnostic pop
 	fflush(stdout);
 }
 
@@ -31,10 +33,12 @@ static inline void log_warning(const char *fmt, ...)
 	char fmt_buffer[1024];
 	sprintf(fmt_buffer, "[\033[0m\033[1;33mWarn\033[0m] %s\n", fmt);
 	va_list va;
+	#pragma GCC diagnostic push
 	#pragma GCC diagnostic ignored "-Wvarargs"
 	va_start(va, fmt_buffer);
 	vfprintf(stderr, fmt_buffer, va);
 	va_end(va);
+	#pragma GCC diagnostic pop
 	fflush(stderr);
 }
 
@@ -43,10 +47,12 @@ static inline void log_error(const char *fmt, ...)
 	char fmt_buffer[1024];
 	sprintf(fmt_buffer, "[\033[0m\033[1;31mError\033[0m] %s\n", fmt);
 	va_list va;
+	#pragma GCC diagnostic push
 	#pragma GCC diagnostic ignored "-Wvarargs"
 	va_start(va, fmt_buffer);
 	vfprintf(stderr, fmt_buffer, va);
 	va_end(va);
+	#pragma GCC diagnostic pop
 	fflush(stderr);
 }
 
@@ -56,10 +62,12 @@ static inline void log_perr(const char *fmt, ...)
 	sprintf(fmt_buffer, "[\033[0m\033[1;31mError\033[0m] %s\nerr_no:%d %s\n",
 		fmt, errno, strerror (errno));
 	va_list va;
+	#pragma GCC diagnostic push
 	#pragma GCC diagnostic ignored "-Wvarargs"
 	va_start(va, fmt_buffer);
 	vfprintf(stderr, fmt_buffer, va);
 	va_end(va);
+	#pragma GCC diagnostic pop
 	fflush(stderr);
 }
 

@@ -7,7 +7,7 @@ ninja -C server_build
 if [ $? != 0 ]; then 
 	exit 
 fi
-# meson test -C server_build -v hprd_server_test
+# meson test -C server_build -v server_test
 
 if [ -f /var/run/lightdm/root/:0 ]
 then

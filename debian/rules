@@ -1,0 +1,51 @@
+#!/usr/bin/make -f
+# See debhelper(7) (uncomment to enable)
+# output every command that modifies files on the build system.
+#export DH_VERBOSE = 1
+
+
+# see FEATURE AREAS in dpkg-buildflags(1)
+#export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+# see ENVIRONMENT in dpkg-buildflags(1)
+# package maintainers to append CFLAGS
+#export DEB_CFLAGS_MAINT_APPEND  = -Wall -pedantic
+# package maintainers to append LDFLAGS
+#export DEB_LDFLAGS_MAINT_APPEND = -Wl,--as-needed
+
+%:
+	dh $@
+
+
+# dh_make generated override targets
+# This is example for Cmake (See https://bugs.debian.org/641051 )
+#override_dh_auto_configure:
+#	dh_auto_configure -- #	-DCMAKE_LIBRARY_PATH=$(DEB_HOST_MULTIARCH)
+
+override_dh_auto_configure:
+	dh_auto_configure --buildsystem=meson
+
+# override_dh_shlibdeps:
+# 	dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info
+
+override_dh_install:
+	$(shell mkdir -p debian/tmp/usr/bin/hprd/)
+	$(shell cp -a debian/hprd_server debian/tmp/usr/bin/)
+	$(shell mkdir -p debian/tmp/lib/systemd/system/)
+	$(shell cp -a debian/hprd-server.service debian/tmp/lib/systemd/system/)
+	$(shell cp -a src/clients/pyqt/main.py debian/tmp/usr/bin/hprd/)
+	$(shell cp -a src/clients/pyqt/MainWindow.py debian/tmp/usr/bin/hprd/)
+	$(shell cp -a src/clients/pyqt/RenderWidget.py debian/tmp/usr/bin/hprd/)
+	$(shell cp -a src/clients/pyqt/util.py debian/tmp/usr/bin/hprd/)
+	$(shell cp -a src/clients/pyqt/pyqt_proxy.py debian/tmp/usr/bin/hprd/)
+	$(shell cp -a debian/hprd_client debian/tmp/usr/bin/)
+	$(shell mkdir -p debian/tmp/usr/share/applications/)
+	$(shell cp -a debian/hprd-client.desktop debian/tmp/usr/share/applications/)
+	$(shell mkdir -p debian/tmp/usr/share/icons/hprd/)
+	$(shell cp -a res/logo_128.png debian/tmp/usr/share/icons/hprd/hprd-icon.png)
+	dh_install
+
+override_dh_auto_test:
+
+override_dh_builddeb:
+	dh_builddeb -- -Zgzip

@@ -180,7 +180,7 @@ static void *_kcp_server_thread(void *opaque) {
 	uint32_t client_id;
 	socklen_t addr_len;
 	struct sockaddr_in form_addr;
-	struct kcp_server_client *client;
+	struct kcp_server_client *client = NULL;
 
 	addr_len = sizeof(form_addr);
 	udp_buf = calloc(2000, 1);

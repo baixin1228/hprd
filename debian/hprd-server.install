@@ -1,0 +1,4 @@
+#! /usr/bin/dh-exec
+usr/bin/hprd_server
+lib/systemd/system/hprd-server.service
+usr/bin/server => usr/bin/hprd/server

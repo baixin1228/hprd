@@ -1,0 +1,10 @@
+#! /usr/bin/dh-exec
+usr/lib/*/libpyqt_proxy.so
+usr/bin/hprd/main.py
+usr/bin/hprd/MainWindow.py
+usr/bin/hprd/RenderWidget.py
+usr/bin/hprd/util.py
+usr/bin/hprd/pyqt_proxy.py
+usr/bin/hprd_client
+usr/share/applications/hprd-client.desktop
+usr/share/icons/hprd/hprd-icon.png

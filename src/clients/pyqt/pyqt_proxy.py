@@ -1,5 +1,6 @@
 #!/usr/bin/python3
-
+import os
+import sys
 from ctypes import *
 from platform import *
 
@@ -9,7 +10,24 @@ cdll_names = {
 			'Windows': 'msvcrt.dll'
 		}
 
-clib = cdll.LoadLibrary(cdll_names[system()])
+cdll_pkg = {
+			'Darwin' : 'libc.dylib',
+			'Linux'  : "whereis libpyqt_proxy.so | awk '{print $2}'",
+			'Windows': 'msvcrt.dll'
+		}
+
+
+if os.path.exists(cdll_names[system()]):
+	clib = cdll.LoadLibrary(cdll_names[system()])
+else:
+	cmd_ret = os.popen(cdll_pkg[system()])
+	if cmd_ret:
+		pkg_path = cmd_ret.read().replace("\n", "")
+		clib = cdll.LoadLibrary(pkg_path)
+	else:
+		print("not find libpyqt_proxy.so, exit...")
+		sys.exit(-1)
+
 clib.py_client_connect.argtypes = [POINTER(c_char), c_ushort]
 clib.py_client_connect.restype = c_int
 

@@ -1,3 +1,5 @@
 *build*/
 *.swp
 *.pyc
+debian/tmp
+obj-x86_64-linux-gnu

@@ -1,1 +1,2 @@
 option('build_target', type : 'combo', choices : ['client', 'server', 'all'], value : 'all')
+option('sdl_client', type : 'boolean', value : false)

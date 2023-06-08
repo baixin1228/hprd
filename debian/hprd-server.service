@@ -1,0 +1,17 @@
+[Unit]
+Description = HPRD Server
+After = network-online.target
+
+[Service]
+Type = simple
+#EnvironmentFile = /etc/default/hprd-server
+User = root
+Group = root
+#WorkingDirectory = /var/lib/hprd-server
+ExecStart = /bin/bash -c "/usr/bin/hprd_server"
+Restart = on-failure
+TimeoutSec = 15
+SuccessExitStatus=0 143
+
+[Install]
+WantedBy = multi-user.target

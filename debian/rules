@@ -30,6 +30,9 @@ override_dh_auto_configure:
 
 override_dh_install:
 	$(shell mkdir -p debian/tmp/usr/bin/hprd/)
+	$(shell cp -a debian/hprd_server debian/tmp/usr/bin/)
+	$(shell mkdir -p debian/tmp/lib/systemd/system/)
+	$(shell cp -a debian/hprd-server.service debian/tmp/lib/systemd/system/)
 	$(shell cp -a src/clients/pyqt/main.py debian/tmp/usr/bin/hprd/)
 	$(shell cp -a src/clients/pyqt/MainWindow.py debian/tmp/usr/bin/hprd/)
 	$(shell cp -a src/clients/pyqt/RenderWidget.py debian/tmp/usr/bin/hprd/)

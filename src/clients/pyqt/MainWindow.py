@@ -10,11 +10,13 @@ import time
 from util import *
 from ctypes import *
 from pyqt_proxy import proxy
+from PlatformRes import PlatformRes
 from RenderWidget import RenderWidget
 
 class MainWindow(QMainWindow):
 	def __init__(self, params):
 		super(MainWindow, self).__init__()
+		self.platform_res = PlatformRes()
 		self.enable_kcp = params["kcp"]
 		self.ip = params["ip"]
 		self.share_clipboard = params["share_clipboard"]
@@ -119,6 +121,11 @@ class MainWindow(QMainWindow):
 
 	def init_ui(self):
 		self.setWindowTitle("High Performance Remote Desktop - %s" % self.ip)
+		icon = QIcon()
+		qpix = QPixmap(self.platform_res.get_icon_path())
+		icon.addPixmap(qpix, QIcon.Normal, QIcon.Off)
+		self.setWindowIcon(icon)
+
 		self.status_bar_action.setChecked(True)
 
 		self.d_a_adapt.setChecked(True)

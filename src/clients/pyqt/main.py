@@ -4,17 +4,20 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
+import os
 import sys
 import sip
 import argparse
-import configparser
 from util import *
+import configparser
 from pyqt_proxy import proxy
 from MainWindow import MainWindow
+from PlatformRes import PlatformRes
 
 class LoginWindow(QMainWindow):
 	def __init__(self):
 		super(LoginWindow, self).__init__(None)
+		self.platform_res = PlatformRes()
 		self.init_args();
 		self.setup_ui()
 		self.init_ui()
@@ -77,6 +80,10 @@ class LoginWindow(QMainWindow):
 		self.layout.addWidget(self.conn_button,4,1,1,2)
 	
 	def init_ui(self):
+		icon = QIcon()
+		qpix = QPixmap(self.platform_res.get_icon_path())
+		icon.addPixmap(qpix, QIcon.Normal, QIcon.Off)
+		self.setWindowIcon(icon)
 		self.ip_edit.setFocus()
 		self.ip_edit.setPlaceholderText("请输入ip地址")
 		self.user_edit.setPlaceholderText("请输入用户名")

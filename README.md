@@ -6,8 +6,8 @@
 Hprd is a remote desktop that enables users to stream their desktops and games to other devices. Stream/share gameplay moments and remotely control your desktop using custom hotkeys.Extremely small bandwidth occupation, about 1~10Mbps, can run on the public network.Hprd is under development, so there will be many problems to be solved.
 
 ### Features
-1.X11 Capture  
-2.X11 Render  
+1.X11 capture  
+2.X11 renderer  
 3.KCP protocol  
 4.H264/H265 encodec and decodec  
 5.Share clipboard  
@@ -15,17 +15,17 @@ Hprd is a remote desktop that enables users to stream their desktops and games t
 ## Installation
 Install Server:  
 ```sh
-sudo dpkg -i hprd_server.deb
+sudo dpkg -i hprd-server_xxx.deb
 ```
 
 Install Client:  
 ```sh
-sudo dpkg -i hprd_client.deb
+sudo dpkg -i hprd-client_xxx.deb
 ```
 ##### Usage
 Run Server:  
 ```sh
-sudo systemctl start hprd_server
+sudo systemctl start hprd-server.service
 ```
 
 Run Client:  
@@ -87,6 +87,8 @@ Run Client:
 1.File transfer  
 2.Audio support  
 3.USB protocol transparent transmission  
+3.Wayland capture  
+3.Wayland renderer  
 4.Video codec hardware acceleration  
 5.Gamepad adaptation  
 6.Encrypted transmission  

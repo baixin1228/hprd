@@ -116,7 +116,8 @@ class LoginWindow(QMainWindow):
 		if ret == 0:
 			add_task(1, 0, self.main_win_show)
 		else:
-			print("connect to {} fail.", ip_port[0])
+			print("connect to %s fail."%(ip_port[0]))
+			QMessageBox.critical(self, "connect time out", "connect to %s fail."%ip_port[0],QMessageBox.Yes)
 
 if __name__=="__main__":
 	app = QApplication(sys.argv)

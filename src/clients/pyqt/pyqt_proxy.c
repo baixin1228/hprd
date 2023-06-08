@@ -245,10 +245,13 @@ int py_client_connect(char *ip, uint16_t port) {
 
 	strcpy(client.ip, ip);
 	client.port = port;
+	printf("connect\n");
 	ret = client_net_init(ip, port);
 	if (ret == -1) {
+		printf("connect fail\n");
 		return -1;
 	}
+	printf("connect success\n");
 	client_net_bind_pkg_cb(_on_client_recv);
 	
 	pthread_mutex_init(&client.req_tab_lock, NULL);

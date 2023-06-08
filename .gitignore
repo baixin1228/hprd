@@ -3,3 +3,15 @@
 *.pyc
 debian/tmp
 obj-x86_64-linux-gnu
+debian/.debhelper/
+debian/debhelper-build-stamp
+debian/files
+debian/hprd-client.debhelper.log
+debian/hprd-client.postinst.debhelper
+debian/hprd-client.postrm.debhelper
+debian/hprd-client.substvars
+debian/hprd-client/
+debian/hprd-server.debhelper.log
+debian/hprd-server.postrm.debhelper
+debian/hprd-server.substvars
+debian/hprd-server/

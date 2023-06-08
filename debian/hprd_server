@@ -3,5 +3,5 @@ cd $(dirname "$0")
 
 ret=`ps -aux | grep Xorg | grep -v grep`
 user=`echo $ret | awk '{print $1}'`
-[[ "$ret" =~ -auth\ ([a-zA-Z0-9/]*) ]] \
-&& XAUTHORITY=${BASH_REMATCH[1]} runuser - $user -g $user -c "/usr/bin/hprd/server"
+[[ "$ret" =~ -auth\ ([a-zA-Z0-9/:]*) ]] \
+&& XAUTHORITY=${BASH_REMATCH[1]} runuser $user -g $user -c "/usr/bin/hprd/server"

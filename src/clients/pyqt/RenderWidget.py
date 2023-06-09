@@ -31,8 +31,8 @@ class RenderWidget(QWidget):
 		self.mouse_key = 0
 		self.installEventFilter(self)
 		self.modifiers = 0
-		self.angle_key = 0
-		self.angle_key_times = 0
+		self.angle_y = 0
+		self.angle_x = 0
 		self.grab = False
 		self.enable_clip = False
 		self.text_clip = ""
@@ -68,38 +68,24 @@ class RenderWidget(QWidget):
 	def wheelEvent(self, event):
 		if self.grab == True:
 			angle = event.angleDelta()
+			self.angle_y += angle.y()
+			self.angle_x += angle.x()
 
-			if angle.y() > 0:
-				if self.angle_key == 4 and self.angle_key_times < 10:
-					self.angle_key_times = self.angle_key_times + 1
-				else:
-					proxy().py_wheel_event(4)
-					self.angle_key = 4
-					self.angle_key_times = 1
+			if self.angle_y >= 120:
+				proxy().py_wheel_event(4)
+				self.angle_y = 0
 
-			if angle.y() < 0:
-				if self.angle_key == 5 and self.angle_key_times < 10:
-					self.angle_key_times = self.angle_key_times + 1
-				else:
-					proxy().py_wheel_event(5)
-					self.angle_key = 5
-					self.angle_key_times = 1
+			if self.angle_y <= -120:
+				proxy().py_wheel_event(5)
+				self.angle_y = 0
 
-			if angle.x() < 0:
-				if self.angle_key == 6 and self.angle_key_times < 10:
-					self.angle_key_times = self.angle_key_times + 1
-				else:
-					proxy().py_wheel_event(6)
-					self.angle_key = 6
-					self.angle_key_times = 1
+			if self.angle_x <= -120:
+				proxy().py_wheel_event(6)
+				self.angle_x = 0
 
-			if angle.x() > 0:
-				if self.angle_key == 7 and self.angle_key_times < 10:
-					self.angle_key_times = self.angle_key_times + 1
-				else:
-					proxy().py_wheel_event(7)
-					self.angle_key = 7
-					self.angle_key_times = 1
+			if self.angle_x >= 120:
+				proxy().py_wheel_event(7)
+				self.angle_x = 0
 
 	def keyPressEvent(self, event):
 		if self.grab == True:

@@ -25,6 +25,7 @@ int gl_bind_khr(struct gl_object *obj, struct gl_texture *texture,
 	struct raw_buffer *buffer);
 int gl_render(struct gl_object *obj, int texture_id);
 void gl_resize(struct gl_object *obj, uint32_t width, uint32_t height);
+void gl_scale(struct gl_object *obj, float width, float height);
 void gl_release(struct gl_object *obj);
 void gl_show_version();
 #endif

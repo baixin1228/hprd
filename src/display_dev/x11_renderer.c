@@ -215,6 +215,31 @@ static int x11_renderer_resize(struct display_object *obj, uint32_t width,
 	return 0;
 }
 
+static int x11_renderer_scale(struct display_object *obj, float width,
+							   float height) {
+	struct x11_renderer *priv = (struct x11_renderer *)obj->priv;
+	if(!priv->gl) {
+		log_error("gl is NULL.");
+		return -1;
+	}
+
+	if(width < 0 || height < 0)
+	{
+		log_error("scale factor not allowed.");
+		return -1;
+	}
+	
+	if (!eglMakeCurrent(priv->display, priv->surface, priv->surface,
+						priv->context)) {
+		log_error("make current fail.");
+		return -1;
+	}
+
+	gl_scale(priv->gl, width, height);
+
+	return 0;
+}
+
 static int x11_renderer_release(struct display_object *obj) {
 	struct x11_renderer *priv = (struct x11_renderer *)obj->priv;
 
@@ -232,10 +257,11 @@ struct display_ops x11_renderer_ops = {
 	.name			= "x11_renderer",
 	.init			= x11_renderer_init,
 	.set_info		= x11_renderer_set_info,
-	.map_fb		= x11_renderer_map_fb,
-	.get_fb		= x11_renderer_get_fb,
-	.put_fb		= x11_renderer_put_fb,
+	.map_fb			= x11_renderer_map_fb,
+	.get_fb			= x11_renderer_get_fb,
+	.put_fb			= x11_renderer_put_fb,
 	.resize			= x11_renderer_resize,
+	.scale			= x11_renderer_scale,
 	.release		= x11_renderer_release,
 };
 

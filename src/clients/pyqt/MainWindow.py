@@ -206,13 +206,15 @@ class MainWindow(QMainWindow):
 			self.setFixedSize(render_size[0], render_size[1] + self.menu_bar.height())
 
 	def _update_dsp_mode(self):
-		if(self.dsp_mode == 1):
+		self.centralwidget.set_scale_mode(self.dsp_mode)
+		if self.dsp_mode == 1 or self.dsp_mode == 2:
+			self.setMinimumSize(0,0);
+			self.setMaximumSize(QSize(QWIDGETSIZE_MAX,QWIDGETSIZE_MAX));
+			""" 触发渲染控件重新布局 """
+			self.centralwidget.update_size()
 			return
 
-		if(self.dsp_mode == 2):
-			return
-
-		if(self.dsp_mode == 3):
+		if self.dsp_mode == 3:
 			self._resize_to_1_1()
 			return
 

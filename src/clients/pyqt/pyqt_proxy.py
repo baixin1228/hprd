@@ -48,6 +48,9 @@ clib.py_key_event.restype = c_int
 clib.py_client_resize.argtypes = [c_uint, c_uint]
 clib.py_client_resize.restype = c_int
 
+clib.py_client_scale.argtypes = [c_float, c_float]
+clib.py_client_scale.restype = c_int
+
 clib.py_get_recv_count.argtypes = []
 clib.py_get_recv_count.restype = c_uint
 

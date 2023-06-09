@@ -299,6 +299,13 @@ int py_client_resize(uint32_t width, uint32_t height) {
 	return display_resize(client.dsp_obj, width, height);
 }
 
+int py_client_scale(float width, float height) {
+	if(!client.dsp_obj)
+		return -1;
+
+	return display_scale(client.dsp_obj, width, height);
+}
+
 int py_client_regist_stream_size_cb(void *oqu, void (*callback)(void *oqu,
 									uint32_t width, uint32_t height)) {
 	client.resize_python_self = oqu;

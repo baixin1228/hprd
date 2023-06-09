@@ -21,9 +21,13 @@ class RenderWidget(QWidget):
 		proxy().py_client_regist_stream_size_cb(py_object(self), self._stream_size_cb)
 		self.stream_width = 0
 		self.stream_height = 0
-		self.old_width = self.width()
-		self.old_height = self.height()
 		self.last_time = 0
+		self.x_offset = 0
+		self.y_offset = 0
+		self.x_scale = 1
+		self.y_scale = 1
+		self.x_adapt_scale = 1
+		self.y_adapt_scale = 1
 
 	def _setup_ui(self):
 		self.setMouseTracking(True)
@@ -38,11 +42,15 @@ class RenderWidget(QWidget):
 		self.text_clip = ""
 		self.html_clip = ""
 		self.image_clip = 0
+		self.scale_mode = 1
 
 	@CFUNCTYPE(None, py_object, c_uint, c_uint)
 	def _stream_size_cb(self, width, height):
 		self.stream_width = width
 		self.stream_height = height
+		""" 触发父window resize """
+		if self.main_window._on_render_show:
+			self.main_window._on_render_show()
 
 	def _frame_loop(self, task):
 		if proxy().py_on_frame() == -1:
@@ -50,19 +58,19 @@ class RenderWidget(QWidget):
 			sys.exit(-1);
 
 	def _waiting_init(self, task):
+		""" 初始化显示 """
 		ret = proxy().py_client_init_config(self.winId().__int__())
 		if ret == 0:
 			stop_task(task)
 			add_task(1, 1, self._frame_loop)
-			if self.main_window._on_render_show:
-				self.main_window._on_render_show()
+
 		if ret == -1:
 			print("py_client_init_config fail.")
 			sys.exit(-1)
 
 	def _get_remote_pos(self, x , y):
-		x = x / self.width() * self.stream_width
-		y = y / self.height() * self.stream_height
+		x = (self.x_offset + x) / self.x_adapt_scale
+		y = (self.y_offset + y) / self.y_adapt_scale
 		return int(x), int(y)
 
 	def wheelEvent(self, event):
@@ -116,15 +124,18 @@ class RenderWidget(QWidget):
 		if event.buttons() == Qt.MidButton:
 			self.mouse_key = 2
 
-		proxy().py_mouse_click(*self._get_remote_pos(event.x(), event.y()),
-			self.mouse_key, 1)
+		x, y = self._get_remote_pos(event.x(), event.y())
+		if x >= 0 and y >= 0 and x <= self.stream_width and y <= self.stream_height:
+			proxy().py_mouse_click(x, y, self.mouse_key, 1)
 
 	def mouseMoveEvent(self,event):
 		time_ms = int(round(time.time() * 1000))
 		self._ui_grab()
 		if time_ms - self.last_time > 1000 / self.main_window.get_fps():
-			proxy().py_mouse_move(*self._get_remote_pos(event.x(), event.y()))
-			self.last_time = time_ms
+			x, y = self._get_remote_pos(event.x(), event.y())
+			if x >= 0 and y >= 0 and x <= self.stream_width and y <= self.stream_height:
+				proxy().py_mouse_move(x, y)
+				self.last_time = time_ms
 
 	def mouseReleaseEvent(self,event):
 		proxy().py_mouse_click(*self._get_remote_pos(event.x(), event.y()),
@@ -132,10 +143,30 @@ class RenderWidget(QWidget):
 		self.mouse_key = 0
 
 	def update_size(self):
-		if self.old_width != self.width() or self.old_height != self.height():
-			self.old_width = self.width()
-			self.old_height = self.height()
-			proxy().py_client_resize(self.width(), int(self.height()))
+		proxy().py_client_resize(self.width(), int(self.height()))
+		if self.stream_width > 0 and self.stream_height > 0:
+			self.x_scale = float(self.width()) / self.stream_width
+			self.y_scale = float(self.height()) / self.stream_height
+			self.x_adapt_scale = self.x_scale
+			self.y_adapt_scale = self.y_scale
+
+		if self.scale_mode == 1 and self.stream_width > 0 and self.stream_height > 0:
+			ratio_window = float(self.width()) / self.height()
+			ratio_stream = float(self.stream_width) / self.stream_height
+			if ratio_window > ratio_stream:
+				self.y_offset = 0
+				self.x_offset = -int((self.width() - self.stream_width * self.y_scale) / 2)
+				proxy().py_client_scale(float(self.stream_width * self.y_scale) / float(self.width()) , 1.0)
+				self.x_adapt_scale = self.y_scale
+			else:
+				self.x_offset = 0
+				self.y_offset = -int((self.height() - self.stream_height * self.x_scale) / 2)
+				proxy().py_client_scale(1.0, float(self.stream_height * self.x_scale) / float(self.height()))
+				self.y_adapt_scale = self.x_scale
+		else:
+			proxy().py_client_scale(1.0, 1.0)
+			self.x_offset = 0
+			self.y_offset = 0
 
 	def _ui_grab(self):
 		if self.grab == False and self.geometry().contains(self.mapFromGlobal(QCursor.pos())):
@@ -207,3 +238,6 @@ class RenderWidget(QWidget):
 
 	def get_stream_size(self):
 		return int(self.stream_width), int(self.stream_height)
+
+	def set_scale_mode(self, scale_mode):
+		self.scale_mode = scale_mode

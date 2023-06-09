@@ -43,12 +43,12 @@ struct gl_object *gl_init(uint32_t width, uint32_t height, int pix_format)
 		for (int j = 0; j < 4; ++j)
 		{
 			if(i == j)
-				obj->mvp_matrix[i][j] = 1;
+				obj->mvp_matrix[i][j] = 1.0f;
 			else
 				obj->mvp_matrix[i][j] = 0;
 		}
 	}
-	
+
 	switch(pix_format)
 	{
 		case ARGB8888:
@@ -138,6 +138,7 @@ GLuint rect_points[] =
 };
 int gl_render(struct gl_object *obj, int texture_id)
 {
+	glClear(GL_COLOR_BUFFER_BIT);
 	if(obj->gl_ops->render(obj, &obj->texture[texture_id]) == -1)
 		return -1;
 
@@ -149,6 +150,14 @@ int gl_render(struct gl_object *obj, int texture_id)
 void gl_resize(struct gl_object *obj, uint32_t width, uint32_t height)
 {
 	glViewport(0, 0, width, height);
+}
+
+void gl_scale(struct gl_object *obj, float width, float height)
+{
+	obj->mvp_matrix[0][0] = width;
+	obj->mvp_matrix[1][1] = height;
+	glUniformMatrix4fv(obj->mvp, 1, GL_FALSE, (GLfloat*) obj->mvp_matrix);
+	checkEGlError(__FILE__, __LINE__);
 }
 
 void gl_release(struct gl_object *obj)

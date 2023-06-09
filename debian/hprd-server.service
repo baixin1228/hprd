@@ -9,6 +9,7 @@ User = root
 Group = root
 #WorkingDirectory = /var/lib/hprd-server
 ExecStart = /bin/bash -c "/usr/bin/hprd_server"
+KillMode = control-group
 Restart = on-failure
 TimeoutSec = 15
 SuccessExitStatus=0 143

@@ -1,8 +1,12 @@
-hprd (0.1.2-2) unstable; urgency=medium
+hprd (0.1.3-1) unstable; urgency=medium
 
   * debian: disable zstd package.
-
- -- BaiXin <1228504957@qq.com>  Fri, 09 Jun 2023 09:50:56 +0800
+  * pyqt_client: add platform res.
+  * client/tcp: add tcp timeout check.
+  * pyqt_client: fix touchpad speed.
+  * pyqt_client: add adapt display mode.
+  
+ -- BaiXin <1228504957@qq.com>  Fri, 09 Jun 2023 13:04:29 +0800
 
 hprd (0.1.2-1) unstable; urgency=medium
 

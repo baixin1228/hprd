@@ -169,6 +169,7 @@ static int x11_renderer_put_fb(struct display_object *obj,
 	}
 
 	if(!priv->share_mem) {
+		/* not share mem */
 		buffer = get_raw_buffer(obj->buf_pool, buf_id);
 		if(buffer == NULL) {
 			log_error("x11 get buffer fail! buf_id:%d", buf_id);

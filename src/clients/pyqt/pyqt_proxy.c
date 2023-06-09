@@ -245,10 +245,13 @@ int py_client_connect(char *ip, uint16_t port) {
 
 	strcpy(client.ip, ip);
 	client.port = port;
+	printf("connect\n");
 	ret = client_net_init(ip, port);
 	if (ret == -1) {
+		printf("connect fail\n");
 		return -1;
 	}
+	printf("connect success\n");
 	client_net_bind_pkg_cb(_on_client_recv);
 	
 	pthread_mutex_init(&client.req_tab_lock, NULL);
@@ -294,6 +297,13 @@ int py_client_resize(uint32_t width, uint32_t height) {
 		return -1;
 
 	return display_resize(client.dsp_obj, width, height);
+}
+
+int py_client_scale(float width, float height) {
+	if(!client.dsp_obj)
+		return -1;
+
+	return display_scale(client.dsp_obj, width, height);
 }
 
 int py_client_regist_stream_size_cb(void *oqu, void (*callback)(void *oqu,

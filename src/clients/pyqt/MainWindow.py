@@ -10,11 +10,13 @@ import time
 from util import *
 from ctypes import *
 from pyqt_proxy import proxy
+from PlatformRes import PlatformRes
 from RenderWidget import RenderWidget
 
 class MainWindow(QMainWindow):
 	def __init__(self, params):
 		super(MainWindow, self).__init__()
+		self.platform_res = PlatformRes()
 		self.enable_kcp = params["kcp"]
 		self.ip = params["ip"]
 		self.share_clipboard = params["share_clipboard"]
@@ -119,6 +121,11 @@ class MainWindow(QMainWindow):
 
 	def init_ui(self):
 		self.setWindowTitle("High Performance Remote Desktop - %s" % self.ip)
+		icon = QIcon()
+		qpix = QPixmap(self.platform_res.get_icon_path())
+		icon.addPixmap(qpix, QIcon.Normal, QIcon.Off)
+		self.setWindowIcon(icon)
+
 		self.status_bar_action.setChecked(True)
 
 		self.d_a_adapt.setChecked(True)
@@ -199,13 +206,15 @@ class MainWindow(QMainWindow):
 			self.setFixedSize(render_size[0], render_size[1] + self.menu_bar.height())
 
 	def _update_dsp_mode(self):
-		if(self.dsp_mode == 1):
+		self.centralwidget.set_scale_mode(self.dsp_mode)
+		if self.dsp_mode == 1 or self.dsp_mode == 2:
+			self.setMinimumSize(0,0);
+			self.setMaximumSize(QSize(QWIDGETSIZE_MAX,QWIDGETSIZE_MAX));
+			""" 触发渲染控件重新布局 """
+			self.centralwidget.update_size()
 			return
 
-		if(self.dsp_mode == 2):
-			return
-
-		if(self.dsp_mode == 3):
+		if self.dsp_mode == 3:
 			self._resize_to_1_1()
 			return
 

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <fcntl.h>
 
 #include "util.h"
 #include "protocol.h"
@@ -104,6 +105,57 @@ static void *_recv_thread(void *oq) {
 	return NULL;
 }
 
+int connect_timeout(int sock_fd,struct sockaddr_in *servaddr, int time_out)
+{
+    int ret = -1;
+
+    fcntl(sock_fd, F_SETFL, fcntl(sock_fd, F_GETFL, 0) | O_NONBLOCK);
+    int connected = connect(sock_fd, (struct sockaddr*)servaddr, sizeof(struct sockaddr_in));
+    if(connected != 0)
+	{
+		if(errno != EINPROGRESS)
+			printf("connect error :%s\n",strerror(errno));
+		else
+		{
+			struct timeval tm = {time_out, 0};
+			fd_set wset,rset;
+			FD_ZERO(&wset);
+			FD_ZERO(&rset);
+			FD_SET(sock_fd,&wset);
+			FD_SET(sock_fd,&rset);
+			long t1 = time(NULL);
+			int res = select(sock_fd+1, &rset, &wset, NULL, &tm);
+			long t2 = time(NULL);
+			printf("interval time: %ld\n", t2 - t1);
+			if(res < 0)
+			{
+				printf("network error in connect\n");
+			}
+			else if(res == 0)
+			{
+				printf("connect time out\n");
+			}
+			else if (1 == res)
+			{
+				if(FD_ISSET(sock_fd,&wset))
+				{
+					printf("connect succeed.\n");
+					fcntl(sock_fd, F_SETFL, fcntl(sock_fd, F_GETFL, 0) & ~O_NONBLOCK);
+					ret = 0;
+				}
+				else
+				{
+					printf("other error when select:%s\n",strerror(errno));
+				}
+			}
+		}
+	}else{
+		fcntl(sock_fd, F_SETFL, fcntl(sock_fd, F_GETFL, 0) & ~O_NONBLOCK);
+	}
+ 
+    return ret;
+}
+
 int tcp_client_init(char *ip, uint16_t port)
 {
 	pthread_t p1;
@@ -120,9 +172,8 @@ int tcp_client_init(char *ip, uint16_t port)
 		.sin_port = htons(port)
 	};
 
-	int err = connect(tcp_client.fd, (struct sockaddr *)&addr, sizeof(addr));
+	int err = connect_timeout(tcp_client.fd, &addr, 2);
 	if (err < 0) {
-		perror("\n connect");
 		return -1;
 	}
 

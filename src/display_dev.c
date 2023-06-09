@@ -65,6 +65,7 @@ DEV_FUNC_2(display, unmap_fb)
 DEV_FUNC_1(display, get_fb)
 DEV_FUNC_2(display, put_fb)
 DEV_RESIZE(display, display_ops)
+DEV_SCALE(display, display_ops)
 DEV_RELEASE(display, display_ops)
 
 int display_regist_frame_callback(struct display_object *display_obj, void (* on_frame)(struct display_object *obj))

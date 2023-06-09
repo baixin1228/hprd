@@ -2,31 +2,15 @@
 import os
 import sys
 from ctypes import *
-from platform import *
+from PlatformRes import PlatformRes
 
-cdll_names = {
-			'Darwin' : 'libc.dylib',
-			'Linux'  : '../../../client_build/src/clients/pyqt/libpyqt_proxy.so',
-			'Windows': 'msvcrt.dll'
-		}
-
-cdll_pkg = {
-			'Darwin' : 'libc.dylib',
-			'Linux'  : "whereis libpyqt_proxy.so | awk '{print $2}'",
-			'Windows': 'msvcrt.dll'
-		}
-
-
-if os.path.exists(cdll_names[system()]):
-	clib = cdll.LoadLibrary(cdll_names[system()])
+platform_res = PlatformRes()
+proxy_path = platform_res.get_proxy_path()
+if proxy_path:
+	clib = cdll.LoadLibrary(proxy_path)
 else:
-	cmd_ret = os.popen(cdll_pkg[system()])
-	if cmd_ret:
-		pkg_path = cmd_ret.read().replace("\n", "")
-		clib = cdll.LoadLibrary(pkg_path)
-	else:
-		print("not find libpyqt_proxy.so, exit...")
-		sys.exit(-1)
+	print("not find libpyqt_proxy.so, exit...")
+	sys.exit(-1)
 
 clib.py_client_connect.argtypes = [POINTER(c_char), c_ushort]
 clib.py_client_connect.restype = c_int
@@ -63,6 +47,9 @@ clib.py_key_event.restype = c_int
 
 clib.py_client_resize.argtypes = [c_uint, c_uint]
 clib.py_client_resize.restype = c_int
+
+clib.py_client_scale.argtypes = [c_float, c_float]
+clib.py_client_scale.restype = c_int
 
 clib.py_get_recv_count.argtypes = []
 clib.py_get_recv_count.restype = c_uint

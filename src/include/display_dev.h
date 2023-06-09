@@ -32,6 +32,7 @@ struct display_ops
 	int (* put_fb)(struct display_object *obj, int buf_id);
 	int (* get_fb)(struct display_object *obj);
 	int (* resize)(struct display_object *obj, uint32_t width, uint32_t height);
+	int (* scale)(struct display_object *obj, float width, float height);
 	int (* unmap_fb)(struct display_object *obj, int buf_id);
 	int (* main_loop)(struct display_object *obj);
 	int (* release)(struct display_object *obj);
@@ -43,6 +44,7 @@ int display_map_fb(struct display_object *display_obj, int buf_id);
 int display_get_fb(struct display_object *display_obj);
 int display_put_fb(struct display_object *display_obj, int buf_id);
 int display_resize(struct display_object *display_obj, uint32_t width, uint32_t height);
+int display_scale(struct display_object *display_obj, float width, float height);
 int display_regist_frame_callback(struct display_object *display_obj,
 	void (* on_frame)(struct display_object *obj));
 int display_regist_event_callback(struct display_object *display_obj,

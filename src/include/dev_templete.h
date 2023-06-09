@@ -105,6 +105,27 @@ int __obj##_resize(struct __obj##_object *obj,		\
 	return -1;										\
 }
 
+#define DEV_SCALE(__obj, __obj_ops)					\
+int __obj##_scale(struct __obj##_object *obj,		\
+	float width, float height)						\
+{													\
+	struct __obj_ops *dev_ops;						\
+													\
+	if(!obj)										\
+		return -1;									\
+													\
+	dev_ops = (struct __obj_ops *)obj->ops;			\
+	if(dev_ops)										\
+	{												\
+		if(dev_ops->scale)							\
+			return dev_ops->scale(obj, width, height);\
+		else 										\
+			log_error(#__obj" dev not find func:scale\n");\
+	}												\
+													\
+	return -1;										\
+}
+
 #define DEV_RELEASE(__obj, __obj_ops)				\
 int __obj##_release(struct __obj##_object *obj)		\
 {													\

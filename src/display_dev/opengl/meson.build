@@ -6,5 +6,5 @@ gl_source += 'yuv420_render.c'
 
 gl_lib = static_library('gl-help',
                         gl_source,
-						dependencies: [dependency('gl')],
+						dependencies: [dependency('gl'), dependency('glesv2')],
                         include_directories : '../../include')

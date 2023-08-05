@@ -8,5 +8,11 @@ if [ $? != 0 ]; then
 	exit 
 fi
 
+dpkg -l python3-pyqt5 2>&1 > /dev/null
+if [ $? != 0 ]; then 
+	echo "not find python3-pyqt5."
+	exit
+fi
+
 cd src/clients/pyqt
 python3 ./main.py $*

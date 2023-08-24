@@ -73,8 +73,6 @@ static struct kcp_server_client *_new_client(uint32_t nip, uint16_t nport, uint1
 	// 设置kcp的下层输出，这里为 _udp_output，模拟udp网络输出函数
 	ret->kcp_context->output = _udp_output;
 
-	ikcp_wndsize(ret->kcp_context, 1024, 1024);
-
 	// 启动快速模式
 	// 第二个参数 nodelay-启用以后若干常规加速将启动
 	// 第三个参数 interval为内部处理时钟，默认设置为 10ms

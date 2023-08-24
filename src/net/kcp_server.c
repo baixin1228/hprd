@@ -87,48 +87,22 @@ static struct kcp_server_client *_new_client(uint32_t nip, uint16_t nport, uint1
 	return ret;
 }
 
-static int _kcp_send_data(ikcpcb * kcp, char *buf, size_t len)
+int kcp_server_send_pkt(struct kcp_server_client *client, char *buf, size_t len)
 {
 	int ret = -1;
 	pthread_spin_lock(&kcp_server.kcp_lock);
-	ret = ikcp_send(kcp, buf, len);
+	ret = ikcp_send(client->kcp_context, buf, len);
 	if(ret != len)
 	{
-		log_error("ikcp_send error kcp:%p buf:%p ret:%d len:%d", kcp, buf, ret, len);
+		log_error("ikcp_send error kcp:%p buf:%p ret:%d len:%d", client->kcp_context, buf, ret, len);
 		ret = -1;
 	}else{
-		ikcp_flush(kcp);
+		ikcp_flush(client->kcp_context);
 		ret = len;
 	}
 	pthread_spin_unlock(&kcp_server.kcp_lock);
 
 	return ret;
-}
-
-int kcp_server_send_pkt(struct kcp_server_client *client, char *buf, size_t len)
-{
-	if(client->kcp_context)
-	{
-		(*(uint32_t *)client->send_buf) = htonl(len);
-		memcpy(client->send_buf + 4, buf, len);
-		return _kcp_send_data(client->kcp_context, client->send_buf, len + 4);
-	}else
-		return -1;
-}
-
-static int _check_recv_pkt(struct kcp_server_client *kcp_client, uint32_t buf_size)
-{
-	int pkt_len;
-
-	pkt_len = ntohl(*(uint32_t *)kcp_client->recv_buf);
-	if(pkt_len > 0 && buf_size == 4 + pkt_len)
-	{
-		server_on_pkg((struct server_client *)kcp_client->priv, kcp_client->recv_buf + 4, pkt_len);
-		return 0;
-	}else{
-		log_error("kcp recv len is invalid, buf_size:%d [4 + pkt_len]:%d.", buf_size, 4 + pkt_len);
-	}
-	return -1;
 }
 
 static void _kcp_recvdata(struct kcp_server_client *kcp_client) {
@@ -141,7 +115,7 @@ static void _kcp_recvdata(struct kcp_server_client *kcp_client) {
 		pthread_spin_unlock(&kcp_server.kcp_lock);
 		// 没有收到包就退出
 		if(recv_count > 0)
-			_check_recv_pkt(kcp_client, recv_count);
+			server_on_pkg((struct server_client *)kcp_client->priv, kcp_client->recv_buf, recv_count);
 	} while(recv_count > 0);
 
 }

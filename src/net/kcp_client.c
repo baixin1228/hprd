@@ -7,7 +7,6 @@
 #include <arpa/inet.h>
 
 #include "util.h"
-#include "queue.h"
 #include "net/ikcp.h"
 #include "net/isleep.h"
 #include "net/net_util.h"
@@ -19,44 +18,24 @@ struct {
 	uint32_t kcp_id;
 	pthread_spinlock_t kcp_lock;
 	struct sockaddr_in ser_addr;
-	struct data_queue recv_queue;
 	char recv_buf[BUFLEN];
-	char queue_buf[BUFLEN];
 	char send_buf[BUFLEN];
 	ikcpcb *kcp_context;
 	bool kcp_enable;
 } kcp_client = {0};
 
-static int _check_recv_pkt()
+static int _check_recv_pkt(uint32_t recv_count)
 {
 	int pkt_len;
-	uint32_t npkt_len;
 
-	if(get_queue_data_count(&kcp_client.recv_queue) > 4)
+	pkt_len = ntohl(*(uint32_t *)kcp_client.recv_buf);
+	if(pkt_len > 0 && recv_count == 4 + pkt_len)
 	{
-		read_data(&kcp_client.recv_queue, &npkt_len, 4);
-		pkt_len = ntohl(npkt_len);
-		if(pkt_len > 0)
-		{
-			if(get_queue_data_count(&kcp_client.recv_queue) >= 4 + pkt_len)
-			{
-				if(dequeue_data(&kcp_client.recv_queue, &npkt_len, 4) != 4)
-				{
-					log_error("[%s] dequeue_data error.", __func__);
-					exit(-1);
-				}
-				if(dequeue_data(&kcp_client.recv_queue, kcp_client.queue_buf, pkt_len) != pkt_len)
-				{
-					log_error("[%s] dequeue_data error.", __func__);
-					exit(-1);
-				}
-				client_on_pkg(kcp_client.queue_buf, pkt_len);
-				return 0;
-			}
-		}else{
-			log_error("kcp recv len is invalid.");
-			exit(-1);
-		}
+		client_on_pkg(kcp_client.recv_buf + 4, pkt_len);
+		return 0;
+	}else{
+		log_error("kcp recv len is invalid.");
+		exit(-1);
 	}
 	return -1;
 }
@@ -72,19 +51,11 @@ static void _kcp_recvdata() {
 		// 没有收到包就退出
 		if(recv_count > 0)
 		{
-			kcp_client.kcp_enable = true;
-			/* Using queues to solve packet sticking problems */
-			if(enqueue_data(&kcp_client.recv_queue, kcp_client.recv_buf,
-				recv_count) != recv_count)
-			{
-				log_error("[%s] enqueue_data error.", __func__);
-				exit(-1);
-			}
+			_check_recv_pkt(recv_count);
 		}
 
 	} while(recv_count > 0);
 
-	while(_check_recv_pkt() == 0);
 }
 
 static void *_recv_thread(void *oq) {
@@ -190,7 +161,7 @@ static int _kcp_send_data(ikcpcb * kcp, char *buf, size_t len)
 	int ret = -1;
 	pthread_spin_lock(&kcp_client.kcp_lock);
 	ret = ikcp_send(kcp, buf, len);
-	if(ret != 0)
+	if(ret != len)
 	{
 		log_error("ikcp_send error kcp:%p buf:%p ret:%d len:%d", kcp, buf, ret, len);
 		ret = -1;

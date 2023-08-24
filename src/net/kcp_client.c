@@ -73,6 +73,7 @@ static void _kcp_recvdata() {
 		if(recv_count > 0)
 		{
 			kcp_client.kcp_enable = true;
+			/* Using queues to solve packet sticking problems */
 			if(enqueue_data(&kcp_client.recv_queue, kcp_client.recv_buf,
 				recv_count) != recv_count)
 			{

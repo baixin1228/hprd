@@ -93,7 +93,7 @@ static int _kcp_send_data(ikcpcb * kcp, char *buf, size_t len)
 	int ret = -1;
 	pthread_spin_lock(&kcp_server.kcp_lock);
 	ret = ikcp_send(kcp, buf, len);
-	if(ret != 0)
+	if(ret != len)
 	{
 		log_error("ikcp_send error kcp:%p buf:%p ret:%d len:%d", kcp, buf, ret, len);
 		ret = -1;

@@ -14,7 +14,6 @@
 // #endif
 
 #include "util.h"
-#include "queue.h"
 #include "net/net_util.h"
 #include "net/kcp_server.h"
 #include "net/net_server.h"
@@ -117,35 +116,17 @@ int kcp_server_send_pkt(struct kcp_server_client *client, char *buf, size_t len)
 		return -1;
 }
 
-static int _check_recv_pkt(struct kcp_server_client *kcp_client)
+static int _check_recv_pkt(struct kcp_server_client *kcp_client, uint32_t buf_size)
 {
 	int pkt_len;
-	uint32_t npkt_len;
 
-	if(get_queue_data_count(&kcp_client->recv_queue) > 4)
+	pkt_len = ntohl(*(uint32_t *)kcp_client->recv_buf);
+	if(pkt_len > 0 && buf_size == 4 + pkt_len)
 	{
-		read_data(&kcp_client->recv_queue, &npkt_len, 4);
-		pkt_len = ntohl(npkt_len);
-		if(pkt_len > 0)
-		{
-			if(get_queue_data_count(&kcp_client->recv_queue) >= 4 + pkt_len)
-			{
-				if(dequeue_data(&kcp_client->recv_queue, &npkt_len, 4) != 4)
-				{
-					log_error("[%s] dequeue_data error.", __func__);
-					exit(-1);
-				}
-				if(dequeue_data(&kcp_client->recv_queue, kcp_client->queue_buf, pkt_len) != pkt_len)
-				{
-					log_error("[%s] dequeue_data error.", __func__);
-					exit(-1);
-				}
-				server_on_pkg((struct server_client *)kcp_client->priv, kcp_client->queue_buf, pkt_len);
-				return 0;
-			}
-		}else{
-			log_error("kcp recv len is invalid.");
-		}
+		server_on_pkg((struct server_client *)kcp_client->priv, kcp_client->recv_buf + 4, pkt_len);
+		return 0;
+	}else{
+		log_error("kcp recv len is invalid, buf_size:%d [4 + pkt_len]:%d.", buf_size, 4 + pkt_len);
 	}
 	return -1;
 }
@@ -160,17 +141,9 @@ static void _kcp_recvdata(struct kcp_server_client *kcp_client) {
 		pthread_spin_unlock(&kcp_server.kcp_lock);
 		// 没有收到包就退出
 		if(recv_count > 0)
-		{
-			if(enqueue_data(&kcp_client->recv_queue, kcp_client->recv_buf, recv_count) != recv_count)
-			{
-				log_error("[%s] enqueue_data error.", __func__);
-				exit(-1);
-			}
-		}
-
+			_check_recv_pkt(kcp_client, recv_count);
 	} while(recv_count > 0);
 
-	while(_check_recv_pkt(kcp_client) == 0);
 }
 
 static void *_kcp_server_thread(void *opaque) {

@@ -34,6 +34,7 @@ static void _kcp_recvdata() {
 		// 没有收到包就退出
 		if(recv_count > 0)
 		{
+			kcp_client.kcp_enable = true;
 			client_on_pkg(kcp_client.recv_buf, recv_count);
 		}
 

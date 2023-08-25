@@ -767,8 +767,7 @@ int ikcp_input(ikcpcb *kcp, const char *data, long size)
 
 	while (1) {
 		IUINT32 ts, sn, len, una, conv;
-		IUINT16 wnd;
-		IUINT8 cmd, frg;
+		IUINT16 wnd, cmd, frg;
 		IKCPSEG *seg;
 
 		if (size < (int)IKCP_OVERHEAD) break;
@@ -776,8 +775,8 @@ int ikcp_input(ikcpcb *kcp, const char *data, long size)
 		data = ikcp_decode32u(data, &conv);
 		if (conv != kcp->conv) return -1;
 
-		data = ikcp_decode8u(data, &cmd);
-		data = ikcp_decode8u(data, &frg);
+		data = ikcp_decode16u(data, &cmd);
+		data = ikcp_decode16u(data, &frg);
 		data = ikcp_decode16u(data, &wnd);
 		data = ikcp_decode32u(data, &ts);
 		data = ikcp_decode32u(data, &sn);
@@ -913,8 +912,8 @@ int ikcp_input(ikcpcb *kcp, const char *data, long size)
 static char *ikcp_encode_seg(char *ptr, const IKCPSEG *seg)
 {
 	ptr = ikcp_encode32u(ptr, seg->conv);
-	ptr = ikcp_encode8u(ptr, (IUINT8)seg->cmd);
-	ptr = ikcp_encode8u(ptr, (IUINT8)seg->frg);
+	ptr = ikcp_encode16u(ptr, (IUINT16)seg->cmd);
+	ptr = ikcp_encode16u(ptr, (IUINT16)seg->frg);
 	ptr = ikcp_encode16u(ptr, (IUINT16)seg->wnd);
 	ptr = ikcp_encode32u(ptr, seg->ts);
 	ptr = ikcp_encode32u(ptr, seg->sn);

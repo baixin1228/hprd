@@ -28,7 +28,10 @@ static void capture_on_frame(struct capture_object *obj)
 	int buf_id;
 
 	if(get_client_count() == 0)
+	{
+		sleep(1);
 		return;
+	}
 
 	buf_id = capture_get_fb(cap_obj);
 	if(buf_id == -1)

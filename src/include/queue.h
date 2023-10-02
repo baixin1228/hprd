@@ -21,6 +21,7 @@ struct data_queue
 
 int queue_put_int(struct int_queue *queue, int id);
 int queue_get_int(struct int_queue *queue);
+int queue_int_len(struct int_queue *queue);
 
 int enqueue_data(struct data_queue *queue, void *p_buf, size_t len);
 int dequeue_data(struct data_queue *queue, void *p_buf, size_t len);

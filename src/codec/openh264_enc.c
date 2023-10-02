@@ -339,6 +339,7 @@ static int openh264_enc_release(struct encodec_object *obj) {
 
 struct encodec_ops openh264_enc_ops = {
 	.name				= "openh264_encodec",
+	.priority			= SHARE_MEMORY,
 	.init				= openh264_enc_init,
 	.set_info			= openh264_enc_set_info,
 	.map_fb				= openh264_enc_map_buf,

@@ -4,4 +4,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+enum {
+	SHARE_MEMORY = 0x1
+};
+
 #endif

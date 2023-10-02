@@ -74,7 +74,7 @@ void print_stack(char *sig)
 		return ;
 	}
 
-	for (i = 0; i < size; i++) {
+	for (i = 4; i < size; i++) {
 		_show_file_line2(strings[i]);
 	}
 

@@ -30,6 +30,13 @@ int queue_get_int(struct int_queue *queue)
 	return -1;
 }
 
+int queue_int_len(struct int_queue *queue)
+{
+	if(queue == NULL)
+		return -1;
+	return queue->buffer_head - queue->buffer_tail;
+}
+
 int enqueue_data(struct data_queue *queue, void *p_buf, size_t len)
 {
 	char *buf = (char *)p_buf;

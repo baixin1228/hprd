@@ -14,7 +14,6 @@
 #include "util.h"
 #include "allocator.h"
 
-
 static int _open_drm()
 {
 	static int _drm_fd = -1;
@@ -25,14 +24,14 @@ static int _open_drm()
 	return _drm_fd;
 }
 
-struct frame_buffer *create_framebuffer(uint32_t width, uint32_t height, uint16_t bpp)
+struct drm_buffer *create_framebuffer(uint32_t width, uint32_t height, uint16_t bpp)
 {
 	struct drm_mode_create_dumb create = { 0 };
  	struct drm_mode_map_dumb map = { 0 };
- 	struct frame_buffer *fb;
+ 	struct drm_buffer *fb;
  	int fd, ret;
 
- 	if(bpp != 16 || bpp != 24 || bpp != 32)
+ 	if(bpp != 16 && bpp != 24 && bpp != 32)
  	{
  		log_error("bpp is invalid.");
  		return NULL;
@@ -91,7 +90,7 @@ fail:
  	return NULL;
 }
 
-void release_framebuffer(struct frame_buffer *fb)
+void release_framebuffer(struct drm_buffer *fb)
 {
  	int fd;
 	struct drm_mode_destroy_dumb destroy = { 0 };

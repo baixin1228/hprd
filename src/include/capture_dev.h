@@ -2,6 +2,7 @@
 #define __CAPTURE_dev_H__
 
 #include <glib.h>
+#include "common.h"
 #include "frame_buffer.h"
 
 extern GSList *capture_list;

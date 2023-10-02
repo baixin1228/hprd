@@ -218,7 +218,10 @@ static int xext_unmap_fb(struct capture_object *obj, int buf_id) {
 	struct x11_extensions *priv = (struct x11_extensions *)obj->priv;
 
 	if(priv->xext_bufs[buf_id].ximg == NULL)
+	{
+		log_error("%s ximg is null.", __func__);
 		return -1;
+	}
 
 	xext_buf = &priv->xext_bufs[buf_id];
 	if (!XShmDetach(priv->display, &xext_buf->shm)) {
@@ -303,13 +306,14 @@ static int xcb_quit(struct capture_object *obj)
 
 struct capture_ops xcb_dev_ops = {
 	.name 				= "x11_capture",
+	.priority			= SHARE_MEMORY,
 	.init 				= xext_dev_init,
 	.set_info			= xext_set_info,
 	.get_info			= xext_get_fb_info,
-	.map_fb 		= xext_map_fb,
-	.get_fb 		= xext_get_frame_buffer,
-	.put_fb 		= xext_put_frame_buffer,
-	.unmap_fb 		= xext_unmap_fb,
+	.map_fb 			= xext_map_fb,
+	.get_fb 			= xext_get_frame_buffer,
+	.put_fb 			= xext_put_frame_buffer,
+	.unmap_fb 			= xext_unmap_fb,
 	.release 			= xext_dev_release,
 	.main_loop			= xcb_main_loop,
 	.quit				= xcb_quit

@@ -12,23 +12,50 @@
 
 #include "util.h"
 
+char cmd[256];
+char line[256];
+char exec[32] = {0,};
+char addrline[32] = {0,};
+__attribute__((unused))
 static void _show_file_line(char addr[])
 {
-	char cmd[256];
-	char line[256];
-	char addrline[32] = {0,};
 	char *str1, *str2;
 	FILE *file;
 
+	printf("%s", addr);
 	str1 = strchr(addr, '[');
 	str2 = strchr(addr, ']');
 	if (str1 == NULL || str2 == NULL)
 		return;
-	memcpy(addrline, str1 + 1, str2 - str1);
-	snprintf(cmd, sizeof(cmd), "addr2line -Cfe /proc/%d/exe %s ", getpid(), addrline);
+	memcpy(addrline, str1 + 1, str2 - str1 - 1);
+	snprintf(cmd, sizeof(cmd), "addr2line -e /proc/%d/exe -C -f %s", getpid(), addrline);
 	file = popen(cmd, "r");
 	if (NULL != fgets(line, 256, file))
 		printf("%s", line);
+	printf("\n");
+	pclose(file);
+}
+
+__attribute__((unused))
+static void _show_file_line2(char addr[])
+{
+	char *str1, *str2;
+	FILE *file;
+
+	printf("%s", addr);
+	str1 = strchr(addr, '(');
+	str2 = strchr(addr, ')');
+	if (str1 == NULL || str2 == NULL)
+		return;
+
+	memcpy(exec, addr, str1 - addr);
+	memcpy(addrline, str1 + 2, str2 - str1 - 2);
+	snprintf(cmd, sizeof(cmd), "addr2line -e %s %s", exec, addrline);
+	bzero(exec, 32);
+	bzero(addrline, 32);
+	file = popen(cmd, "r");
+	while (NULL != fgets(line, 256, file))
+		printf("  %s", line);
 	pclose(file);
 }
 
@@ -47,9 +74,8 @@ void print_stack(char *sig)
 		return ;
 	}
 
-	for (i = 0; i < size; i++) {
-		printf("%s", strings[i]);
-		_show_file_line(strings[i]);
+	for (i = 4; i < size; i++) {
+		_show_file_line2(strings[i]);
 	}
 
 	free(strings);
@@ -87,7 +113,7 @@ void _printf_stack(int dunno)
 		print_stack(signal_str);
 		break;
 	case SIGSEGV:
-		signal_str = "[段错误：]";
+		signal_str = "[段错误]";
 		print_stack(signal_str);
 		break;
 	case SIGPIPE:

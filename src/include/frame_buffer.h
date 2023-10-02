@@ -26,8 +26,11 @@ struct raw_buffer
 	uint32_t format;
 	uint16_t bpp;
 	uint32_t size;
+	void *priv;
 	char *ptrs[4];
 	bool is_free;
 };
 
+int format_to_bpp(uint32_t format);
+char* format_to_name(uint32_t format);
 #endif

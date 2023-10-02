@@ -4,15 +4,17 @@
 #include <string.h>
 #include <getopt.h>
 #include <pthread.h>
+#include <sys/time.h>
 #include <netinet/in.h>
 
 #include "util.h"
 #include "codec.h"
 #include "encodec.h"
 #include "protocol.h"
-#include "capture_dev.h"
 #include "input_dev.h"
+#include "capture_dev.h"
 #include "buffer_pool.h"
+#include "frame_buffer.h"
 #include "net/net_server.h"
 
 struct mem_pool server_pool = {0};
@@ -22,20 +24,29 @@ struct capture_object *cap_obj = NULL;
 struct input_object *in_obj = NULL;
 pthread_mutex_t net_cb_lock = PTHREAD_MUTEX_INITIALIZER;
 
+struct timeval time1, time2;
 static void capture_on_frame(struct capture_object *obj)
 {
 	int ret;
 	int buf_id;
+	uint64_t capture_time;
+	uint64_t enc_time;
 
 	if(get_client_count() == 0)
+	{
+		sleep(1);
 		return;
+	}
 
+	gettimeofday(&time1, NULL);
 	buf_id = capture_get_fb(cap_obj);
 	if(buf_id == -1)
 	{
 		log_error("capture_get_fb fail.");
 		exit(-1);
 	}
+	gettimeofday(&time2, NULL);
+	capture_time = time2.tv_usec + time2.tv_sec * 1000000 - time1.tv_usec - time1.tv_sec * 1000000;
 
 	ret = encodec_put_fb(enc_obj, buf_id);
 	if(ret != 0)
@@ -43,19 +54,10 @@ static void capture_on_frame(struct capture_object *obj)
 		log_error("encodec_put_fb fail.");
 		exit(-1);
 	}
-	buf_id = encodec_get_fb(enc_obj);
-	if(buf_id == -1)
-	{
-		log_error("encodec_get_fb fail.");
-		exit(-1);
-	}
+	gettimeofday(&time1, NULL);
+	enc_time = time1.tv_usec + time1.tv_sec * 1000000 - time2.tv_usec - time2.tv_sec * 1000000;
 
-	ret = capture_put_fb(cap_obj, buf_id);
-	if(ret != 0)
-	{
-		log_error("capture_put_fb fail.");
-		exit(-1);
-	}
+	log_info("capture_time:%dms enc_time:%dms", capture_time / 1000, enc_time / 1000);
 }
 
 static void on_key(struct input_event *event)
@@ -198,15 +200,40 @@ void on_client_connect(struct server_client *client)
 	}
 }
 
+pthread_t bradcast_thread;
+static char *enc_data;
+static size_t enc_data_len;
+static void* bradcast_video_thread(void * data)
+{
+	while(true)
+	{
+		if(enc_data_len != 0)
+		{
+			bradcast_video(enc_data, enc_data_len);
+			enc_data_len = 0;
+		} else {
+			usleep(1000);
+		}
+	}
+
+	return NULL;
+}
+
 void on_enc_package(char *buf, size_t len)
 {
-	bradcast_video(buf, len);
+	while(enc_data_len != 0)
+		usleep(1000);
+
+	memcpy(enc_data, buf, len);
+	enc_data_len = len;
 }
 
 int server_start(char *capture, char *encodec)
 {
 	int ret;
 	int buf_id;
+	bool share_mem;
+	uint32_t screen_width, screen_height, screen_format;
 	GHashTable *fb_info = g_hash_table_new(g_str_hash, g_str_equal);
 
 	if(encodec == NULL)
@@ -216,33 +243,53 @@ int server_start(char *capture, char *encodec)
 	enc_obj = encodec_init(&server_pool, encodec);
 	in_obj = input_init(NULL);
 
+	share_mem = cap_obj->ops->priority & SHARE_MEMORY && enc_obj->ops->priority & SHARE_MEMORY;
+	
+	log_info("share memory:%d", share_mem);
+
+	ret = capture_get_info(cap_obj, fb_info);
+	if(ret != 0)
+	{
+		log_error("capture_get_info fail.");
+		return -1;
+	}
+	screen_width = *(uint32_t *)g_hash_table_lookup(fb_info, "width");
+	screen_height = *(uint32_t *)g_hash_table_lookup(fb_info, "height");
+	screen_format = *(uint32_t *)g_hash_table_lookup(fb_info, "format");
+	log_info("screen info, width:%d height:%d format:%s", screen_width, screen_height, format_to_name(screen_format));
+
 	for (int i = 0; i < 5; ++i)
 	{
+		// buf_id = alloc_buffer2(&server_pool, screen_width, screen_height, screen_format);
 		buf_id = alloc_buffer(&server_pool);
 		if(buf_id == -1)
 		{
 			log_error("alloc_buffer fail.");
-			exit(-1);
+			return -1;
 		}
-		ret = capture_map_fb(cap_obj, buf_id);
-		if(ret != 0)
+		if (share_mem)
 		{
-			log_error("capture_map_fb fail.");
-			exit(-1);
-		}
-		ret = encodec_map_fb(enc_obj, buf_id);
-		if(ret != 0)
-		{
-			log_error("encodec_map_fb fail.");
-			exit(-1);
+			ret = capture_map_fb(cap_obj, buf_id);
+			if(ret != 0)
+			{
+				log_error("capture_map_fb fail.");
+				return -1;
+			}
+			ret = encodec_map_fb(enc_obj, buf_id);
+			if(ret != 0)
+			{
+				log_error("encodec_map_fb fail.");
+				return -1;
+			}
 		}
 	}
+
 
 	g_hash_table_insert(fb_info, "frame_rate", &frame_rate);
 	if(capture_set_info(cap_obj, fb_info) == -1)
 	{
 		log_error("capture_set_info fail.");
-		exit(-1);
+		goto out1;
 	}
 	capture_regist_event_callback(cap_obj, capture_on_frame);
 	capture_get_info(cap_obj, fb_info);
@@ -253,7 +300,7 @@ int server_start(char *capture, char *encodec)
 	if(encodec_set_info(enc_obj, fb_info) == -1)
 	{
 		log_error("encodec_set_info fail.");
-		exit(-1);
+		goto out1;
 	}
 
 	g_hash_table_destroy(fb_info);
@@ -261,27 +308,38 @@ int server_start(char *capture, char *encodec)
 	capture_main_loop(cap_obj);
 
 	pthread_mutex_lock(&net_cb_lock);
+
+out1:
 	for (int i = 0; i < 5; ++i)
 	{
-		buf_id = get_fb(&server_pool);
+		buf_id = get_fb_block(&server_pool, 100);
 		if(buf_id == -1)
 		{
-			log_error("alloc_buffer fail.");
+			log_error("%s get_fb time out", __func__);
 			exit(-1);
 		}
-		ret = capture_unmap_fb(cap_obj, buf_id);
-		if(ret != 0)
+
+		if (share_mem)
 		{
-			log_error("capture_unmap_fb fail.");
-			exit(-1);
+			ret = capture_unmap_fb(cap_obj, buf_id);
+			if(ret != 0)
+			{
+				log_error("capture_unmap_fb fail. id:%d", buf_id);
+				return -1;
+			}
+			ret = encodec_unmap_fb(enc_obj, buf_id);
+			if(ret != 0)
+			{
+				log_error("encodec_unmap_fb fail.");
+				return -1;
+			}
 		}
-		ret = encodec_unmap_fb(enc_obj, buf_id);
-		if(ret != 0)
+
+		if(release_buffer(&server_pool, buf_id) == -1)
 		{
-			log_error("encodec_unmap_fb fail.");
+			log_error("%s release buffer fail.", __func__);
 			exit(-1);
 		}
-		release_buffer(&server_pool, buf_id);
 	}
 
 	input_release(in_obj);
@@ -305,7 +363,7 @@ struct option long_options[] =
 
 void print_help()
 {
-	printf("help\n");
+	printf("help");
 }
 
 int main(int argc, char *argv[])
@@ -369,9 +427,20 @@ int main(int argc, char *argv[])
 		log_error("server_net_bind_connect_cb fail.");
 		exit(-1);
 	}
+	
+	ret = pthread_create(&bradcast_thread, NULL, bradcast_video_thread, NULL);
+	if(ret != 0)
+	{
+		log_error("pthread_create fail.");
+		exit(-1);
+	}
+
+	enc_data = malloc(1024 * 1024 * 10);
 	while(1)
 	{
-		server_start(capture, encodec);
+		if(server_start(capture, encodec) != 0)
+			break;
+		
 		log_info("restart server.");
 	}
 	server_net_release();

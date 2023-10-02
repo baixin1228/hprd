@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <unistd.h>
 #include <stdatomic.h>
 #include <libavutil/opt.h>
 #include <libavcodec/avcodec.h>
@@ -27,21 +28,10 @@ struct ffmpeg_enc_data {
 	struct SwsContext *sws_ctx;
 
 	int enc_status;
-	struct int_queue id_queue;
+	int cur_buf_id;
+	pthread_t enc_thread;
+	bool exit;
 };
-
-static int ffmpeg_enc_init(struct encodec_object *obj) {
-	struct ffmpeg_enc_data *enc_data;
-
-	enc_data = calloc(1, sizeof(*enc_data));
-	if(!enc_data) {
-		log_error("calloc fail, check free memery.");
-		return -1;
-	}
-
-	obj->priv = enc_data;
-	return 0;
-}
 
 static int ffmpeg_enc_set_info(
 	struct encodec_object *obj, GHashTable *enc_info) {
@@ -108,7 +98,7 @@ static int ffmpeg_enc_set_info(
 	av_codec_ctx->gop_size = frame_rate * 4;
 	av_codec_ctx->max_b_frames = 0;
 	av_codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
-	av_codec_ctx->thread_count = 2;
+	av_codec_ctx->thread_count = 4;
 
 	AVDictionary *param = 0;
 
@@ -204,56 +194,86 @@ static int ffmpeg_enc_unmap_buf(struct encodec_object *obj, int buf_id) {
 }
 
 static int ffmpeg_frame_enc(struct encodec_object *obj, int buf_id) {
-	struct raw_buffer *buffer;
 	struct ffmpeg_enc_data *enc_data = obj->priv;
 
-	AVFrame *frame = enc_data->av_frame;
-	frame->pict_type = enc_data->force_key_frame ? AV_PICTURE_TYPE_I : AV_PICTURE_TYPE_P;
+	while(enc_data->cur_buf_id != -1)
+		usleep(1000);
 
-	if(enc_data->force_key_frame)
-		enc_data->force_key_frame = false;
-
-	buffer = get_raw_buffer(obj->buf_pool, buf_id);
-
-	int linesizes[4] = {
-		buffer->size / buffer->height, 0, 0, 0
-	};
-	if(enc_data->av_codec_ctx->pix_fmt != enc_data->capture_fb_fmt) {
-		/* convert */
-		sws_scale(enc_data->sws_ctx, (const uint8_t *const *)buffer->ptrs, linesizes, 0, buffer->height, frame->data, frame->linesize);
-	} else {
-		/* zero copy */
-		switch(frame->format) {
-		case AV_PIX_FMT_YUV420P:
-			frame->data[0] = (uint8_t *)buffer->ptrs[0];
-			frame->data[1] = (uint8_t *)buffer->ptrs[0] + buffer->width * buffer->height;
-			frame->data[2] = (uint8_t *)buffer->ptrs[0] + buffer->width * buffer->height +
-							 buffer->width * buffer->height / 4;
-			break;
-		case AV_PIX_FMT_NV12:
-			frame->data[0] = (uint8_t *)buffer->ptrs[0];
-			frame->data[1] = (uint8_t *)buffer->ptrs[0] + buffer->width * buffer->height;
-			frame->data[2] = (uint8_t *)0;
-			break;
-		default:
-			log_error("unsupport frame format.");
-			break;
-		}
-	}
-
-	enc_data->enc_status = avcodec_send_frame(enc_data->av_codec_ctx,
-						   frame);
-	if (enc_data->enc_status < 0) {
-		log_error("Error sending a frame for encoding");
-		return -1;
-	}
-
-	_ffmpeg_enc_get_pkt(obj);
-
-	while(queue_put_int(&enc_data->id_queue, buf_id) != 0)
-		log_warning("queue_put_int fail.");
-
+	enc_data->cur_buf_id = buf_id;
 	return 0;
+}
+
+static void* _ffmpeg_enc_thread(void * data)
+{
+	struct encodec_object *obj = data;
+	struct ffmpeg_enc_data *enc_data = obj->priv;
+	struct raw_buffer *buffer;
+	AVFrame *frame;
+	int buf_id;
+
+	log_info("ffmpeg enc thread start.");
+	while(!enc_data->exit)
+	{
+		while(enc_data->cur_buf_id == -1)
+		{
+			if(enc_data->exit)
+				goto end;
+			usleep(1000);
+		}
+
+		buf_id = enc_data->cur_buf_id;
+		frame = enc_data->av_frame;
+		frame->pict_type = enc_data->force_key_frame ? AV_PICTURE_TYPE_I : AV_PICTURE_TYPE_P;
+
+		if(enc_data->force_key_frame)
+			enc_data->force_key_frame = false;
+
+		buffer = get_raw_buffer(obj->buf_pool, buf_id);
+
+		int linesizes[4] = {
+			buffer->size / buffer->height, 0, 0, 0
+		};
+		if(enc_data->av_codec_ctx->pix_fmt != enc_data->capture_fb_fmt) {
+			/* convert */
+			sws_scale(enc_data->sws_ctx, (const uint8_t *const *)buffer->ptrs, linesizes, 0, buffer->height, frame->data, frame->linesize);
+		} else {
+			/* zero copy */
+			switch(frame->format) {
+			case AV_PIX_FMT_YUV420P:
+				frame->data[0] = (uint8_t *)buffer->ptrs[0];
+				frame->data[1] = (uint8_t *)buffer->ptrs[0] + buffer->width * buffer->height;
+				frame->data[2] = (uint8_t *)buffer->ptrs[0] + buffer->width * buffer->height +
+								 buffer->width * buffer->height / 4;
+				break;
+			case AV_PIX_FMT_NV12:
+				frame->data[0] = (uint8_t *)buffer->ptrs[0];
+				frame->data[1] = (uint8_t *)buffer->ptrs[0] + buffer->width * buffer->height;
+				frame->data[2] = (uint8_t *)0;
+				break;
+			default:
+				log_error("unsupport frame format.");
+				break;
+			}
+		}
+
+		enc_data->enc_status = avcodec_send_frame(enc_data->av_codec_ctx,
+							   frame);
+		if (enc_data->enc_status < 0) {
+			log_error("Error sending a frame for encoding");
+			return NULL;
+		}
+
+		_ffmpeg_enc_get_pkt(obj);
+
+		if(put_fb(obj->buf_pool, buf_id) != 0) {
+			log_error("put_fb fail.");
+			exit(-1);
+		}
+		enc_data->cur_buf_id = -1;
+	}
+
+end:
+	return NULL;
 }
 
 static int ffmpeg_force_key_frame(struct encodec_object *obj) {
@@ -263,18 +283,26 @@ static int ffmpeg_force_key_frame(struct encodec_object *obj) {
 	return 0;
 }
 
-static int ffmpeg_enc_getbuf(struct encodec_object *obj) {
-	int ret;
-	struct ffmpeg_enc_data *enc_data = obj->priv;
+static int ffmpeg_enc_init(struct encodec_object *obj) {
+	struct ffmpeg_enc_data *enc_data;
 
-	while((ret = queue_get_int(&enc_data->id_queue)) == -1)
-		log_warning("queue_get_int fail.");
+	enc_data = calloc(1, sizeof(*enc_data));
+	if(!enc_data) {
+		log_error("calloc fail, check free memery.");
+		return -1;
+	}
+	enc_data->cur_buf_id = -1;
 
-	return ret;
+	pthread_create(&enc_data->enc_thread, NULL, _ffmpeg_enc_thread, obj);
+
+	obj->priv = enc_data;
+	return 0;
 }
 
 static int ffmpeg_enc_release(struct encodec_object *obj) {
 	struct ffmpeg_enc_data *enc_data = obj->priv;
+	enc_data->exit = true;
+	pthread_join(enc_data->enc_thread, NULL);
 	avcodec_close(enc_data->av_codec_ctx);
 	av_packet_free(&enc_data->av_packet);
 	if(enc_data->sws_ctx) {
@@ -286,13 +314,13 @@ static int ffmpeg_enc_release(struct encodec_object *obj) {
 
 struct encodec_ops ffmpeg_enc_ops = {
 	.name				= "ffmpeg_encodec",
+	.priority			= SHARE_MEMORY,
 	.init				= ffmpeg_enc_init,
 	.set_info			= ffmpeg_enc_set_info,
 	.map_fb				= ffmpeg_enc_map_buf,
 	.unmap_fb			= ffmpeg_enc_unmap_buf,
 	.force_i			= ffmpeg_force_key_frame,
 	.put_fb				= ffmpeg_frame_enc,
-	.get_fb				= ffmpeg_enc_getbuf,
 	.release			= ffmpeg_enc_release
 };
 

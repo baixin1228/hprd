@@ -12,5 +12,6 @@ cd $(dirname "$0")
 
 ret=`ps -aux | grep Xorg | grep -v grep`
 user=`echo $ret | awk '{print $1}'`
+echo run as:$user
 [[ "$ret" =~ -auth\ ([a-zA-Z0-9/:]*) ]] \
 && sudo XAUTHORITY=${BASH_REMATCH[1]} runuser $user -g $user -c "./server_build/src/server $*"

@@ -74,7 +74,7 @@ static void on_clip(struct clip_event *event)
 
 #define MIN_BIT_RATE (1 * 1024 * 1024)
 static uint32_t frame_rate = 58;
-static float frame_scale = 1.0f;
+float frame_scale = 1.0f;
 static uint32_t stream_ftm = STREAM_H264;
 static uint32_t bit_rate = MIN_BIT_RATE;
 static void on_request(struct server_client *client, struct request_event *event)

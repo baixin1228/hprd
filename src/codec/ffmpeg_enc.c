@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <pthread.h>
 #include <stdatomic.h>
 #include <libavutil/opt.h>
 #include <libavcodec/avcodec.h>
@@ -29,7 +30,9 @@ struct ffmpeg_enc_data {
 
 	int enc_status;
 	int cur_buf_id;
+	bool conv_over;
 	pthread_t enc_thread;
+	pthread_t pkt_thread;
 	bool exit;
 };
 
@@ -87,18 +90,22 @@ static int ffmpeg_enc_set_info(
 								av_codec_ctx->width,
 								av_codec_ctx->height,
 								enc_data->capture_fb_fmt,
-								av_codec_ctx->width,
-								av_codec_ctx->height,
+								av_codec_ctx->width / 2,
+								av_codec_ctx->height / 2,
 								av_codec_ctx->pix_fmt,
 								SWS_POINT, NULL, NULL, NULL);
+		av_codec_ctx->width /= 2;
+		av_codec_ctx->height /= 2;
 	} else {
 		av_codec_ctx->pix_fmt = enc_data->capture_fb_fmt;
 	}
 
-	av_codec_ctx->gop_size = frame_rate * 4;
+	av_codec_ctx->gop_size = frame_rate * 2;
 	av_codec_ctx->max_b_frames = 0;
 	av_codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
-	av_codec_ctx->thread_count = 4;
+	av_codec_ctx->thread_count = 2;
+	// av_codec_ctx->thread_type = FF_THREAD_FRAME;
+	av_codec_ctx->thread_type = FF_THREAD_SLICE;
 
 	AVDictionary *param = 0;
 
@@ -135,6 +142,7 @@ static int ffmpeg_enc_set_info(
 		}
 	}
 
+
 	enc_data->av_packet = av_packet_alloc();
 	if (!enc_data->av_packet) {
 		log_error("ffmpeg enc alloc pkg fail.");
@@ -150,23 +158,45 @@ FAIL1:
 	return -1;
 }
 
-static void _ffmpeg_enc_get_pkt(struct encodec_object *obj) {
+static void* _ffmpeg_enc_thread(void * data)
+{
+	struct encodec_object *obj = data;
 	struct ffmpeg_enc_data *enc_data = obj->priv;
-	AVPacket *pkt = enc_data->av_packet;
-	AVCodecContext *av_codec_ctx = enc_data->av_codec_ctx;
+	AVFrame *frame;
+	AVPacket *pkt;
+	AVCodecContext *av_codec_ctx;
 
-	if (enc_data->enc_status >= 0) {
+	while(!enc_data->exit)
+	{
+		pkt = enc_data->av_packet;
+		av_codec_ctx = enc_data->av_codec_ctx;
+		if(pkt == NULL || av_codec_ctx == NULL || !enc_data->conv_over)
+		{
+			usleep(1000);
+			continue;
+		}
+
+		frame = enc_data->av_frame;
+
+		enc_data->enc_status = avcodec_send_frame(enc_data->av_codec_ctx,
+							   frame);
+
+		if (enc_data->enc_status < 0) {
+			log_error("Error sending a frame for encoding");
+			exit(-1);
+		}
+
 		enc_data->enc_status = avcodec_receive_packet(av_codec_ctx, pkt);
+		enc_data->conv_over = false;
 		if (enc_data->enc_status == AVERROR_EOF) {
 			log_info("encode end.");
-			return;
+			return NULL;
 		}
 		if (enc_data->enc_status == AVERROR(EAGAIN)) {
-			log_info("not data, retry.");
-			return;
+			continue;
 		} else if (enc_data->enc_status < 0) {
 			log_error("Error during encoding");
-			return;
+			return NULL;
 		}
 
 		if (pkt->flags & AV_PKT_FLAG_KEY) { //找到带I帧的AVPacket
@@ -180,9 +210,9 @@ static void _ffmpeg_enc_get_pkt(struct encodec_object *obj) {
 		obj->pkt_callback((char *)pkt->data, pkt->size);
 
 		av_packet_unref(pkt);
-	} else {
-		log_error("get pkt error.");
 	}
+
+	return NULL;
 }
 
 static int ffmpeg_enc_map_buf(struct encodec_object *obj, int buf_id) {
@@ -203,7 +233,7 @@ static int ffmpeg_frame_enc(struct encodec_object *obj, int buf_id) {
 	return 0;
 }
 
-static void* _ffmpeg_enc_thread(void * data)
+static void* _ffmpeg_conv_thread(void * data)
 {
 	struct encodec_object *obj = data;
 	struct ffmpeg_enc_data *enc_data = obj->priv;
@@ -214,11 +244,10 @@ static void* _ffmpeg_enc_thread(void * data)
 	log_info("ffmpeg enc thread start.");
 	while(!enc_data->exit)
 	{
-		while(enc_data->cur_buf_id == -1)
+		if(enc_data->cur_buf_id == -1)
 		{
-			if(enc_data->exit)
-				goto end;
 			usleep(1000);
+			continue;
 		}
 
 		buf_id = enc_data->cur_buf_id;
@@ -237,33 +266,30 @@ static void* _ffmpeg_enc_thread(void * data)
 			/* convert */
 			sws_scale(enc_data->sws_ctx, (const uint8_t *const *)buffer->ptrs, linesizes, 0, buffer->height, frame->data, frame->linesize);
 		} else {
+			log_error("unsurport format.");
 			/* zero copy */
-			switch(frame->format) {
-			case AV_PIX_FMT_YUV420P:
-				frame->data[0] = (uint8_t *)buffer->ptrs[0];
-				frame->data[1] = (uint8_t *)buffer->ptrs[0] + buffer->width * buffer->height;
-				frame->data[2] = (uint8_t *)buffer->ptrs[0] + buffer->width * buffer->height +
-								 buffer->width * buffer->height / 4;
-				break;
-			case AV_PIX_FMT_NV12:
-				frame->data[0] = (uint8_t *)buffer->ptrs[0];
-				frame->data[1] = (uint8_t *)buffer->ptrs[0] + buffer->width * buffer->height;
-				frame->data[2] = (uint8_t *)0;
-				break;
-			default:
-				log_error("unsupport frame format.");
-				break;
-			}
+			// switch(frame->format) {
+			// case AV_PIX_FMT_YUV420P:
+			// 	frame->data[0] = (uint8_t *)buffer->ptrs[0];
+			// 	frame->data[1] = (uint8_t *)buffer->ptrs[0] + buffer->width * buffer->height;
+			// 	frame->data[2] = (uint8_t *)buffer->ptrs[0] + buffer->width * buffer->height +
+			// 					 buffer->width * buffer->height / 4;
+			// 	break;
+			// case AV_PIX_FMT_NV12:
+			// 	frame->data[0] = (uint8_t *)buffer->ptrs[0];
+			// 	frame->data[1] = (uint8_t *)buffer->ptrs[0] + buffer->width * buffer->height;
+			// 	frame->data[2] = (uint8_t *)0;
+			// 	break;
+			// default:
+			// 	log_error("unsupport frame format.");
+			// 	break;
+			// }
 		}
 
-		enc_data->enc_status = avcodec_send_frame(enc_data->av_codec_ctx,
-							   frame);
-		if (enc_data->enc_status < 0) {
-			log_error("Error sending a frame for encoding");
-			return NULL;
-		}
+		while(enc_data->conv_over)
+			usleep(1000);
 
-		_ffmpeg_enc_get_pkt(obj);
+		enc_data->conv_over = true;
 
 		if(put_fb(obj->buf_pool, buf_id) != 0) {
 			log_error("put_fb fail.");
@@ -272,7 +298,6 @@ static void* _ffmpeg_enc_thread(void * data)
 		enc_data->cur_buf_id = -1;
 	}
 
-end:
 	return NULL;
 }
 
@@ -293,9 +318,10 @@ static int ffmpeg_enc_init(struct encodec_object *obj) {
 	}
 	enc_data->cur_buf_id = -1;
 
-	pthread_create(&enc_data->enc_thread, NULL, _ffmpeg_enc_thread, obj);
-
 	obj->priv = enc_data;
+
+	pthread_create(&enc_data->enc_thread, NULL, _ffmpeg_conv_thread, obj);
+	pthread_create(&enc_data->pkt_thread, NULL, _ffmpeg_enc_thread, obj);
 	return 0;
 }
 
@@ -303,6 +329,7 @@ static int ffmpeg_enc_release(struct encodec_object *obj) {
 	struct ffmpeg_enc_data *enc_data = obj->priv;
 	enc_data->exit = true;
 	pthread_join(enc_data->enc_thread, NULL);
+	pthread_join(enc_data->pkt_thread, NULL);
 	avcodec_close(enc_data->av_codec_ctx);
 	av_packet_free(&enc_data->av_packet);
 	if(enc_data->sws_ctx) {

@@ -300,6 +300,7 @@ static long get_xkeycode(int keycode)
 		return XK_Control_L;
 }
 
+extern float frame_scale;
 static int xlib_push_key(struct input_object *obj, struct input_event *event)
 {
 	struct xlib_input *priv = (struct xlib_input *)obj->priv;
@@ -307,7 +308,7 @@ static int xlib_push_key(struct input_object *obj, struct input_event *event)
 	switch (event->type) {
 		case MOUSE_MOVE:
 		{
-			XTestFakeMotionEvent(priv->display, 0, event->x, event->y, 0);
+			XTestFakeMotionEvent(priv->display, 0, event->x / frame_scale, event->y / frame_scale, 0);
 			break;
 		}
 		case KEY_UP:

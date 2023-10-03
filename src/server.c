@@ -73,9 +73,10 @@ static void on_clip(struct clip_event *event)
 }
 
 #define MIN_BIT_RATE (1 * 1024 * 1024)
-uint32_t frame_rate = 58;
-uint32_t stream_ftm = STREAM_H264;
-uint32_t bit_rate = MIN_BIT_RATE;
+static uint32_t frame_rate = 58;
+static float frame_scale = 1.0f;
+static uint32_t stream_ftm = STREAM_H264;
+static uint32_t bit_rate = MIN_BIT_RATE;
 static void on_request(struct server_client *client, struct request_event *event)
 {
 	struct response_event ret_event;
@@ -297,6 +298,7 @@ int server_start(char *capture, char *encodec)
 	encodec_regist_event_callback(enc_obj, on_enc_package);
 	g_hash_table_insert(fb_info, "stream_fmt", &stream_ftm);
 	g_hash_table_insert(fb_info, "bit_rate", &bit_rate);
+	g_hash_table_insert(fb_info, "frame_scale", &frame_scale);
 	if(encodec_set_info(enc_obj, fb_info) == -1)
 	{
 		log_error("encodec_set_info fail.");
@@ -358,6 +360,7 @@ struct option long_options[] =
 	{"capture", 	required_argument,  NULL, 'c'},
 	{"encodec", 	required_argument,  NULL, 'e'},
 	{"kcp-disable", no_argument,        NULL, 'k'},
+	{"scale", 		required_argument,  NULL, 's'},
 	{NULL,		0,  	                NULL,  0}
 };
 
@@ -380,34 +383,46 @@ int main(int argc, char *argv[])
 	{
 		switch(ret)
 		{
-		case 0:
-		case 'h':
-		default:
-		{
-			print_help();
-			exit(0);
-			break;
-		}
-		case 1:
-		case 'c':
-		{
-			capture = optarg;
-			break;
-		}
-		case 2:
-		case 'e':
-		{
-			encodec = optarg;
-			break;
-		}
-		case 3:
-		case 'k':
-		{
-			enable_kcp = false;
-			break;
-		}
+			case 0:
+			case 'h':
+			default:
+			{
+				print_help();
+				exit(0);
+				break;
+			}
+			case 1:
+			case 'c':
+			{
+				capture = optarg;
+				break;
+			}
+			case 2:
+			case 'e':
+			{
+				encodec = optarg;
+				break;
+			}
+			case 3:
+			case 'k':
+			{
+				enable_kcp = false;
+				break;
+			}
+			case 4:
+			case 's':
+			{
+				sscanf(optarg, "%f", &frame_scale);
+				break;
+			}
 		}
 	}
+
+	if(frame_scale < 0.1f)
+		frame_scale = 0.1f;
+
+	if(frame_scale > 1.0f)
+		frame_scale = 1.0f;
 
 	ret = server_net_init("0.0.0.0", 9999, enable_kcp);
 	if(ret != 0)

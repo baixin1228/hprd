@@ -98,8 +98,8 @@ static int xext_set_info(struct capture_object *obj, GHashTable *fb_info)
 	if(g_hash_table_contains(fb_info, "frame_rate"))
 		priv->frame_rate = *(uint32_t *)g_hash_table_lookup(fb_info, "frame_rate");
 
-	if(priv->frame_rate > 120)
-		priv->frame_rate = 120;
+	if(priv->frame_rate > 240)
+		priv->frame_rate = 240;
 	
 	return 0;
 }

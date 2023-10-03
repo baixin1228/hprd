@@ -39,18 +39,30 @@ struct ffmpeg_enc_data {
 static int ffmpeg_enc_set_info(
 	struct encodec_object *obj, GHashTable *enc_info) {
 	int ret;
-	uint32_t frame_rate;
+	uint32_t frame_rate = 30;
+	uint32_t raw_width, raw_height, rate, format, stream_fmt;
+	uint32_t width, height;
+	float frame_scale = 1.0f;
 	int stream_format;
 	AVCodecContext *av_codec_ctx = NULL;
 	struct ffmpeg_enc_data *enc_data = obj->priv;
 
 	if(g_hash_table_contains(enc_info, "frame_rate"))
 		frame_rate = *(uint32_t *)g_hash_table_lookup(enc_info, "frame_rate");
-	else
-		frame_rate = 30;
 
-	stream_format = stream_fmt_to_av_fmt(
-						*(uint32_t *)g_hash_table_lookup(enc_info, "stream_fmt"));
+	if(g_hash_table_contains(enc_info, "frame_scale"))
+		frame_scale = *(float *)g_hash_table_lookup(enc_info, "frame_scale");
+
+	rate = *(uint32_t *)g_hash_table_lookup(enc_info, "bit_rate");
+	raw_width = *(uint32_t *)g_hash_table_lookup(enc_info, "width");
+	raw_height = *(uint32_t *)g_hash_table_lookup(enc_info, "height");
+	format = *(uint32_t *)g_hash_table_lookup(enc_info, "format");
+	stream_fmt = *(uint32_t *)g_hash_table_lookup(enc_info, "stream_fmt");
+	width = ALIGN16((int)(raw_width * frame_scale));
+	height = ALIGN2((int)(raw_height * frame_scale));
+
+	stream_format = stream_fmt_to_av_fmt(stream_fmt);
+
 	enc_data->av_codec = avcodec_find_encoder(stream_format);
 	if (!enc_data->av_codec) {
 		log_error("ffmpeg enc avcodec not found.");
@@ -67,38 +79,30 @@ static int ffmpeg_enc_set_info(
 	av_codec_ctx->codec_id = stream_format;
 
 	av_opt_set(av_codec_ctx->priv_data, "nal-hrd", "cbr", 0);
-	int rate = *(uint32_t *)g_hash_table_lookup(enc_info, "bit_rate");
 	av_codec_ctx->rc_min_rate = rate;       // 最小比特率
 	av_codec_ctx->rc_max_rate = rate;       // 最大比特率
 	av_codec_ctx->rc_buffer_size = rate * 2;// 设置缓冲大小, 一般设定为比特率的2倍
 	av_codec_ctx->bit_rate = rate;
-	av_codec_ctx->width = *(uint32_t *)g_hash_table_lookup(enc_info, "width");
-	av_codec_ctx->height = *(uint32_t *)g_hash_table_lookup(enc_info, "height");
+	av_codec_ctx->width = width;
+	av_codec_ctx->height = height;
 	av_codec_ctx->time_base = (AVRational) {
 		1, frame_rate
 	};
 	av_codec_ctx->framerate = (AVRational) {
 		frame_rate, 1
 	};
-	enc_data->capture_fb_fmt = fb_fmt_to_av_fmt(
-								   *(uint32_t *)g_hash_table_lookup(enc_info, "format"));
+	enc_data->capture_fb_fmt = fb_fmt_to_av_fmt(format);
 
-	if(enc_data->capture_fb_fmt == AV_PIX_FMT_RGB32) {
-		av_codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
+	av_codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
 
-		enc_data->sws_ctx = sws_getContext(
-								av_codec_ctx->width,
-								av_codec_ctx->height,
-								enc_data->capture_fb_fmt,
-								av_codec_ctx->width / 2,
-								av_codec_ctx->height / 2,
-								av_codec_ctx->pix_fmt,
-								SWS_POINT, NULL, NULL, NULL);
-		av_codec_ctx->width /= 2;
-		av_codec_ctx->height /= 2;
-	} else {
-		av_codec_ctx->pix_fmt = enc_data->capture_fb_fmt;
-	}
+	enc_data->sws_ctx = sws_getContext(
+							raw_width,
+							raw_height,
+							enc_data->capture_fb_fmt,
+							width,
+							height,
+							av_codec_ctx->pix_fmt,
+							SWS_POINT, NULL, NULL, NULL);
 
 	av_codec_ctx->gop_size = frame_rate * 2;
 	av_codec_ctx->max_b_frames = 0;

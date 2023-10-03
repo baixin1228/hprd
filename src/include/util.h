@@ -7,6 +7,7 @@
 #include <string.h>
 #include <errno.h>
 
+#define ALIGN2(x)	((x+1)&~1)
 #define ALIGN4(x)	((x+3)&~3)
 #define ALIGN8(x)	((x+7)&~7)
 #define ALIGN16(x)  ((x+15)&~15)
